@@ -1,0 +1,31 @@
+http://prov.vic.gov.au/vers/schema/ANZS5478 http://www.w3.org/1999/02/22-rdf-syntax-ns
+<rdf:RDF xmlns:anzs5478="http://www.prov.vic.gov.au/ANZS5478">
+<anzs5478:Mandate rdf:about="http://www.prov.vic.gov.au/VERS/example">
+ <anzs5478:EntityType rdf:datatype="xs:string">Mandate</anzs5478:EntityType>
+ <anzs5478:Category rdf:datatype="xs:string">Item</anzs5478:Category>
+ <anzs5478:Identifier rdf:parseType="Resource">
+  <anzs5478:IdentifierString rdf:datatype="xs:string">String</anzs5478:IdentifierString>
+  <anzs5478:IdentifierScheme rdf:datatype="xs:string">Scheme</anzs5478:IdentifierScheme>
+ </anzs5478:Identifier>
+ <anzs5478:Name rdf:parseType="Resource">
+  <anzs5478:NameWords rdf:datatype="xs:string">String</anzs5478:NameWords>
+  <anzs5478:NameScheme rdf:datatype="xs:string">Scheme</anzs5478:NameScheme>
+ </anzs5478:Name>
+ <anzs5478:DateRange rdf:parseType="Resource">
+  <anzs5478:StartDate rdf:datatype="xs:datetime">20010101</anzs5478:StartDate>
+  <anzs5478:EndDate rdf:datatype="xs:datetime">20010101</anzs5478:EndDate>
+ </anzs5478:DateRange>
+ <anzs5478:Description rdf:datatype="xs:string">Text</anzs5478:Description>
+ <anzs5478:Jurisdiction rdf:datatype="xs:string">Text</anzs5478:Jurisdiction>
+ <anzs5478:SecurityClassification rdf:datatype="xs:string">Text</anzs5478:SecurityClassification>
+ <anzs5478:SecurityCaveat rdf:parseType="Resource">
+  <anzs5478:CaveatText rdf:datatype="xs:string">text</anzs5478:CaveatText>
+  <anzs5478:CaveatCategory rdf:datatype="xs:string">text</anzs5478:CaveatCategory>
+ </anzs5478:SecurityCaveat>
+ <anzs5478:Coverage rdf:parseType="Resource">
+  <anzs5478:SpatialCoverage rdf:datatype="xs:string">text</anzs5478:SpatialCoverage>
+ </anzs5478:Coverage>
+</anzs5478:Mandate>
+</rdf:RDF>
+
+

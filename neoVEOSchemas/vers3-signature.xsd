@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	   xmlns:vers="http://www.prov.vic.gov.au/VERS"
+	   targetNamespace="http://www.prov.vic.gov.au/VERS"
+	   elementFormDefault="qualified">
+
+<xs:element name="SignatureBlock">
+  <xs:complexType>
+    <xs:sequence>
+      <xs:element name="Version" type="xs:string"/>
+      <xs:element name="SignatureAlgorithm" type="xs:string"/>
+      <xs:element name="SignatureDateTime" type="xs:dateTime"/>
+      <xs:element name="Signer" type="xs:string"/>
+      <xs:element name="Signature" type="xs:string"/>
+      <xs:element ref="vers:CertificateChain" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="CertificateChain">
+  <xs:complexType>
+    <xs:sequence>
+      <xs:element name="Certificate" type="xs:string" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+</xs:schema>

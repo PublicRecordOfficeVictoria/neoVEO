@@ -1,0 +1,10 @@
+<#if licenseFirst??>
+${licenseFirst}
+</#if>
+${licensePrefix}Copyright Public Record Office Victoria 2015
+${licensePrefix}Licensed under the CC-BY license http://creativecommons.org/licenses/by/3.0/au/
+${licensePrefix}Author Andrew Waugh
+${licensePrefix}Version 1.0 February 2015.
+<#if licenseLast??>
+${licenseLast}
+</#if>

@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	   xmlns:vers="http://www.prov.vic.gov.au/VERS"
+	   targetNamespace="http://www.prov.vic.gov.au/VERS"
+	   elementFormDefault="qualified">
+
+<xs:element name="VEOContent">
+  <xs:complexType>
+    <xs:sequence>
+      <xs:element name="Version" type="xs:string" default="3.0"/>
+      <xs:element name="HashFunctionAlgorithm" type="xs:string" />
+      <xs:element ref="vers:InformationObject" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="InformationObject">
+  <xs:complexType>
+    <xs:sequence>
+      <xs:element name="InformationObjectType" type="xs:string"/>
+      <xs:element name="InformationObjectDepth" type="xs:nonNegativeInteger"/>
+      <xs:element ref="vers:MetadataPackage" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element ref="vers:InformationPiece" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="MetadataPackage">
+  <xs:complexType>
+    <xs:sequence>
+      <xs:element name="MetadataSchemaIdentifier" type="xs:string"/>
+      <xs:element name="MetadataSyntaxIdentifier" type="xs:string"/>
+      <xs:any processContents="lax" minOccurs="1" maxOccurs="unbounded"/> <!-- any RDF -->
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="InformationPiece">
+  <xs:complexType>
+    <xs:sequence>
+      <xs:element name="Label" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element ref="vers:ContentFile" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="ContentFile">
+  <xs:complexType>
+    <xs:sequence>
+      <xs:element name="PathName" type="xs:string"/>
+      <xs:element name="HashValue" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
+</xs:schema>

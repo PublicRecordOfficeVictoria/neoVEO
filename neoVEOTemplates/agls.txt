@@ -1,0 +1,91 @@
+http://prov.vic.gov.au/vers/schema/AGLS	http://www.w3.org/1999/02/22-rdf-syntax-ns
+<rdf:RDF xmlns:dcterms="http://purl.org/dc/terms/"
+	 xmlns:aglsterms="http://www.agls.gov.au/agls/terms/"
+	 xmlns:versterms="http://www.prov.vic.gov.au/vers/terms/">
+<rdf:Description rdf:about="http://www.example.org/123">
+ <dcterms:creator><rdf:value>Peter Smith</rdf:value></dcterms:creator>
+ <dcterms:date rdf:datatype="xsd:date">2002-03-17</dcterms:date>
+ <dcterms:date rdf:datatype="xsd:dateTime">2002-03-17T12:00:00</dcterms:date>
+ <dcterms:available rdf:datatype="http://purl/dc/terms/Period">start=2002-03-11;end=2002-04-12</dcterms:available>
+ <dcterms:created rdf:datatype="xsd:date">2002-03-17</dcterms:created>
+ <dcterms:created rdf:datatype="xsd:dateTime">2002-03-17T12:00:00</dcterms:created>
+ <dcterms:dateCopyrighted rdf:datatype="xsd:date">2002-03-17</dcterms:dateCopyrighted>
+ <dcterms:dateCopyrighted rdf:datatype="xsd:dateTime">2002-03-17T12:00:00</dcterms:dateCopyrighted>
+ <dcterms:dateLicensed rdf:datatype="xsd:date">2002-03-17</dcterms:dateLicensed>
+ <dcterms:dateLicensed rdf:datatype="xsd:dateTime">2002-03-17T12:00:00</dcterms:dateLicensed>
+ <dcterms:issued rdf:datatype="xsd:date">2002-03-17</dcterms:issued>
+ <dcterms:issued rdf:datatype="xsd:dateTime">2002-03-17T12:00:00</dcterms:issued>
+ <dcterms:modified rdf:datatype="xsd:date">2002-03-17</dcterms:modified>
+ <dcterms:modified rdf:datatype="xsd:dateTime">2002-03-17T12:00:00</dcterms:modified>
+ <dcterms:valid rdf:datatype="http://purl/dc/terms/Period">start=2002-03-11;end=2002-04-12</dcterms:valid>
+ <dcterms:title>Title</dcterms:title>
+ <dcterms:alternative>Alt Title</dcterms:alternative>
+ <aglsterms:availability>Details</aglsterms:availability>
+ <dcterms:identifier>XYXX</dcterms:identifier>
+ <dcterms:bibliographicCitation>xxx</dcterms:bibliographicCitation>
+ <dcterms:publisher>Acme</dcterms:publisher>
+ <dcterms:description>Description</dcterms:description>
+ <aglsterms:function>School Education</aglsterms:function>
+ <dcterms:language>en</dcterms:language>
+ <dcterms:subject>Subject</dcterms:subject>
+ <dcterms:type>Annual Report</dcterms:type>
+ <aglsterms:aggregationLevel>collection</aglsterms:aggregationLevel>
+ <aglsterms:category>service</aglsterms:category>
+ <aglsterms:documentType>
+  <rdf:Description>
+   <dcam:memberOf rdf:resource="aglsterms:agls-document"/>
+   <rdf:value>contract</rdf:value>
+  </rdf:Description>
+ </aglsterms:documentType>
+ <aglsterms:serviceType>
+  <rdf:Description>
+   <dcam:memberOf rdf:resource="aglsterms:agls-service"/>
+   <rdf:value>bookings and reservations</rdf:value>
+  </rdf:Description>
+ </aglsterms:serviceType>
+ <dcterms:audience>Annual Report</dcterms:audience>
+ <dcterms:contributor>Jane Smith</dcterms:contributor>
+ <dcterms:coverage>Hunter River region</dcterms:coverage>
+ <dcterms:spatial>Central Australia</dcterms:spatial>
+ <dcterms:temporal>2001-01-31/2001-10-21</dcterms:temporal>
+ <aglsterms:jurisdiction>
+  <rdf:Description>
+   <dcam:memberOf rdf:resource="aglsterms:agls-AglsJuri"/>
+   <rdf:value>WA</rdf:value>
+  </rdf:Description>
+ </aglsterms:jurisdiction>
+ <dcterms:format>leather bound book</dcterms:format>
+ <dcterms:extent>1.5 megabytes</dcterms:extent>
+ <dcterms:medium>16mm film</dcterms:medium>
+ <aglsterms:mandate>Family Law Act 1975</aglsterms:mandate>
+ <aglsterms:act>Family Law Act 1975</aglsterms:act>
+ <aglsterms:case>Shaw v University of Queensland [1999]</aglsterms:case>
+ <aglsterms:regulation>Great Barrier Reef Region</aglsterms:regulation>
+ <dcterms:relation>16mm film</dcterms:relation>
+ <dcterms:conformsTo>16mm film</dcterms:conformsTo>
+ <dcterms:hasFormat>16mm film</dcterms:hasFormat>
+ <dcterms:hasPart>16mm film</dcterms:hasPart>
+ <dcterms:hasVersion>16mm film</dcterms:hasVersion>
+ <aglsterms:isBasisFor>16mm film</aglsterms:isBasisFor>
+ <aglsterms:isBasedOn>16mm film</aglsterms:isBasedOn>
+ <dcterms:isFormatOf>16mm film</dcterms:isFormatOf>
+ <dcterms:isPartOf>16mm film</dcterms:isPartOf>
+ <dcterms:isReferencedBy>16mm film</dcterms:isReferencedBy>
+ <dcterms:isReplacedBy>16mm film</dcterms:isReplacedBy>
+ <dcterms:isRequiredBy>16mm film</dcterms:isRequiredBy>
+ <dcterms:isVersionOf>16mm film</dcterms:isVersionOf>
+ <dcterms:replaces>16mm film</dcterms:replaces>
+ <dcterms:requires>16mm film</dcterms:requires>
+ <dcterms:rights>Copyright State of Victoria 1999</dcterms:rights>
+ <dcterms:accessRights>Copyright State of Victoria 1999</dcterms:accessRights>
+ <dcterms:license>Copyright State of Victoria 1999</dcterms:license>
+ <aglsterms:protectiveMarking>Cabinet in Confidence</aglsterms:protectiveMarking>
+ <dcterms:rightsHolder>State of Victoria 1999</dcterms:rightsHolder>
+ <dcterms:source>State of Victoria 1999</dcterms:source>
+ <versterms:disposalReviewDate>2020</versterms:disposalReviewDate>
+ <versterms:disposalAction>Destroy</versterms:disposalAction>
+ <versterms:disposalCondition>None</versterms:disposalCondition>
+ <versterms:disposalReference>PROS 15/01 clause 10.1</versterms:disposalReference>
+</rdf:Description>
+</rdf:RDF>
+
