@@ -197,7 +197,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK);
+            cv.addContent();
             testFailed(module, test);
         } catch (VEOError e) {
             handleVEOError(module, test, e, 1);
@@ -209,7 +209,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -218,7 +218,7 @@ public class TestCreateVEO {
             }
             ds.close();
             cv.finishFiles();
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-7"));
+            cv.addContent(Paths.get("Test", "S-37-7"));
             testFailed(module, test);
         } catch (VEOError e) {
             handleVEOError(module, test, e, 2);
@@ -232,7 +232,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -242,7 +242,7 @@ public class TestCreateVEO {
             ds.close();
             cv.finishFiles();
             cv.sign(signer, "SHA1withRSA");
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-7"));
+            cv.addContent(Paths.get("Test", "S-37-7"));
             testFailed(module, test);
         } catch (VEOError e) {
             handleVEOError(module, test, e, 3);
@@ -256,7 +256,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -267,7 +267,7 @@ public class TestCreateVEO {
             cv.finishFiles();
             cv.sign(signer, "SHA1withRSA");
             cv.finalise(false);
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-7"));
+            cv.addContent(Paths.get("Test", "S-37-7"));
             testFailed(module, test);
         } catch (VEOError e) {
             handleVEOError(module, test, e, 4);
@@ -280,7 +280,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, (Path) null);
+            cv.addContent((Path) null);
             testFailed(module, test);
         } catch (VEOError e) {
             handleVEOError(module, test, e, 5);
@@ -291,7 +291,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-5"));
+            cv.addContent(Paths.get("Test", "S-37-5"));
             testFailed(module, test);
         } catch (VEOError e) {
             handleVEOError(module, test, e, 6);
@@ -302,8 +302,8 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             testFailed(module, test);
         } catch (VEOError e) {
             handleVEOError(module, test, e, 7);
@@ -356,7 +356,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -379,7 +379,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -403,7 +403,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -446,7 +446,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addMetadataPackage(null, new String[]{"First", "Second"});
             testFailed(module, test);
@@ -459,7 +459,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addMetadataPackage(templates.findTemplate("agls"), null);
             testFailed(module, test);
@@ -472,7 +472,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addMetadataPackage(templates.findTemplate("agls"), new String[]{"first", "second"});
             testFailed(module, test);
         } catch (VEOError e) {
@@ -484,7 +484,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             cv.addMetadataPackage(templates.findTemplate("agls"), new String[]{"first", "second"});
@@ -499,7 +499,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -522,7 +522,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -546,7 +546,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -588,7 +588,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addMetadataPackage(templates.findTemplate("agls"), new String[]{"First", "Second"});
             cv.continueMetadataPackage(null, new String[]{"First", "Second"});
@@ -602,7 +602,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addMetadataPackage(templates.findTemplate("agls"), new String[]{"First", "Second"});
             cv.continueMetadataPackage(templates.findTemplate("agls"), null);
@@ -616,7 +616,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.continueMetadataPackage(templates.findTemplate("agls"), new String[]{"first", "second"});
             testFailed(module, test);
         } catch (VEOError e) {
@@ -628,7 +628,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             cv.continueMetadataPackage(templates.findTemplate("agls"), new String[]{"first", "second"});
@@ -643,7 +643,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -666,7 +666,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -690,7 +690,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -732,7 +732,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationPiece("label");
             testFailed(module, test);
         } catch (VEOError e) {
@@ -745,7 +745,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -768,7 +768,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -792,7 +792,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -834,7 +834,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece(null);
             cv.addContentFile(null);
@@ -848,7 +848,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addContentFile(Paths.get("S-37-6", "S-37-6.docx").toString());
             testFailed(module, test);
         } catch (VEOError e) {
@@ -860,7 +860,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 0);
             cv.addContentFile(Paths.get("S-37-6", "S-37-6.docx").toString());
             testFailed(module, test);
@@ -873,7 +873,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 0);
             cv.addMetadataPackage(templates.findTemplate("agls"), new String[]{"First", "Second"});
             cv.addContentFile(Paths.get("S-37-6", "S-37-6.docx").toString());
@@ -888,7 +888,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -911,7 +911,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -935,7 +935,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -1028,7 +1028,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -1051,7 +1051,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -1075,7 +1075,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -1128,7 +1128,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -1151,7 +1151,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -1175,7 +1175,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -1218,7 +1218,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -1241,7 +1241,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addInformationPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "S-37-6"));
@@ -1263,7 +1263,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.sign(signer, "SHA1withRSA");
             testFailed(module, test);
         } catch (VEOError e) {
@@ -1275,7 +1275,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.sign(signer, "SHA1withRSA");
             testFailed(module, test);
@@ -1288,7 +1288,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addMetadataPackage(templates.findTemplate("agls"), new String[]{"First", "Second"});
             cv.sign(signer, "SHA1withRSA");
@@ -1302,7 +1302,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addMetadataPackage(templates.findTemplate("agls"), new String[]{"First", "Second"});
             cv.addInformationPiece("Label");
@@ -1318,7 +1318,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addMetadataPackage(templates.findTemplate("agls"), new String[]{"First", "Second"});
             cv.addInformationPiece("Label");
@@ -1343,7 +1343,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addMetadataPackage(templates.findTemplate("agls"), new String[]{"First", "Second"});
             cv.addInformationPiece("Label");
@@ -1385,7 +1385,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.finalise(false);
             testFailed(module, test);
         } catch (VEOError e) {
@@ -1397,7 +1397,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.finalise(false);
             testFailed(module, test);
@@ -1410,7 +1410,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addMetadataPackage(templates.findTemplate("agls"), new String[]{"First", "Second"});
             cv.finalise(false);
@@ -1424,7 +1424,7 @@ public class TestCreateVEO {
         try {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addMetadataPackage(templates.findTemplate("agls"), new String[]{"First", "Second"});
             cv.addInformationPiece("Label");
@@ -1440,7 +1440,7 @@ public class TestCreateVEO {
             cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", false);
             veoDir = cv.getVEODir();
             cv.addVEOReadme(Paths.get("Test", "Templates"));
-            cv.addContent(CreateVEO.AddMode.HARD_LINK, Paths.get("Test", "S-37-6"));
+            cv.addContent(Paths.get("Test", "S-37-6"));
             cv.addInformationObject("Record", 1);
             cv.addMetadataPackage(templates.findTemplate("agls"), new String[]{"First", "Second"});
             cv.addInformationPiece("Label");

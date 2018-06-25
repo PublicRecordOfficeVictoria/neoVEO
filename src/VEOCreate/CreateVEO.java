@@ -4,14 +4,30 @@
  * Author Andrew Waugh
  * Version 1.0 February 2015
  * Version 1.0.1 Feb 2018 fixed a bug in LinkOrCopy()
+ * Version 1.1 25 June 2018 Content files are now zipped directly from the
+ * original file, instead of being copied, moved, or linked into the VEO. THe
+ * options to copy, move, or link the files were removed
  */
 package VEOCreate;
 
 import VERSCommon.PFXUser;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFatal;
-import java.io.*;
-import java.nio.file.*;
+import java.nio.file.Path;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileSystemException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
@@ -31,6 +47,8 @@ public class CreateVEO {
     CreateVEOContent cvc;   // the VEOContent.xml file being created
     CreateVEOHistory cvhf;  // the VEOHistory.xml file being created
     CreateSignatureFile csf;// used to generate signture files
+    HashMap<String, Path> contentPrefixes; // content directories to create in VEO
+    ArrayList<FileToInclude> filesToInclude; // list of files to include
 
     // state of the VEO being built
     private enum VEOState {
@@ -102,6 +120,10 @@ public class CreateVEO {
         } catch (IOException e) {
             throw new VEOError(classname, 7, "failed to create VEO directory '" + name + "' :" + e.toString());
         }
+
+        contentPrefixes = new HashMap<>();
+        contentPrefixes.put("DefaultContent", Paths.get("DefaultContent")); // put in the default content directory
+        filesToInclude = new ArrayList<>();
 
         // create VEO Content and VEO History files
         cvc = new CreateVEOContent(veoDir, "3.0", hashAlg);
@@ -204,30 +226,16 @@ public class CreateVEO {
     }
 
     /**
-     * How to add content files to the VEO being created. The content files can
-     * be copied, moved, or linked.
-     */
-    public enum AddMode {
-
-        COPY, // Copy the files
-        MOVE, // Move the files
-        HARD_LINK, // Hard link to the files
-        SOFT_LINK  // Create a symbolic link to the files
-    };
-
-    /**
      * Add content files to the VEO being created. Content files can be copied,
      * moved, or linked into the VEO directory. Linking the files is the
      * fastest, but is not supported across file systems
      *
-     * @param mode how to add the content
      * @param directories a list of directories to be added
      * @throws VEOError if the error affects this VEO only
      * @throws VEOFatal if the error means no VEOs can be generated
      */
-    public void addContent(AddMode mode, Path... directories) throws VEOError {
+    public void addContent(Path... directories) throws VEOError {
         String method = "addContent";
-        Path toDir;
         int i;
 
         // check there is at least one directory to add...
@@ -259,153 +267,9 @@ public class CreateVEO {
             if (!Files.exists(directories[i])) {
                 throw new VEOError(classname, method, 6, "content directory '" + directories[i].toString() + "' does not exist");
             }
-            toDir = Paths.get(veoDir.toString(), directories[i].getFileName().toString());
 
-            // link the content directory into the VEO directory
-            try {
-                switch (mode) {
-                    case MOVE:
-                        Files.move(toDir, directories[i]);
-                        break;
-                    case HARD_LINK:
-                    case COPY:
-                        linkOrCopy(mode, toDir, directories[i]);
-                        break;
-                    case SOFT_LINK:
-                        Files.createSymbolicLink(toDir, directories[i]);
-                        break;
-                }
-            } catch (FileAlreadyExistsException e) {
-                throw new VEOError(classname, method, 7, "content directory '" + directories[i].getFileName() + "' has been added twice");
-            } catch (IOException e) {
-                throw new VEOError(classname, method, 8, "Problem adding content files from '" + directories[i].toString() + "': " + e.toString());
-            }
-        }
-    }
-
-    /**
-     * Add individual content file to the default directory in the VEO being
-     * created. Content files can be copied, moved, or linked into the VEO
-     * directory. Linking the files is the fastest, but is not supported across
-     * file systems
-     *
-     * @param mode how to add the content
-     * @param files a list of directories to be added
-     * @throws VEOError if the error affects this VEO only
-     * @throws VEOFatal if the error means no VEOs can be generated
-     */
-    public void addIndividualContentFiles(AddMode mode, Path... files) throws VEOError {
-        String method = "addIndividualContentFiles";
-        Path toDir;
-        int i;
-        boolean nofiles;
-
-        // check there is at least one directory to add...
-        nofiles = true;
-
-        // can only add content until the VEO has been signed
-        switch (state) {
-            case VEO_STARTED:
-            case IO_STARTED:
-            case ADDING_MP:
-            case ADDING_IP:
-                break;
-            case FINISHED_FILES:
-                throw new VEOError(classname, method, 2, "Content cannot be added after finishFiles() has been called");
-            case SIGNED:
-                throw new VEOError(classname, method, 3, "Content cannot be added after sign() has been called");
-            case FINISHED:
-                throw new VEOError(classname, method, 4, "Content cannot be added after finalise() has been called");
-        }
-        // add directories...
-        for (i = 0; i < files.length; i++) {
-
-            // check that the source content file exists
-            if (files[i] == null) {
-                throw new VEOError(classname, method, 5, "a content file is null");
-            }
-            if (files[i].toString().equals("") || files[i].toString().trim().equals(" ")) {
-                continue;
-            }
-            nofiles = false;
-            if (!Files.exists(files[i])) {
-                throw new VEOError(classname, method, 6, "content file '" + files[i].toString() + "' does not exist");
-            }
-
-            // check that the default content directory exists, and if not, create it
-            toDir = Paths.get(veoDir.toString(), "DefaultContent");
-            if (!Files.exists(toDir)) {
-                try {
-                    Files.createDirectory(toDir);
-                } catch (IOException e) {
-                    throw new VEOError(classname, method, 9, "Problem creating default content directory " + toDir.toString() + " Problem was: " + e.getMessage());
-                }
-            }
-            // log.log(Level.WARNING, "veoDir:''{0}''{1}''{2}", new Object[]{veoDir, directories[i], toDir});
-
-            // link the content directory into the VEO directory
-            try {
-                switch (mode) {
-                    case MOVE:
-                        Files.move(files[i], toDir.resolve(files[i].getFileName()));
-                        break;
-                    case HARD_LINK:
-                        Files.createLink(toDir.resolve(files[i].getFileName()), files[i]);
-                        break;
-                    case COPY:
-                        Files.copy(files[i], toDir.resolve(files[i].getFileName()));
-                        break;
-                    case SOFT_LINK:
-                        Files.createSymbolicLink(toDir, files[i]);
-                        break;
-                }
-            } catch (FileAlreadyExistsException e) {
-                throw new VEOError(classname, method, 7, "content file '" + files[i].getFileName() + "' has been added twice");
-            } catch (IOException e) {
-                throw new VEOError(classname, method, 8, "Problem adding content files from '" + files[i].toString() + "': " + e.toString());
-            }
-        }
-
-        // check that at least one file has been added...
-        if (nofiles) {
-            throw new VEOError(classname, method, 1, "must be passed at least one (non blank) file");
-        }
-    }
-
-    /**
-     * Private function to create a subdirectory containing (hard) links to an
-     * original tree. Needed because Windows does not support symbolic links,
-     * nor hard links to directories
-     *
-     * @param toDir
-     * @param fromDir
-     * @throws VEOError
-     */
-    private void linkOrCopy(AddMode mode, Path toDir, Path fromDir) throws IOException {
-        DirectoryStream<Path> ds;
-        String sourceFile;
-        Path destFile;
-
-        Files.createDirectory(toDir);
-
-        // get a list of files in the content directory
-        ds = Files.newDirectoryStream(fromDir);
-
-        // go through list and for each file
-        for (Path p : ds) {
-            sourceFile = p.getFileName().toString();
-            destFile = Paths.get(toDir.toString(), sourceFile);
-
-            // if a directory, create new directory and recurse
-            if (Files.isDirectory(p)) {
-                linkOrCopy(mode, destFile, p);
-
-                // otherwise link or copy the source into the link directory
-            } else if (mode == AddMode.COPY) {
-                Files.copy(p, destFile, StandardCopyOption.COPY_ATTRIBUTES);
-            } else {
-                Files.createLink(destFile, p);
-            }
+            // remember content directory prefix
+            contentPrefixes.put(directories[i].getFileName().toString(), directories[i]);
         }
     }
 
@@ -645,6 +509,7 @@ public class CreateVEO {
      */
     public void addContentFile(String file) throws VEOError {
         String method = "addContentFile";
+        Path source;
 
         // sanity checks
         if (file == null) {
@@ -656,8 +521,127 @@ public class CreateVEO {
             throw new VEOError(classname, method, 2, "Can only add a Content File when adding an Information Piece");
         }
 
-        // add content file
-        cvc.addContentFile(file);
+        // remember file to be zipped later
+        source = getActualSourcePath(file);
+
+        if (!Files.exists(source)) {
+            throw new VEOError(classname, method, 3, "content file '" + source.toString() + "' does not exist");
+        }
+        filesToInclude.add(new FileToInclude(source, file));
+        System.err.println(source.toString() + "->" + file);
+        cvc.addContentFile(file, source);
+    }
+
+    /**
+     * Add a reference to a content file to an Information Piece.
+     *
+     * @param file content file to add
+     * @throws VEOError if an error occurs
+     */
+    public void addContentFile(String file, Path source) throws VEOError {
+        String method = "addContentFile";
+
+        // sanity checks
+        if (file == null) {
+            throw new VEOError(classname, method, 1, "file parameter is null");
+        }
+
+        // can only add Content Files when adding an Information Piece
+        if (state != VEOState.ADDING_IP) {
+            throw new VEOError(classname, method, 2, "Can only add a Content File when adding an Information Piece");
+        }
+
+        // if ZIPping files, remember it...
+        System.err.println(source.toString() + "->" + file);
+        cvc.addContentFile(file, source);
+    }
+
+    /**
+     * Get the path to the real source file. THere are three cases: if the we
+     * have linked, moved, or copied the source file to the VEO directory, the
+     * source file is the entry in the VEO directory. If we are directly ZIPping
+     * the source file, calculate the actual file from the previously added
+     * content directory (if one exists). Otherwise, file directly points to the
+     * source file.
+     *
+     * @param file the path name to be used in the VEO
+     * @return the real file
+     * @throws VEOError if the content directory hasn't been loaded
+     */
+    public Path getActualSourcePath(String file) throws VEOError {
+        String method = "getSourcePath";
+        Path rootPath, source, destination;
+        String rootName;
+
+        destination = Paths.get(file);
+        rootName = destination.getName(0).toString();
+        rootPath = contentPrefixes.get(rootName);
+        if (rootPath == null) {
+            source = Paths.get(file);
+        } else {
+            source = rootPath.resolve(destination.subpath(1, destination.getNameCount()));
+        }
+        return source;
+    }
+
+    /**
+     * Add individual content file to the default directory in the VEO being
+     * created. Content files can be copied, moved, or linked into the VEO
+     * directory. Linking the files is the fastest, but is not supported across
+     * file systems
+     *
+     * @param files a list of directories to be added
+     * @throws VEOError if the error affects this VEO only
+     * @throws VEOFatal if the error means no VEOs can be generated
+     */
+    public void addIndividualContentFiles(Path... files) throws VEOError {
+        String method = "addIndividualContentFiles";
+        int i;
+        boolean nofiles;
+        String s;
+
+        // check there is at least one directory to add...
+        nofiles = true;
+
+        // can only add content until the VEO has been signed
+        switch (state) {
+            case VEO_STARTED:
+            case IO_STARTED:
+            case ADDING_MP:
+            case ADDING_IP:
+                break;
+            case FINISHED_FILES:
+                throw new VEOError(classname, method, 2, "Content cannot be added after finishFiles() has been called");
+            case SIGNED:
+                throw new VEOError(classname, method, 3, "Content cannot be added after sign() has been called");
+            case FINISHED:
+                throw new VEOError(classname, method, 4, "Content cannot be added after finalise() has been called");
+        }
+        // add directories...
+        for (i = 0; i < files.length; i++) {
+
+            // check that the source content file exists
+            if (files[i] == null) {
+                throw new VEOError(classname, method, 5, "a content file is null");
+            }
+            if (files[i].toString().equals("") || files[i].toString().trim().equals(" ")) {
+                continue;
+            }
+            nofiles = false;
+            if (!Files.exists(files[i])) {
+                throw new VEOError(classname, method, 6, "content file '" + files[i].toString() + "' does not exist");
+            }
+
+            // log.log(Level.WARNING, "veoDir:''{0}''{1}''{2}", new Object[]{veoDir, directories[i], toDir});
+            // link the content directory into the VEO directory
+            s = veoDir.resolve(Paths.get("DefaultContent")).resolve(files[i].getFileName()).toString();
+            filesToInclude.add(new FileToInclude(files[i], s));
+        }
+
+        // check that at least one file has been added...
+        if (nofiles) {
+            throw new VEOError(classname, method, 1, "must be passed at least one (non blank) file");
+        }
     }
 
     /**
@@ -858,6 +842,10 @@ public class CreateVEO {
 
             // recursively process VEO file
             zip(zos, veoDir.getParent(), veoDir);
+
+            // include the content files
+            zipContentFiles(zos, veoDir);
+
         } catch (IOException e) {
             throw new VEOError(classname, method, 1, "Error creating ZIP file: " + e.toString());
         } finally {
@@ -897,7 +885,6 @@ public class CreateVEO {
         DirectoryStream<Path> ds = null;
         int l;
         Path relPath;
-        String s;
         ZipEntry zs;
 
         try {
@@ -911,12 +898,10 @@ public class CreateVEO {
                 // construct the Path between the veoDir and the file being linked
                 relPath = veoDir.relativize(p);
 
-                // enter it in the ZIP file
-                s = relPath.toString();
-
                 // copy a regular file into the ZIP file
                 if (relPath.getNameCount() != 0 && Files.isRegularFile(p)) {
-                    zs = new ZipEntry(s);
+                    // System.err.println("Adding '" + s + "'");
+                    zs = new ZipEntry(relPath.toString());
                     zs.setTime(Files.getLastModifiedTime(p).toMillis());
                     zos.putNextEntry(zs);
 
@@ -947,6 +932,65 @@ public class CreateVEO {
     }
 
     /**
+     * ZIP the content files specified to be included. We keep track of what
+     * files have been ZIPped, so that we only include them once.
+     *
+     * @param zos the ZIP output stream
+     * @param veoDir the root directory of the ZIP
+     * @throws IOException
+     */
+    private void zipContentFiles(ZipOutputStream zos, Path veoDir) throws IOException {
+        String method = "zipContentFiles";
+        FileInputStream fis;
+        BufferedInputStream bis;
+        byte[] b = new byte[1024];
+        FileToInclude fi;
+        int i, l;
+        Path relPath;
+        ZipEntry zs;
+        HashMap<String, Path> seen;
+
+        seen = new HashMap<>();
+
+        // go through list and for each file
+        for (i = 0; i < filesToInclude.size(); i++) {
+            fi = filesToInclude.get(i);
+            // log.log(Level.WARNING, "zipping:" + p.toString());
+
+            // have we already zipped this file?
+            if (seen.containsKey(fi.destination)) {
+                continue;
+            } else {
+                seen.put(fi.destination, fi.source);
+            }
+
+            // construct the Path between the veoDir and the file being linked
+            relPath = veoDir.getFileName().resolve(fi.destination);
+
+            // copy a regular file into the ZIP file
+            if (relPath.getNameCount() != 0 && Files.isRegularFile(fi.source)) {
+                zs = new ZipEntry(relPath.toString());
+                zs.setTime(Files.getLastModifiedTime(fi.source).toMillis());
+                zos.putNextEntry(zs);
+
+                // copy the content
+                fis = new FileInputStream(fi.source.toString());
+                bis = new BufferedInputStream(fis);
+                while ((l = fis.read(b)) > 0) {
+                    zos.write(b, 0, l);
+                }
+                bis.close();
+                fis.close();
+
+                // close this ZIP entry
+                zos.closeEntry();
+            }
+        }
+        seen.clear();
+        seen = null;
+    }
+
+    /**
      * Abandon construction of this VEO and free any resources associated with
      * it. This method is called automatically by the finalise() method. It may
      * also be called at any other time to abandon construction of the VEO (e.g.
@@ -971,6 +1015,10 @@ public class CreateVEO {
             csf.abandon(debug);
         }
         csf = null;
+        contentPrefixes.clear();
+        contentPrefixes = null;
+        filesToInclude.clear();
+        filesToInclude = null;
 
         // delete VEO directory if it exists
         try {
@@ -1011,6 +1059,23 @@ public class CreateVEO {
     }
 
     /**
+     * This class simply records a content file that needs to be included in the
+     * VEO. It contains two file names: the actual location of the file to be
+     * included in the real file system; and the eventual location of the file
+     * in the VEO.
+     */
+    private class FileToInclude {
+
+        Path source;
+        String destination;
+
+        public FileToInclude(Path source, String destination) {
+            this.source = source;
+            this.destination = destination;
+        }
+    }
+
+    /**
      * Test program...
      *
      * @param args the command line arguments
@@ -1031,7 +1096,7 @@ public class CreateVEO {
             cv.addVEOReadme(Paths.get("Test"));
 
             // add content files
-            cv.addContent(AddMode.HARD_LINK, Paths.get("Test", "testDir"));
+            cv.addContent(Paths.get("Test", "testDir"));
 
             // create VEO Content file
             cvc = new CreateVEOContent(veoDir, "3.0", "SHA-1");
@@ -1044,7 +1109,7 @@ public class CreateVEO {
             cvc.startInfoPiece("Label");
             ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "testDir"));
             for (Path p : ds) {
-                cvc.addContentFile((veoDir.relativize(p)).toString());
+                cvc.addContentFile((veoDir.relativize(p)).toString(), null);
             }
             cvc.finishInfoPiece();
             cvc.finishInfoObject();

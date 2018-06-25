@@ -182,7 +182,6 @@ public class CreateVEOs {
     boolean debug;          // true if debugging
     String hashAlg;         // hash algorithm to use
     String inputEncoding;   // how to translate the characters in the control file to UTF-16
-    CreateVEO.AddMode mode; // mode to use when including content files
     Templates templates;    // database of templates
 
     // state of the VEOs being built
@@ -228,7 +227,6 @@ public class CreateVEOs {
         debug = false;
         hashAlg = "SHA-1";
         inputEncoding = "UTF-8";
-        mode = CreateVEO.AddMode.HARD_LINK;
         state = State.PREAMBLE;
 
         // process command line arguments
@@ -317,25 +315,22 @@ public class CreateVEOs {
                         i++;
                         break;
 
-                    // copy content
+                    // copy content - ignore
                     case "-copy":
                         i++;
-                        mode = CreateVEO.AddMode.COPY;
-                        log.log(Level.INFO, "Content files are to be copied");
+                        log.log(Level.INFO, "-copy argument is now redundant");
                         break;
 
                     // move content
                     case "-move":
                         i++;
-                        mode = CreateVEO.AddMode.MOVE;
-                        log.log(Level.INFO, "Content files are to be moved");
+                        log.log(Level.INFO, "-move argument is now redundant");
                         break;
 
                     // link content
                     case "-link":
                         i++;
-                        mode = CreateVEO.AddMode.HARD_LINK;
-                        log.log(Level.INFO, "Content files are to be hard linked");
+                        log.log(Level.INFO, "-link argument is now reduntant");
                         break;
 
                     // if verbose...
@@ -460,6 +455,7 @@ public class CreateVEOs {
 
     /**
      * Read commands from the Reader to build VEOs
+     *
      * @param br
      * @throws VEOFatal
      */
@@ -617,7 +613,7 @@ public class CreateVEOs {
                         // go through list of directories adding them
                         try {
                             for (i = 1; i < tokens.length; i++) {
-                                veo.addContent(mode, getRealFile(tokens[i]));
+                                veo.addContent(getRealFile(tokens[i]));
                             }
                         } catch (VEOError e) {
                             veoFailed(line, "AC command failed", e);
@@ -785,8 +781,12 @@ public class CreateVEOs {
                         Path p;
                         label = null;
                         i = 1;
-                        p = Paths.get(veo.getVEODir().toString(), tokens[1]);
-                        if (!Files.exists(p) || !Files.isRegularFile(p)) {
+                        try {
+                            p = veo.getActualSourcePath(tokens[1]);
+                        } catch (VEOError ve) {
+                            p = null;
+                        }
+                        if (p == null || !Files.exists(p) || !Files.isRegularFile(p)) {
                             i = 2;
                             label = tokens[1];
                             if (tokens.length < 3) {
@@ -941,15 +941,12 @@ public class CreateVEOs {
                                     continue;
                                 }
                                 if (foundFiles) {
-                                    // add this file to the default content directory
-                                    veo.addIndividualContentFiles(mode, Paths.get(tokens[i]));
-
                                     // create information piece
                                     veo.addInformationPiece(null);
 
                                     // add the content file to the information piece
                                     log.log(Level.FINE, "Adding ''{0}''", tokens[i]);
-                                    veo.addContentFile((Paths.get("DefaultContent", Paths.get(tokens[i]).getFileName().toString())).toString());
+                                    veo.addContentFile(tokens[i]);
                                 }
                             }
 
@@ -1063,7 +1060,7 @@ public class CreateVEOs {
 
     /**
      * VERSDate method to report an error resulting from a VEOFatal or VEOError
- exception.
+     * exception.
      *
      * @param line line in control file in which error occurred
      * @param s a string describing error

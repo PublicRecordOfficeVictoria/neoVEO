@@ -3,6 +3,8 @@
  * Licensed under the CC-BY license http://creativecommons.org/licenses/by/3.0/au/
  * Author Andrew Waugh
  * Version 1.0 February 2015
+ * 25-06-2018 changed addContentFile() to have explicit source and destination
+ * parameters
  */
 package VEOCreate;
 
@@ -251,7 +253,7 @@ public class CreateVEOContent extends CreateXMLDoc {
         }
         write(data.toString());
     }
-    
+
     /**
      * Adds a prebuilt metadata packages from a String
      *
@@ -268,7 +270,7 @@ public class CreateVEOContent extends CreateXMLDoc {
         }
         write(data);
     }
-    
+
     /**
      * Finishes a metadata package
      *
@@ -350,13 +352,13 @@ public class CreateVEOContent extends CreateXMLDoc {
     /**
      * Add a content file to an Information Piece
      *
-     * @param pathName the name of the content file to add
+     * @param nameInVEO the name of the content file being added
+     * @param fileToHash the fileToHash of the file at the moment
      * @throws VEOError if a fatal error occurred
      */
-    public void addContentFile(String pathName) throws VEOError {
+    public void addContentFile(String nameInVEO, Path fileToHash) throws VEOError {
         String method = "addContentFile";
         MessageDigest md;
-        Path fileToHash;
         FileInputStream fis;    // input streams to read file to sign
         BufferedInputStream bis;//
         byte[] hash;            // generated hash
@@ -370,15 +372,17 @@ public class CreateVEOContent extends CreateXMLDoc {
         state = State.SCND_STG_INFO_PIECE;
 
         // sanity checks...
-        if (pathName == null) {
-            throw new VEOError(classname, method, 1, "pathName is null");
+        if (nameInVEO == null) {
+            throw new VEOError(classname, method, 1, "nameInVEO is null");
         }
-        if (pathName.trim().equals(" ")) {
-            throw new VEOError(classname, method, 1, "pathName is blank");
+        if (nameInVEO.trim().equals(" ")) {
+            throw new VEOError(classname, method, 1, "nameInVEO is blank");
         }
 
         // check that the file exists
-        fileToHash = Paths.get(veoDir.toString(), pathName);
+        if (fileToHash == null) {
+            fileToHash = Paths.get(veoDir.toString(), nameInVEO);
+        }
         if (Files.notExists(fileToHash)) {
             throw new VEOError(classname, method, 1, "File to add '" + fileToHash.toString() + "' does not exist");
         }
@@ -419,7 +423,7 @@ public class CreateVEOContent extends CreateXMLDoc {
 
         // add the Content File
         write(contentsCF1);
-        writeValue(pathName);
+        writeValue(nameInVEO);
         write(contentsCF2);
 
         // output hash value
@@ -466,7 +470,7 @@ public class CreateVEOContent extends CreateXMLDoc {
             cvc.startMetadataPackage("", "");
             cvc.finishMetadataPackage();
             cvc.startInfoPiece("Label");
-            cvc.addContentFile("TestContent.txt");
+            cvc.addContentFile("TestContent.txt", null);
             cvc.finishInfoPiece();
             cvc.finishInfoObject();
             cvc.finalise();
