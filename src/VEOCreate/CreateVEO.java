@@ -523,12 +523,11 @@ public class CreateVEO {
 
         // remember file to be zipped later
         source = getActualSourcePath(file);
-
         if (!Files.exists(source)) {
             throw new VEOError(classname, method, 3, "content file '" + source.toString() + "' does not exist");
         }
         filesToInclude.add(new FileToInclude(source, file));
-        System.err.println(source.toString() + "->" + file);
+        
         cvc.addContentFile(file, source);
     }
 
