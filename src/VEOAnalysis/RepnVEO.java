@@ -9,6 +9,7 @@ package VEOAnalysis;
 import VERSCommon.VEOError;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -348,13 +349,13 @@ public class RepnVEO extends Repn {
                 log.log(Level.FINE, "Extracting: {0}({1}) {2} {3}", new Object[]{entry.getName(), entry.getSize(), entry.getTime(), entry.isDirectory()});
 
                 // check that the VEOName in the ZIP file is the same as on the ZIP file
-                s = Paths.get(entry.getName()).getName(0).toString();
+                s = new File(entry.getName()).toPath().getName(0).toString();
                 if (!veoName.equals(s + ".zip")) {
                     throw new VEOError(classname, method, 1, "The name of the zip file (" + veoName + ") is different to that contained in the entries in the ZIP file (" + s +")");
                 }
 
                 // get the name of that entry in the VEO directory
-                f = veoDir.getParent().resolve(entry.getName());
+                f = veoDir.getParent().resolve(new File(entry.getName()).toPath());
 
                 // make any directories...
                 if (entry.isDirectory()) {
