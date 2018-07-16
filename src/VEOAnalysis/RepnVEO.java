@@ -9,7 +9,6 @@ package VEOAnalysis;
 import VERSCommon.VEOError;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -63,7 +62,7 @@ public class RepnVEO extends Repn {
         super("");
 
         int i;
-        String s;
+        String s, safe;
         Path zipFile, p;
 
         // initialise
@@ -79,18 +78,20 @@ public class RepnVEO extends Repn {
         veoReadmePresent = false;
 
         // check if VEO exists
-        zipFile = Paths.get(veo);
+        safe = veo.replaceAll("\\\\", "/");
+        zipFile = Paths.get(safe);
         if (!Files.exists(zipFile)) {
-            throw new VEOError(1, errMesg(classname, "VEO file name '" + veo + "' does not exist"));
+            throw new VEOError(1, errMesg(classname, "VEO file name '" + safe + "' does not exist"));
         }
 
         // get VEO directory name
         s = zipFile.getFileName().toString();
         if ((i = s.lastIndexOf(".zip")) == -1) {
-            throw new VEOError(2, errMesg(classname, "VEO file name '" + veo + "' does not end in '.zip'"));
+            throw new VEOError(2, errMesg(classname, "VEO file name '" + safe + "' does not end in '.zip'"));
         }
         s = s.substring(0, i);
-        veoDir = output.resolve(s);
+        safe = s.replaceAll("\\\\", "/");
+        veoDir = output.resolve(safe);
 
         // delete the VEO directory (if it exists)
         deleteVEO();
@@ -98,15 +99,16 @@ public class RepnVEO extends Repn {
         // unzip veo into VEO directory
         unzip(zipFile);
     }
-    
+
     /**
      * Return the VEO directory
+     *
      * @return the VEO directory
      */
     public Path getVEODir() {
         return veoDir;
     }
-    
+
     /**
      * Construct an internal representation of the VEO ready for validation
      *
@@ -147,7 +149,7 @@ public class RepnVEO extends Repn {
                     case "VEOReadme.txt":
                         int expVEOSize = 4840;
                         if (Files.size(entry) != expVEOSize) {
-                            readme.addWarning("VEOReadme.txt has an unexpected size(" + Files.size(entry) + ") instead of "+expVEOSize);
+                            readme.addWarning("VEOReadme.txt has an unexpected size(" + Files.size(entry) + ") instead of " + expVEOSize);
                         }
                         veoReadmePresent = true;
                         break;
@@ -268,7 +270,8 @@ public class RepnVEO extends Repn {
      * Validate the data in the RepnVEO.
      *
      * @param ltpfs HashMap of valid long term preservation formats
-     * @param noRec true if not to complain about missing recommended metadata elements
+     * @param noRec true if not to complain about missing recommended metadata
+     * elements
      * @throws VEOSupport.VEOError if validation couldn't be completed
      */
     public final void validate(HashMap<String, String> ltpfs, boolean noRec) throws VEOError {
@@ -348,14 +351,15 @@ public class RepnVEO extends Repn {
                 entry = (ZipEntry) entries.nextElement();
                 log.log(Level.FINE, "Extracting: {0}({1}) {2} {3}", new Object[]{entry.getName(), entry.getSize(), entry.getTime(), entry.isDirectory()});
 
-                // check that the VEOName in the ZIP file is the same as on the ZIP file
-                s = new File(entry.getName()).toPath().getName(0).toString();
-                if (!veoName.equals(s + ".zip")) {
-                    throw new VEOError(classname, method, 1, "The name of the zip file (" + veoName + ") is different to that contained in the entries in the ZIP file (" + s +")");
+                // get the local path to extract the ZIP entry into
+                // this is so horrible because Paths.resolve won't process
+                // windows file separators in a string on Unix boxes
+                String safe = entry.getName().replaceAll("\\\\", "/");
+                Path p = Paths.get(safe);
+                if (!veoName.equals(p.getName(0).toString() + ".zip")) {
+                    throw new VEOError(classname, method, 1, "The name of the zip file (" + veoName + ") is different to that contained in the entries in the ZIP file (" + entry.getName() + ")");
                 }
-
-                // get the name of that entry in the VEO directory
-                f = veoDir.getParent().resolve(new File(entry.getName()).toPath());
+                f = veoDir.getParent().resolve(p);
 
                 // make any directories...
                 if (entry.isDirectory()) {
@@ -615,7 +619,7 @@ public class RepnVEO extends Repn {
      * validate().
      *
      * @param verbose true if additional information is to be generated
-     * @throws VEOSupport.VEOError  if a fatal error occurred
+     * @throws VEOSupport.VEOError if a fatal error occurred
      */
     public void genReport(boolean verbose) throws VEOError {
         String method = "genReport";
@@ -638,7 +642,7 @@ public class RepnVEO extends Repn {
 
         // create index file
         createReport(veoDir, "index.html", "Report for " + veoDir.getFileName());
-        
+
         // check for errors and warnings
         hasErrors();
         hasWarnings();

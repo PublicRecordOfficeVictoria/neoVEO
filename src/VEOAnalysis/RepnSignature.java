@@ -57,9 +57,7 @@ public class RepnSignature extends RepnXML {
      * @param veoDir VEO directory that contains the VEOSignature.xml file
      * @param sigFileName The signature file
      * @param schemaDir schemaDir directory that contains vers2-signature.xsd
-     * @throws VEOSupport.VEOFatal if a system error occurred would prevent
-     * processing any VEO
-     * @throws VEOSupport.VEOError if an error occurred processing this VEO
+     * @throws VEOError if an error occurred processing this VEO
      */
     public RepnSignature(Path veoDir, String sigFileName, Path schemaDir) throws VEOError {
         super(sigFileName);
@@ -567,7 +565,7 @@ public class RepnSignature extends RepnXML {
      * @param verbose true if additional information is to be generated
      * @param veoDir the directory in which to create the report
      * @param fileName the file the report will be about
-     * @throws VEOSupport.VEOError  if a fatal error occurred
+     * @throws VEOError  if a fatal error occurred
      */
     public void genReport(boolean verbose, Path veoDir, String fileName) throws VEOError {
         String reportName;

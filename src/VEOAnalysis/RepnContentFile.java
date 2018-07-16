@@ -116,7 +116,8 @@ public class RepnContentFile extends Repn {
         }
         
         // check that the file exists
-        fileToHash = veoDir.resolve(pathName.getValue());
+        String safe = pathName.getValue().replaceAll("\\\\", "/");
+        fileToHash = veoDir.resolve(safe);
         if (Files.notExists(fileToHash)) {
             addError("Referenced file '" + fileToHash.toString() + "' does not exist");
             return ltpf;
@@ -269,7 +270,7 @@ public class RepnContentFile extends Repn {
      * Generate a HTML representation of the content file
      *
      * @param verbose true if additional information is to be generated
-     * @throws VEOSupport.VEOError if a fatal error occurred
+     * @throws VEOError if a fatal error occurred
      */
     public void genReport(boolean verbose) throws VEOError {
         startDiv("ContentFile", getAnchor());

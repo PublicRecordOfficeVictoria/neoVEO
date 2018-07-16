@@ -551,14 +551,12 @@ public class CreateVEO {
         }
 
         // if ZIPping files, remember it...
-        System.err.println(source.toString() + "->" + file);
         cvc.addContentFile(file, source);
     }
 
     /**
-     * Get the path to the real source file. THere are three cases: if the we
-     * have linked, moved, or copied the source file to the VEO directory, the
-     * source file is the entry in the VEO directory. If we are directly ZIPping
+     * Get the path to the real source file. THere are two cases. If we are
+     * directly ZIPping
      * the source file, calculate the actual file from the previously added
      * content directory (if one exists). Otherwise, file directly points to the
      * source file.

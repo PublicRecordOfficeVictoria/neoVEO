@@ -291,7 +291,8 @@ public class VEOAnalysis {
     private Path checkFile(String type, String name, boolean isDirectory) throws VEOFatal {
         Path p;
 
-        p = Paths.get(name);
+        String safe = name.replaceAll("\\\\", "/");
+        p = Paths.get(safe);
 
         if (!Files.exists(p)) {
             throw new VEOFatal(classname, 6, type + " '" + p.toAbsolutePath().toString() + "' does not exist");
@@ -323,13 +324,14 @@ public class VEOAnalysis {
             if (veo == null) {
                 continue;
             }
+            String safe = veo.replaceAll("\\\\", "/");
 
             // if veo is a directory, go through directory and test all the VEOs
             // otherwise just test the VEO
             try {
-                veoFile = Paths.get(veo);
+                veoFile = Paths.get(safe);
             } catch (InvalidPathException ipe) {
-                System.out.println("Failed trying to open file '" + veo + "': " + ipe.getMessage());
+                System.out.println("Failed trying to open file '" + safe + "': " + ipe.getMessage());
                 continue;
             }
             if (Files.isDirectory(veoFile)) {
@@ -342,7 +344,7 @@ public class VEOAnalysis {
                     }
                     ds.close();
                 } catch (IOException e) {
-                    System.out.println("Failed to process directory '" + veo + "': " + e.getMessage());
+                    System.out.println("Failed to process directory '" + safe + "': " + e.getMessage());
                 }
             } else {
                 testVEOint(veo, outputDir);
@@ -513,7 +515,7 @@ public class VEOAnalysis {
         BufferedReader br;
         String s;
 
-        f = Paths.get(schemaDir.toString(), "validLTPF.txt");
+        f = schemaDir.resolve("validLTPF.txt");
 
         // open validLTPF.txt for reading
         fr = null;
