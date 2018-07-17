@@ -124,7 +124,7 @@ public class RepnContentFile extends Repn {
         }
 
         // get the RepnFile associated with this content file, and mark it off the file in the list of files in VEO
-        p = Paths.get(pathName.getValue());
+        p = Paths.get(safe);
         if (contentFiles.containsKey(p)) {
             rf = contentFiles.get(p);
             rf.setContentFile(this);
