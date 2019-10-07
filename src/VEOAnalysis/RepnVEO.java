@@ -437,9 +437,6 @@ public class RepnVEO extends Repn {
         if (veoHistory != null) {
             hasErrors |= veoHistory.hasErrors();
         }
-        if (veoContent != null) {
-            hasErrors |= veoContent.hasErrors();
-        }
         for (i = 0; i < veoContentSignatures.size(); i++) {
             hasErrors |= veoContentSignatures.get(i).hasErrors();
         }
@@ -501,9 +498,6 @@ public class RepnVEO extends Repn {
         }
         if (veoHistory != null) {
             hasWarnings |= veoHistory.hasWarnings();
-        }
-        if (veoContent != null) {
-            hasWarnings |= veoContent.hasWarnings();
         }
         for (i = 0; i < veoContentSignatures.size(); i++) {
             hasWarnings |= veoContentSignatures.get(i).hasWarnings();
