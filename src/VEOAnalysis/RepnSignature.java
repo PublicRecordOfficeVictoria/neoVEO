@@ -310,7 +310,7 @@ public class RepnSignature extends RepnXML {
                 return false;
             }
         } catch (SignatureException se) {
-            LOG.log(Level.WARNING, errMesg(classname, method, "Unexpected error when verifying signature: ", se));
+            addError("signature verification failed: "+se.getMessage());
             return false;
         }
         return true;
