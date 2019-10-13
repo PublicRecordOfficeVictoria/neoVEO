@@ -92,6 +92,7 @@ public class RepnVEO extends Repn {
         s = s.substring(0, i);
         safe = s.replaceAll("\\\\", "/");
         veoDir = output.resolve(safe);
+        veoDir = veoDir.normalize();
 
         // delete the VEO directory (if it exists)
         deleteVEO();
@@ -313,16 +314,16 @@ public class RepnVEO extends Repn {
     /**
      * Private function to unzip a VEO file.
      *
-     * @param veo the path to the VEO file
+     * @param zipFilePath the path to the VEO file
      * @throws VEOError
      * @throws IOException
      */
-    private void unzip(Path veo) throws VEOError {
+    private void unzip(Path zipFilePath) throws VEOError {
         String method = "unzip";
         ZipFile zipFile;
         Enumeration entries;
         ZipEntry entry;
-        Path f;
+        Path vze, zipEntryPath;
         InputStream is;
         BufferedInputStream bis;
         FileOutputStream fos;
@@ -331,6 +332,7 @@ public class RepnVEO extends Repn {
         int len;
         String veoName, s;
         long modTime;
+        boolean complainedOnceAlready;
 
         // unzip the VEO file
         bos = null;
@@ -338,12 +340,17 @@ public class RepnVEO extends Repn {
         bis = null;
         is = null;
         zipFile = null;
+        complainedOnceAlready = false;
         try {
-            // get the name of this VEO
-            veoName = veo.getFileName().toString();
+            // get the name of this VEO, stripping off the final '.zip'
+            veoName = zipFilePath.getFileName().toString();
+            int i = veoName.lastIndexOf(".");
+            if (i != -1) {
+                veoName = veoName.substring(0, i);
+            }
 
             // open the zip file and get the entries in it
-            zipFile = new ZipFile(veo.toFile());
+            zipFile = new ZipFile(zipFilePath.toFile());
             entries = zipFile.entries();
 
             // go through each entry
@@ -355,23 +362,42 @@ public class RepnVEO extends Repn {
                 // this is so horrible because Paths.resolve won't process
                 // windows file separators in a string on Unix boxes
                 String safe = entry.getName().replaceAll("\\\\", "/");
-                Path p = Paths.get(safe);
-                if (!veoName.equals(p.getName(0).toString() + ".zip")) {
-                    throw new VEOError(classname, method, 1, "The name of the zip file (" + veoName + ") is different to that contained in the entries in the ZIP file (" + entry.getName() + ")");
+                zipEntryPath = Paths.get(safe);
+
+                // complain (once!) if filename of the VEO is different to the
+                // base of the filenames in the ZIP file (e.g. the VEO file has
+                // been renamed)
+                if (!veoName.equals(zipEntryPath.getName(0).toString())) {
+                    if (!complainedOnceAlready) {
+                        log.log(Level.WARNING, "The filename of the VEO ({0}) is different to that contained in the entries in the ZIP file ({1))", new Object[]{veoName, entry.getName()});
+                    }
+                    complainedOnceAlready = true;
                 }
-                f = veoDir.getParent().resolve(p);
+
+                // doesn't matter what the ZIP file says, force the extract to
+                // be in a directory with the same name as the VEO filename
+                // (even if we have complained about this)
+                zipEntryPath = zipEntryPath.subpath(1, zipEntryPath.getNameCount());
+                vze = veoDir.getParent().resolve(Paths.get(veoName)).resolve(zipEntryPath);
+                vze = vze.normalize();
+                
+                // just be cynical and check that the file name to be extracted
+                // from the ZIP file is actually in the VEO directory...
+                if (!vze.startsWith(veoDir)) {
+                    throw new VEOError(errMesg(classname, method, "ZIP entry in VEO '"+veoName+"' is attempting to create a file outside the VEO directory '"+vze.toString()));
+                }
 
                 // make any directories...
                 if (entry.isDirectory()) {
-                    Files.createDirectories(f);
+                    Files.createDirectories(vze);
                 } else {
                     // make any missing directories parent
-                    Files.createDirectories(f.getParent());
+                    Files.createDirectories(vze.getParent());
 
                     // extract file
                     is = zipFile.getInputStream(entry);
                     bis = new BufferedInputStream(is);
-                    fos = new FileOutputStream(f.toFile());
+                    fos = new FileOutputStream(vze.toFile());
                     bos = new BufferedOutputStream(fos, 1024);
                     while ((len = bis.read(b, 0, 1024)) != -1) {
                         bos.write(b, 0, len);
@@ -390,7 +416,7 @@ public class RepnVEO extends Repn {
 
                 // set the time of the file
                 if ((modTime = entry.getTime()) != -1) {
-                    Files.setLastModifiedTime(f, FileTime.fromMillis(modTime));
+                    Files.setLastModifiedTime(vze, FileTime.fromMillis(modTime));
                 }
             }
             zipFile.close();
