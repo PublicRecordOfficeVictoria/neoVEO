@@ -527,7 +527,7 @@ public class CreateVEO {
             throw new VEOError(classname, method, 3, "content file '" + source.toString() + "' does not exist");
         }
         filesToInclude.add(new FileToInclude(source, file));
-        
+
         cvc.addContentFile(file, source);
     }
 
@@ -556,10 +556,9 @@ public class CreateVEO {
 
     /**
      * Get the path to the real source file. THere are two cases. If we are
-     * directly ZIPping
-     * the source file, calculate the actual file from the previously added
-     * content directory (if one exists). Otherwise, file directly points to the
-     * source file.
+     * directly ZIPping the source file, calculate the actual file from the
+     * previously added content directory (if one exists). Otherwise, file
+     * directly points to the source file.
      *
      * @param file the path name to be used in the VEO
      * @return the real file
@@ -1012,9 +1011,13 @@ public class CreateVEO {
             csf.abandon(debug);
         }
         csf = null;
-        contentPrefixes.clear();
+        if (contentPrefixes != null) {
+            contentPrefixes.clear();
+        }
         contentPrefixes = null;
-        filesToInclude.clear();
+        if (filesToInclude != null) {
+            filesToInclude.clear();
+        }
         filesToInclude = null;
 
         // delete VEO directory if it exists
