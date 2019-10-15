@@ -24,9 +24,8 @@ import java.util.logging.Logger;
 import java.util.regex.PatternSyntaxException;
 
 /**
- * This class creates multiple VEOs by signing VEO directories.
- * This class also processes the command line arguments and reads the
- * metadata templates.
+ * This class creates multiple VEOs by signing VEO directories. This class also
+ * processes the command line arguments and reads the metadata templates.
  * <h3>Command Line arguments</h3>
  * The following command line arguments must be supplied:
  * <ul>
@@ -119,6 +118,10 @@ public class SignVEOs {
      * @throws VEOFatal when cannot continue to generate any VEOs
      */
     public SignVEOs(String[] args) throws VEOFatal {
+
+        // Set up logging
+        System.setProperty("java.util.logging.SimpleFormatter.format", "%4$s: %5$s%n");
+        log.setLevel(Level.WARNING);
 
         // sanity check
         if (args == null) {
@@ -214,14 +217,14 @@ public class SignVEOs {
                         rootLog.setLevel(Level.INFO);
                         log.log(Level.INFO, "Verbose output is selected");
                         break;
-                        
+
                     // print comments from control file
                     case "-i":
                         printComments = true;
                         i++;
                         log.log(Level.INFO, "Printing comments output is selected");
                         break;
-                        
+
                     // if debugging...
                     case "-d":
                         debug = true;
@@ -257,7 +260,7 @@ public class SignVEOs {
     private Path checkFile(String type, String name, boolean isDirectory) throws VEOFatal {
         Path p;
 
-        p = Paths.get(name);
+        p = Paths.get(name).normalize();
 
         if (!Files.exists(p)) {
             throw new VEOFatal(classname, 6, type + " '" + p.toAbsolutePath().toString() + "' does not exist");
@@ -325,7 +328,7 @@ public class SignVEOs {
                             break;
                         }
                         if (printComments) {
-                            System.out.println("COMMENT: "+tokens[1]);
+                            System.out.println("COMMENT: " + tokens[1]);
                         }
                         log.log(Level.INFO, "COMMENT: {0}", new Object[]{tokens[1]});
                         break;
@@ -357,7 +360,7 @@ public class SignVEOs {
                         break;
 
                     // add an event to the VEO history file
-                        /*
+                    /*
                      case "e":
                      boolean error;  // true if processing error part of event
                      List<String> descriptions = new ArrayList<>(); // description strings in command
@@ -534,7 +537,8 @@ public class SignVEOs {
             if (ds != null) {
                 try {
                     ds.close();
-                } catch (IOException ioe) { /* ignore */ }
+                } catch (IOException ioe) {
+                    /* ignore */ }
             }
         }
     }
