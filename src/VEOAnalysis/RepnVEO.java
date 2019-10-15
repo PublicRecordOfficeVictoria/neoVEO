@@ -369,7 +369,7 @@ public class RepnVEO extends Repn {
                 // been renamed)
                 if (!veoName.equals(zipEntryPath.getName(0).toString())) {
                     if (!complainedOnceAlready) {
-                        log.log(Level.WARNING, "The filename of the VEO ({0}) is different to that contained in the entries in the ZIP file ({1))", new Object[]{veoName, entry.getName()});
+                        log.log(Level.WARNING, "The filename of the VEO ({0}) is different to that contained in the entries in the ZIP file ({1})", new Object[]{veoName, entry.getName()});
                     }
                     complainedOnceAlready = true;
                 }
