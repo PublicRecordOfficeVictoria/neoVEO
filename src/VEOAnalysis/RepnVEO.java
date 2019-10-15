@@ -377,14 +377,18 @@ public class RepnVEO extends Repn {
                 // doesn't matter what the ZIP file says, force the extract to
                 // be in a directory with the same name as the VEO filename
                 // (even if we have complained about this)
-                zipEntryPath = zipEntryPath.subpath(1, zipEntryPath.getNameCount());
-                vze = veoDir.getParent().resolve(Paths.get(veoName)).resolve(zipEntryPath);
+                if (zipEntryPath.getNameCount() == 1) {
+                    vze = veoDir.getParent().resolve(Paths.get(veoName));
+                } else {
+                    zipEntryPath = zipEntryPath.subpath(1, zipEntryPath.getNameCount());
+                    vze = veoDir.getParent().resolve(Paths.get(veoName)).resolve(zipEntryPath);
+                }
                 vze = vze.normalize();
-                
+
                 // just be cynical and check that the file name to be extracted
                 // from the ZIP file is actually in the VEO directory...
                 if (!vze.startsWith(veoDir)) {
-                    throw new VEOError(errMesg(classname, method, "ZIP entry in VEO '"+veoName+"' is attempting to create a file outside the VEO directory '"+vze.toString()));
+                    throw new VEOError(errMesg(classname, method, "ZIP entry in VEO '" + veoName + "' is attempting to create a file outside the VEO directory '" + vze.toString()));
                 }
 
                 // make any directories...
