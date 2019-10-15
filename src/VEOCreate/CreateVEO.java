@@ -946,8 +946,13 @@ public class CreateVEO {
         ZipEntry zs;
         HashMap<String, Path> seen;
 
-        seen = new HashMap<>();
+        // if resigning, the content files will already be in the VEO
+        if (filesToInclude == null) {
+            return;
+        }
 
+        seen = new HashMap<>();
+        
         // go through list and for each file
         for (i = 0; i < filesToInclude.size(); i++) {
             fi = filesToInclude.get(i);
