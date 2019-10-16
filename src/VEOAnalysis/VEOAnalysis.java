@@ -149,6 +149,7 @@ public class VEOAnalysis {
      * @throws VEOError if something goes wrong
      */
     public VEOAnalysis(String args[]) throws VEOError {
+        System.setProperty("java.util.logging.SimpleFormatter.format", "%4$s: %5$s%n");
         LOG.getParent().setLevel(Level.WARNING);
         LOG.setLevel(null);
         configure(args);
@@ -167,7 +168,7 @@ public class VEOAnalysis {
         String usage = "AnalyseVEOs [-e] [-r] [-u] [-v] [-d] [-c] [-norec] -s schemaDir [-o outputDir] [files*]";
 
         schemaDir = null;
-        outputDir = Paths.get(".");
+        outputDir = Paths.get(".").toAbsolutePath();
         chatty = false;
         error = false;
         report = false;
@@ -216,6 +217,7 @@ public class VEOAnalysis {
                     case "-o":
                         i++;
                         outputDir = checkFile("output directory", args[i], true);
+                        outputDir = outputDir.toAbsolutePath();
                         LOG.log(Level.INFO, "Output directory is ''{0}''", outputDir.toString());
                         i++;
                         break;
