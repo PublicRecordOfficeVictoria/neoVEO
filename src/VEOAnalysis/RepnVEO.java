@@ -566,7 +566,7 @@ public class RepnVEO extends Repn {
         for (i = 0; i < veoContentSignatures.size(); i++) {
             sb.append(veoContentSignatures.get(i).getWarnings());
         }
-        for (i = 0; i < veoContentSignatures.size(); i++) {
+        for (i = 0; i < veoHistorySignatures.size(); i++) {
             sb.append(veoHistorySignatures.get(i).getWarnings());
         }
         for (i = 0; i < contentDirs.size(); i++) {
