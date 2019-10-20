@@ -1,4 +1,4 @@
-http://prov.vic.gov.au/vers/schema/ANZS5478 http://www.w3.org/1999/02/22-rdf-syntax-ns
+http://prov.vic.gov.au/vers/schema/ANZS5478	http://www.w3.org/1999/02/22-rdf-syntax-ns
 <rdf:RDF xmlns:anzs5478="http://www.prov.vic.gov.au/ANZS5478">
 <anzs5478:Relationship rdf:about="http://www.prov.vic.gov.au/VERS/example">
  <anzs5478:EntityType rdf:datatype="xs:string">Relationship</anzs5478:EntityType>
