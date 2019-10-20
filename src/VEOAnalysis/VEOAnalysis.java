@@ -151,6 +151,7 @@ public class VEOAnalysis {
     public VEOAnalysis(String args[]) throws VEOError {
         System.setProperty("java.util.logging.SimpleFormatter.format", "%4$s: %5$s%n");
         LOG.getParent().setLevel(Level.WARNING);
+        System.setProperty("java.util.logging.SimpleFormatter.format", "%4$s: %5$s%n");
         LOG.setLevel(null);
         configure(args);
     }
