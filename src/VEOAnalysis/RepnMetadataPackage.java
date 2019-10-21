@@ -89,7 +89,8 @@ public class RepnMetadataPackage extends Repn {
      * Validate the data in the Metadata Package.
      *
      * @param veoDir the directory containing the contents of the VEO.
-     * @param noRec true if not to complain about missing recommended metadata elements
+     * @param noRec true if not to complain about missing recommended metadata
+     * elements
      * @return true if the metadata package is AGLS or AGRKMS
      */
     public boolean validate(Path veoDir, boolean noRec) {
@@ -100,6 +101,7 @@ public class RepnMetadataPackage extends Repn {
         StringWriter parseErrs;     // place where parse errors can be captured
         int i;
         Element e;
+        String schemaIdValue;
 
         // create a place to put the RDF metadata (if any)
         rdfModel = ModelFactory.createDefaultModel();
@@ -159,10 +161,21 @@ public class RepnMetadataPackage extends Repn {
             LOG.log(Level.WARNING, errMesg(classname, method, "Failed to close StringWriter used to capture parse errors: ", ioe));
         }
 
+        // confirm that there is a non empty vers:MetadataSchemaIdentifier element
+        if (schemaId.getValue() == null) {
+            addError("vers:MetadataSchemaIdentifier element is missing or has a null value");
+            return false;
+        }
+        if (schemaId.getValue().trim().equals("") || schemaId.getValue().trim().equals(" ")) {
+            addError("vers:MetadataSchemaIdentifier element is empty");
+            return false;
+        }
+
         // if ANZS5478 check to see if the required properties are present and valid
         if (schemaId.getValue().endsWith("ANZS5478")) {
             if (!syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
                 addError("ANZS-5478 metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'");
+                return false;
             }
             rdfModel.setNsPrefix("anzs5478", ANZS5478);
             checkANZSProperties(noRec);
@@ -173,6 +186,7 @@ public class RepnMetadataPackage extends Repn {
         if (schemaId.getValue().endsWith("AGLS")) {
             if (!syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
                 addError("AGLS metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'");
+                return false;
             }
             rdfModel.setNsPrefix("dcterms", DC_TERMS);
             rdfModel.setNsPrefix("aglsterms", AGLS);
@@ -634,7 +648,7 @@ public class RepnMetadataPackage extends Repn {
     }
 
     // check a value as a date, but this is too tedious
-            /*
+    /*
      seenDate = true;
      ResIterator iter;
      iter = rdfModel.listSubjectsWithProperty(CREATED);
@@ -746,7 +760,7 @@ public class RepnMetadataPackage extends Repn {
      * Generate a HTML representation of the metadata package.
      *
      * @param verbose true if additional information is to be generated
-     * @throws VEOSupport.VEOError  if a fatal error occurred
+     * @throws VEOSupport.VEOError if a fatal error occurred
      */
     public void genReport(boolean verbose) throws VEOError {
         Node n;
@@ -811,11 +825,11 @@ public class RepnMetadataPackage extends Repn {
                 addTag("<li>");
                 addLabel("Element: ");
                 addString(n.getNodeName());
-                
+
                 // process attributes
                 if (n.hasAttributes()) {
                     at = n.getAttributes();
-                    for (i=0; i<at.getLength(); i++) {
+                    for (i = 0; i < at.getLength(); i++) {
                         node = at.item(i);
                         addString(node.getNodeName());
                         addString("=\"");
