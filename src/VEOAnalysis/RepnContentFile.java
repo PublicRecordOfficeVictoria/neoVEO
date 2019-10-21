@@ -34,6 +34,7 @@ public class RepnContentFile extends Repn {
     private RepnFile rf; // representation of this file
     private RepnItem pathName;  // file name of the content file
     private RepnItem hashValue; // genHash value of the content file
+    private boolean ltpf;       // true if this content file is a LTPF
     private final static Logger LOG = Logger.getLogger("VEOAnalysis.RepnContent");
 
     static int idCnt; // counter to generate unique id (not thread safe)
@@ -53,6 +54,7 @@ public class RepnContentFile extends Repn {
         id = idCnt;
         idCnt++;
         rf = null;
+        ltpf = false;
 
         // vers:PathName
         pathName = new RepnItem(getId() + ":pathName", "Path name of content file");
@@ -103,24 +105,32 @@ public class RepnContentFile extends Repn {
         byte[] storedHash;      // genHash read from file
         int i;
         byte[] b = new byte[1000]; // buffer used to read input file
-        boolean ltpf;
         String s, fmt;
- 
+
+        // check to see that vers:PathName element exists and has a non empty value
+        if (pathName == null || pathName.getValue() == null) {
+            addError("vers:PathName element is not present or is empty");
+            return false;
+        }
+        s = pathName.getValue().trim();
+        if (s.equals("") || s.equals(" ")) {
+            addError("vers:PathName element is blank");
+            return false;
+        }
+
         // test to see if this file is a LTPF (using the file name extension)
-        ltpf = false;
-        s = pathName.getValue();
         i = s.lastIndexOf(".");
         if (i != -1) {
             fmt = s.substring(i).toLowerCase();
             ltpf = (ltpfs.get(fmt) != null);
         }
-        
+
         // check that the file exists
         String safe = pathName.getValue().replaceAll("\\\\", "/");
         fileToHash = veoDir.resolve(safe);
         if (Files.notExists(fileToHash)) {
             addError("Referenced file '" + fileToHash.toString() + "' does not exist");
-            return ltpf;
+            return false;
         }
 
         // get the RepnFile associated with this content file, and mark it off the file in the list of files in VEO
@@ -132,20 +142,31 @@ public class RepnContentFile extends Repn {
             LOG.log(Level.WARNING, errMesg(classname, method, "VEOContent.xml referenced content file (" + pathName.getValue() + "), but it could not be found in the index"));
         }
 
+        // check to see that vers:HashVale element exists and has a non empty value
+        if (hashValue == null || hashValue.getValue() == null) {
+            addError("vers:HashValue element is not present or is empty");
+            return false;
+        }
+        s = hashValue.getValue().trim();
+        if (s.equals("") || s.equals(" ")) {
+            addError("vers:HashValue element is blank");
+            return false;
+        }
+
         // get message digest
         try {
             md = MessageDigest.getInstance(hashAlgorithm);
         } catch (NoSuchAlgorithmException e) {
             addError("Hash algorithm '" + hashAlgorithm + "' not supported");
-            return ltpf;
+            return false;
         }
-        
+
         // open the file to digest
         try {
             fis = new FileInputStream(fileToHash.toString());
         } catch (FileNotFoundException e) {
             LOG.log(Level.WARNING, errMesg(classname, method, "File to hash not found: ", e));
-            return ltpf;
+            return false;
         }
         bis = new BufferedInputStream(fis);
 
@@ -180,8 +201,17 @@ public class RepnContentFile extends Repn {
         // System.out.println("Calc "+DatatypeConverter.printBase64Binary(genHash));
         if (storedHash != null && !MessageDigest.isEqual(genHash, storedHash)) {
             addError("Integrity check of file '" + pathName + "' failed as hash value has changed.");
+            return false;
         }
 
+        return true;
+    }
+
+    /**
+     * Was this content file a long term preservation file? Note this is only
+     * valid *after* a call to validate
+     */
+    public boolean isLTPF() {
         return ltpf;
     }
 
