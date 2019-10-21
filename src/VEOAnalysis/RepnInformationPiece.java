@@ -21,7 +21,7 @@ public class RepnInformationPiece extends Repn {
 
     private RepnItem label;  // label of the piece
     private ArrayList<RepnContentFile> contents;  // list of metadata packages
-    
+
     /**
      * Construct an Information Object from the XML document VEOContent.xml.
      *
@@ -87,14 +87,18 @@ public class RepnInformationPiece extends Repn {
         RepnContentFile rcf;
         boolean validLTPF;
 
-        // validate Content Files within Information Piece
+        // validate Content Files within Information Piece        
+        for (i = 0; i < contents.size(); i++) {
+            rcf = contents.get(i);
+            rcf.validate(veoDir, hashAlgorithm, contentFiles, ltpfs);
+        }
+
+        // must have at least one valid long term preservation format
         validLTPF = false;
         for (i = 0; i < contents.size(); i++) {
             rcf = contents.get(i);
-            validLTPF |= rcf.validate(veoDir, hashAlgorithm, contentFiles, ltpfs);
+            validLTPF |= rcf.isLTPF();
         }
-        
-        // must have at least one valid long term preservation format
         if (!validLTPF) {
             addError("Information piece did not have a valid long term preservation format");
         }
@@ -192,17 +196,17 @@ public class RepnInformationPiece extends Repn {
 
     /**
      * Generate an XML representation of the information piece
+     *
      * @param verbose true if additional information is to be generated
-     * @throws VEOSupport.VEOError  if a fatal error occurred
+     * @throws VEOSupport.VEOError if a fatal error occurred
      */
-    
     public void genReport(boolean verbose) throws VEOError {
         int i;
 
         startDiv("InfoPiece", null);
         addLabel("Information Piece");
         if (label != null) {
-            addString(" (Label: "+label.getValue()+")");
+            addString(" (Label: " + label.getValue() + ")");
         } else {
             addString(" <no label>");
         }
