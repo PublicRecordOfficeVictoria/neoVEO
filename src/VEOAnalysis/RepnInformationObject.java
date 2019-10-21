@@ -37,6 +37,7 @@ public class RepnInformationObject extends Repn {
         super(parentId + ":IO-" + seq);
 
         int i;
+        String rdfNameSpace;
 
         // remember if this is the first information object in VEO
         firstIO = (seq == 1);
@@ -53,6 +54,21 @@ public class RepnInformationObject extends Repn {
         metadata = new ArrayList<>();
         i = 0;
         while (document.checkElement("vers:MetadataPackage")) {
+            
+            // confirm that the RDF namespace is valid (would otherwise cause the
+            // RDF parser to crash
+            rdfNameSpace = document.getAttribute("xmlns:rdf");
+            if (rdfNameSpace == null || rdfNameSpace.equals("")) {
+                throw new VEOError("vers:MetadataPackage element does not contain a xmlns:rdf attribute");
+            }
+            switch(rdfNameSpace) {
+                case "http://www.w3.org/1999/02/22-rdf-syntax-ns#":
+                case "http://www.w3.org/1999/02/22-rdf-syntax-ns":
+                    break;
+                default:
+                    throw new VEOError("vers:MetadataPackage element had an invalid xmlns:rdf attribute. Was '"+rdfNameSpace+"', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+            }
+            
             document.gotoNextElement();
             i++;
             metadata.add(new RepnMetadataPackage(document, getId(), i));
