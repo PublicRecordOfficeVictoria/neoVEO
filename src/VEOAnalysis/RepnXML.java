@@ -370,7 +370,26 @@ abstract public class RepnXML extends Repn implements ErrorHandler {
         }
         return e.getTagName().equals(tagName);
     }
-
+    
+    /**
+     * Get an attribute from the current element.
+     * 
+     * @param attributeName the attribute to return
+     * @return a string containing the attribute 
+     * @throws IndexOutOfBoundsException if there are no elements, or all have
+     * been processed
+     * @throws VEOError if the parse failed and no elements are available 
+     */
+    final public String getAttribute(String attributeName) throws IndexOutOfBoundsException, VEOError {
+        Element e;
+        
+        e = getCurrentElement();
+        if (e == null) {
+            return null;
+        }
+        return e.getAttribute(attributeName);
+    }
+    
     /**
      * Get the value associated with the current element. This may be null if
      * the element has no text associated with it. The text returned is trimmed
