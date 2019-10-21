@@ -171,6 +171,16 @@ public class RepnMetadataPackage extends Repn {
             return false;
         }
 
+        // confirm that there is a non empty vers:MetadataSyntaxIdentifier element
+        if (syntaxId.getValue() == null) {
+            addError("vers:MetadataSyntaxIdentifier element is missing or has a null value");
+            return false;
+        }
+        if (syntaxId.getValue().trim().equals("") || schemaId.getValue().trim().equals(" ")) {
+            addError("vers:MetadataSyntaxIdentifier element is empty");
+            return false;
+        }
+
         // if ANZS5478 check to see if the required properties are present and valid
         if (schemaId.getValue().endsWith("ANZS5478")) {
             if (!syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
