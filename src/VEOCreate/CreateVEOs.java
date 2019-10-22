@@ -217,6 +217,7 @@ public class CreateVEOs {
 
         // defaults...
         log.setLevel(null);
+        System.setProperty("java.util.logging.SimpleFormatter.format", "%4$s: %5$s%n");
         rootLog.setLevel(Level.WARNING);
         templateDir = Paths.get(".", "Templates");
         outputDir = Paths.get("."); // default is the current working directory
@@ -1113,8 +1114,7 @@ public class CreateVEOs {
             cv = new CreateVEOs(args);
             cv.buildVEOs();
         } catch (VEOFatal e) {
-            System.err.println(e.toString());
-            e.printStackTrace();
+            System.err.println(e.getMessage());
         }
     }
 }
