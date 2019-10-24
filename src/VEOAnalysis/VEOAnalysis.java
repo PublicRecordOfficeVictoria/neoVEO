@@ -305,7 +305,6 @@ public class VEOAnalysis {
         if (!isDirectory && Files.isDirectory(p)) {
             throw new VEOFatal(classname, 8, type + " '" + p.toAbsolutePath().toString() + "' is a directory not a file");
         }
-        LOG.log(Level.INFO, "{0} is ''{1}''", new Object[]{type, p.toAbsolutePath().toString()});
         return p;
     }
 
