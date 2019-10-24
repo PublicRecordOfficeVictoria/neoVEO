@@ -17,6 +17,7 @@ import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.ResourceRequiredException;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdfxml.xmlinput.DOM2Model;
+import com.hp.hpl.jena.shared.BadURIException;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -894,13 +895,18 @@ public class RepnMetadataPackage extends Repn {
     /**
      * Generate a HTML representation of RDF. Actually, we just generate a
      * RDF/XML representation of the RDF and output that.
+     * @throws VERSCommon.VEOError if a problem occurred
      */
-    public void addRDF() {
+    public void addRDF() throws VEOError {
         // String syntax = "TURTLE";
         String syntax = "RDF/XML";
         // String syntax = "N-TRIPLE";
         StringWriter sw = new StringWriter();
-        rdfModel.write(sw, syntax);
+        try {
+            rdfModel.write(sw, syntax);
+        } catch (BadURIException bue) {
+            throw new VEOError("RDF failure: "+bue.getMessage()+" RepnMetadataPackage.addRDF()");
+        }
         addTag("<pre>");
         addString(sw.toString());
         addTag("</pre>");
