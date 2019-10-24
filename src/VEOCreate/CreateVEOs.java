@@ -399,9 +399,6 @@ public class CreateVEOs {
         if (!isDirectory && Files.isDirectory(p)) {
             throw new VEOFatal(classname, 8, type + " '" + p.toAbsolutePath().toString() + "' is a directory not a file");
         }
-        if (verbose) {
-            System.err.println(type + " is '" + p.toAbsolutePath().toString() + "'");
-        }
         return p;
     }
 
