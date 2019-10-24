@@ -135,10 +135,10 @@ abstract public class RepnXML extends Repn implements ErrorHandler {
         try {
             doc = parser.parse(file.toFile());
         } catch (SAXParseException e) {
-            LOG.log(Level.WARNING, errMesg(classname, "Parse error when parsing file " + e.getSystemId() + " (line " + e.getLineNumber() + " column " + e.getColumnNumber() + "): " + e.getMessage()));
+            LOG.log(Level.WARNING, errMesg(classname, "Parse error when parsing file" + e.getSystemId() + " (line " + e.getLineNumber() + " column " + e.getColumnNumber() + "): " + e.getMessage()));
             return false;
         } catch (SAXException e) {
-            addError(errMesg(classname, "Problem when parsing file: ", e));
+            addError(errMesg(classname, "Problem when parsing file: ", e.getMessage()));
             return false;
         } catch (IOException e) {
             throw new VEOFatal(errMesg(classname, "System error when parsing file '" + file.toString() + "'. Error was: ", e));
