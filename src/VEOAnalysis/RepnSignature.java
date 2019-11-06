@@ -282,13 +282,13 @@ public class RepnSignature extends RepnXML {
                 sig.update(b, 0, i);
             }
         } catch (SignatureException e) {
-            LOG.log(Level.WARNING, errMesg(classname, method, "failed updating the signature: ", e));
+            LOG.log(Level.WARNING, errMesg(classname, method, "failed updating the signature", e));
             return false;
         } catch (FileNotFoundException e) {
             addError("File to verify ('" + sourceFile.toString() + "') was not found");
             return false;
         } catch (IOException e) {
-            LOG.log(Level.WARNING, errMesg(classname, method, "failed reading file to sign: ", e));
+            LOG.log(Level.WARNING, errMesg(classname, method, "failed reading file to sign", e));
             return false;
         } finally {
             try {
@@ -299,7 +299,7 @@ public class RepnSignature extends RepnXML {
                     fis.close();
                 }
             } catch (IOException e) {
-                LOG.log(Level.WARNING, errMesg(classname, method, "failed to close file being verified: ", e));
+                LOG.log(Level.WARNING, errMesg(classname, method, "failed to close file being verified", e));
             }
         }
 

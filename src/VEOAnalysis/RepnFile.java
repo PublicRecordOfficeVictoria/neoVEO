@@ -52,7 +52,7 @@ public class RepnFile extends Repn {
      * @throws VEOError if a fatal error occurred
      */
     public RepnFile(Path file, Path veoDir, HashMap<Path, RepnFile> contentFiles) throws VEOError {
-        super(file.toString());
+        super(veoDir.relativize(file).toString());
 
         DirectoryStream<Path> ds;
 
@@ -80,7 +80,7 @@ public class RepnFile extends Repn {
             creationTime = (FileTime) Files.getAttribute(file, "creationTime");
             size = (Long) Files.getAttribute(file, "size");
         } catch (IOException e) {
-            throw new VEOError(errMesg(classname, "Failed reading attributes on '" + file.toString() + "'. Error: ", e));
+            throw new VEOError(errMesg(classname, "Failed reading attributes on '" + file.toString() + "'. Error", e));
         }
         isDirectory = Files.isDirectory(file);
         isSymbolicLink = Files.isSymbolicLink(file);
@@ -94,14 +94,14 @@ public class RepnFile extends Repn {
                     children.add(new RepnFile(entry, veoDir, contentFiles));
                 }
             } catch (IOException e) {
-                LOG.log(Level.WARNING, errMesg(classname, "Failed stepping through directory of content: ", e));
+                LOG.log(Level.WARNING, errMesg(classname, "Failed stepping through directory of content", e));
             } finally {
                 try {
                     if (ds != null) {
                         ds.close();
                     }
                 } catch (IOException e) {
-                    LOG.log(Level.WARNING, errMesg(classname, "Failed closing directory of content: ", e));
+                    LOG.log(Level.WARNING, errMesg(classname, "Failed closing directory of content", e));
                 }
             }
 

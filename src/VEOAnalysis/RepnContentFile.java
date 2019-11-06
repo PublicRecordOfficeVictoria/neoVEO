@@ -129,7 +129,7 @@ public class RepnContentFile extends Repn {
         String safe = pathName.getValue().replaceAll("\\\\", "/");
         fileToHash = veoDir.resolve(safe);
         if (Files.notExists(fileToHash)) {
-            addError("Referenced file '" + fileToHash.toString() + "' does not exist");
+            addError("Referenced file '" + safe + "' does not exist");
             return false;
         }
 
@@ -165,7 +165,7 @@ public class RepnContentFile extends Repn {
         try {
             fis = new FileInputStream(fileToHash.toString());
         } catch (FileNotFoundException e) {
-            LOG.log(Level.WARNING, errMesg(classname, method, "File to hash not found: ", e));
+            LOG.log(Level.WARNING, errMesg(classname, method, "File to hash not found", e));
             return false;
         }
         bis = new BufferedInputStream(fis);
@@ -176,12 +176,12 @@ public class RepnContentFile extends Repn {
                 md.update(b, 0, i);
             }
         } catch (IOException e) {
-            LOG.log(Level.WARNING, errMesg(classname, method, "Failed reading file to hash: ", e));
+            LOG.log(Level.WARNING, errMesg(classname, method, "Failed reading file to hash", e));
         } finally {
             try {
                 bis.close();
             } catch (IOException e) {
-                LOG.log(Level.WARNING, errMesg(classname, method, "failed closing file to hash: ", e));
+                LOG.log(Level.WARNING, errMesg(classname, method, "failed closing file to hash", e));
             }
         }
 
@@ -200,7 +200,7 @@ public class RepnContentFile extends Repn {
         // System.out.println("Orig "+DatatypeConverter.printBase64Binary(hashValue));
         // System.out.println("Calc "+DatatypeConverter.printBase64Binary(genHash));
         if (storedHash != null && !MessageDigest.isEqual(genHash, storedHash)) {
-            addError("Integrity check of file '" + pathName + "' failed as hash value has changed.");
+            addError("Integrity check of file '" + pathName.getValue() + "' failed as hash value has changed.");
             return false;
         }
 

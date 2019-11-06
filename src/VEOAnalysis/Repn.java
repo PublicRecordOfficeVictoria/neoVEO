@@ -75,7 +75,7 @@ abstract class Repn {
             }
             fw = null;
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, "abandon", "Failed to close HTML output file: ", e));
+            log.log(Level.WARNING, errMesg(classname, "abandon", "Failed to close HTML output file", e));
         }
     }
 
@@ -143,9 +143,13 @@ abstract class Repn {
         }
         sb = new StringBuffer();
         for (i = 0; i < errors.size(); i++) {
-            sb.append("   Error (");
-            sb.append(id);
-            sb.append("): ");
+            sb.append("   Error");
+            if (id != null && !id.equals("")) {
+                sb.append(" (");
+                sb.append(id);
+                sb.append(")");
+            }
+            sb.append(": ");
             sb.append(errors.get(i));
             sb.append("\n");
         }
@@ -186,7 +190,7 @@ abstract class Repn {
      *
      * @return a string
      */
-    protected  String getWarnings() {
+    protected String getWarnings() {
         StringBuffer sb;
         int i;
 
@@ -195,9 +199,13 @@ abstract class Repn {
         }
         sb = new StringBuffer();
         for (i = 0; i < warnings.size(); i++) {
-            sb.append("   Warning (");
-            sb.append(id);
-            sb.append("): ");
+            sb.append("   Warning");
+            if (id != null && !id.equals("")) {
+                sb.append(" (");
+                sb.append(id);
+                sb.append(")");
+            }
+            sb.append(": ");
             sb.append(warnings.get(i));
             sb.append("\n");
         }
@@ -226,7 +234,7 @@ abstract class Repn {
             fw = new FileWriter(htmlFile.toFile());
             htmlOutput = new BufferedWriter(fw);
         } catch (IOException e) {
-            throw new VEOError(errMesg(classname, method, "IOException when attempting to open HTML output file '" + htmlFile.toString() + "'. Error was: ", e));
+            throw new VEOError(errMesg(classname, method, "IOException when attempting to open HTML output file '" + htmlFile.toString() + "'. Error was", e));
         }
         try {
             htmlOutput.write("<!DOCTYPE html>\n<html>\n<head>\n");
@@ -248,12 +256,13 @@ abstract class Repn {
             htmlOutput.write("<br>\n");
             htmlOutput.write("</p>\n");
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was: ", e));
+            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
         }
     }
 
     /**
      * Finish a report file.
+     *
      * @throws VEOError if a fatal error occurred
      */
     final protected void finishReport() throws VEOError {
@@ -276,7 +285,7 @@ abstract class Repn {
             fw.close();
             fw = null;
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was: ", e));
+            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
         }
     }
 
@@ -313,10 +322,12 @@ abstract class Repn {
     }
 
     /**
-     * Start a division (HTML DIV element) in the report. If an anchor is specified,
-     * the DIV will contain an ID attribute to that the HTML DIV element can be linked to.
+     * Start a division (HTML DIV element) in the report. If an anchor is
+     * specified, the DIV will contain an ID attribute to that the HTML DIV
+     * element can be linked to.
      *
-     * @param type list of class names (separated by spaces) to put in the HTML DIV element
+     * @param type list of class names (separated by spaces) to put in the HTML
+     * DIV element
      * @param anchor anchor to put in the div to allow linking
      */
     final protected void startDiv(String type, String anchor) {
@@ -324,13 +335,14 @@ abstract class Repn {
     }
 
     /**
-     * Start a division (HTML DIV element) in the report. A list of classes may be
-     * associated with the DIV to control formatting in the CSS file. If an
+     * Start a division (HTML DIV element) in the report. A list of classes may
+     * be associated with the DIV to control formatting in the CSS file. If an
      * anchor is specified, the DIV will contain an ID attribute to that the
      * HTML DIV element can be linked to.
      *
      * @param r the Repn to test for errors and warnings
-     * @param type list of class names (separated by spaces) to put in the DIV element
+     * @param type list of class names (separated by spaces) to put in the DIV
+     * element
      * @param anchor anchor to put in the div to allow linking
      */
     final protected void startDiv(Repn r, String type, String anchor) {
@@ -359,7 +371,7 @@ abstract class Repn {
             }
             htmlOutput.write(">\n");
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was: ", e));
+            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
         }
     }
 
@@ -380,7 +392,7 @@ abstract class Repn {
         try {
             htmlOutput.write("</div>\n");
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was: ", e));
+            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
         }
     }
 
@@ -414,7 +426,7 @@ abstract class Repn {
                 htmlOutput.write("</li>\n");
             }
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was: ", e));
+            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
         }
     }
 
@@ -438,12 +450,13 @@ abstract class Repn {
         try {
             htmlOutput.write(s);
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was: ", e));
+            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
         }
     }
 
     /**
-     * Add a label to the report file. Any less than or greater than characters will be escaped.
+     * Add a label to the report file. Any less than or greater than characters
+     * will be escaped.
      *
      * @param s String to add to the HTML.
      */
@@ -463,12 +476,13 @@ abstract class Repn {
             htmlOutput.write(safeXML(s));
             htmlOutput.write("</strong>");
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was: ", e));
+            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
         }
     }
 
     /**
-     * Add a string to the report file. Any less than or greater than characters will be escaped.
+     * Add a string to the report file. Any less than or greater than characters
+     * will be escaped.
      *
      * @param s String to add to the HTML.
      */
@@ -486,13 +500,14 @@ abstract class Repn {
         try {
             htmlOutput.write(safeXML(s));
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was: ", e));
+            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
         }
     }
 
     /**
-     * Low level routine to encode an XML value. The special charactrs ampersand,
-     * less than, greater than, double quote and single quote are escaped
+     * Low level routine to encode an XML value. The special charactrs
+     * ampersand, less than, greater than, double quote and single quote are
+     * escaped
      *
      * @param s string to write to XML document
      * @return the XML safe string

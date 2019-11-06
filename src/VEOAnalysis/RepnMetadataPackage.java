@@ -135,7 +135,7 @@ public class RepnMetadataPackage extends Repn {
                 try {
                     d2m = DOM2Model.createD2M("http://xyzz/./", m);
                 } catch (SAXParseException spe) {
-                    LOG.log(Level.WARNING, errMesg(classname, method, "Failed to initialise Jena to parse RDF: ", spe));
+                    LOG.log(Level.WARNING, errMesg(classname, method, "Failed to initialise Jena to parse RDF", spe));
                     return false;
                 }
                 d2m.load(e);
@@ -159,7 +159,7 @@ public class RepnMetadataPackage extends Repn {
         try {
             parseErrs.close();
         } catch (IOException ioe) {
-            LOG.log(Level.WARNING, errMesg(classname, method, "Failed to close StringWriter used to capture parse errors: ", ioe));
+            LOG.log(Level.WARNING, errMesg(classname, method, "Failed to close StringWriter used to capture parse errors", ioe));
         }
 
         // confirm that there is a non empty vers:MetadataSchemaIdentifier element
@@ -668,7 +668,7 @@ public class RepnMetadataPackage extends Repn {
      try {
      RepnItem.testValueAsDate(s);
      } catch (IllegalArgumentException iae) {
-     addError(errMesg(classname, method, "invalid DC_TERMS:created metadata: ", iae));
+     addError(errMesg(classname, method, "invalid DC_TERMS:created metadata", iae));
      }
      }
      }

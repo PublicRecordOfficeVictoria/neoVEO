@@ -125,7 +125,7 @@ abstract public class RepnXML extends Repn implements ErrorHandler {
         try {
             schema = sf.newSchema(schemaFile.toFile());
         } catch (SAXException e) {
-            throw new VEOFatal(5, errMesg(classname, "Failed to parse schema '" + schemaFile.toString() + "'. Error was: ", e));
+            throw new VEOFatal(5, errMesg(classname, "Failed to parse schema '" + schemaFile.toString() + "'. Error was", e));
         }
         validator = schema.newValidator();
 
@@ -135,20 +135,20 @@ abstract public class RepnXML extends Repn implements ErrorHandler {
         try {
             doc = parser.parse(file.toFile());
         } catch (SAXParseException e) {
-            LOG.log(Level.WARNING, errMesg(classname, "Parse error when parsing file" + e.getSystemId() + " (line " + e.getLineNumber() + " column " + e.getColumnNumber() + "): " + e.getMessage()));
+            LOG.log(Level.WARNING, errMesg(classname, "Parse error when parsing file" + e.getSystemId() + " (line " + e.getLineNumber() + " column " + e.getColumnNumber() + ")", e));
             return false;
         } catch (SAXException e) {
-            addError(errMesg(classname, "Problem when parsing file: ", e.getMessage()));
+            addError(errMesg(classname, "Problem when parsing file", e));
             return false;
         } catch (IOException e) {
-            throw new VEOFatal(errMesg(classname, "System error when parsing file '" + file.toString() + "'. Error was: ", e));
+            throw new VEOFatal(errMesg(classname, "System error when parsing file '" + file.toString() + "'. Error was", e));
         }
 
         // validate the DOM tree against the schema
         try {
             validator.validate(new DOMSource(doc));
         } catch (SAXException e) {
-            addError("Error when validating " + file.toString() + " against schema '" + schemaFile.toString() + "'. Error was: " + e.getMessage());
+            addError("Error when validating " + file.getFileName().toString() + " against schema '" + schemaFile.toString() + "'. Error was" + e.getMessage());
             return false;
         } catch (IOException e) {
             throw new VEOFatal(errMesg(classname, "System error when validating XML ", e));
@@ -172,7 +172,7 @@ abstract public class RepnXML extends Repn implements ErrorHandler {
     public void warning(SAXParseException e) throws SAXException {
         String method = "warning";
         
-        addWarning(errMesg(classname, method, "Warning when parsing file: ", e));
+        addWarning(errMesg(classname, method, "Warning when parsing file", e));
     }
 
     /**
@@ -185,7 +185,7 @@ abstract public class RepnXML extends Repn implements ErrorHandler {
     public void error(SAXParseException e) throws SAXException {
         String method = "error";
         
-        addError(errMesg(classname, method, "Error when parsing file: ", e));
+        addError(errMesg(classname, method, "Error when parsing file", e));
     }
 
     /**

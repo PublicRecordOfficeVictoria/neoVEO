@@ -173,15 +173,15 @@ public class RepnVEO extends Repn {
                 }
             }
         } catch (DirectoryIteratorException e) {
-            throw new VEOError(errMesg(classname, "Directory iterator failed: ", e));
+            throw new VEOError(errMesg(classname, "Directory iterator failed", e));
         } catch (IOException e) {
-            throw new VEOError(errMesg(classname, "Failed to open the VEO directory for reading files: ", e));
+            throw new VEOError(errMesg(classname, "Failed to open the VEO directory for reading files", e));
         } finally {
             if (ds != null) {
                 try {
                     ds.close();
                 } catch (IOException e) {
-                    log.log(Level.WARNING, errMesg(classname, "Closing directory stream failed: ", e));
+                    log.log(Level.WARNING, errMesg(classname, "Closing directory stream failed", e));
                 }
             }
         }
@@ -198,7 +198,7 @@ public class RepnVEO extends Repn {
             try {
                 deleteFile(veoDir);
             } catch (IOException e) {
-                throw new VEOError(errMesg(classname, "IOException deleting VEO directory: ", e));
+                throw new VEOError(errMesg(classname, "IOException deleting VEO directory", e));
             }
         }
     }
@@ -425,9 +425,9 @@ public class RepnVEO extends Repn {
             }
             zipFile.close();
         } catch (ZipException e) {
-            throw new VEOError(errMesg(classname, method, "ZIP format error in opening Zip file: ", e));
+            throw new VEOError(errMesg(classname, method, "ZIP format error in opening Zip file", e));
         } catch (IOException e) {
-            throw new VEOError(errMesg(classname, method, "IO error reading Zip file: ", e));
+            throw new VEOError(errMesg(classname, method, "IO error reading Zip file", e));
         } finally {
             try {
                 if (bos != null) {
@@ -446,7 +446,7 @@ public class RepnVEO extends Repn {
                     zipFile.close();
                 }
             } catch (IOException e) {
-                log.log(Level.WARNING, errMesg(classname, method, "IOException in closing Zip files: ", e));
+                log.log(Level.WARNING, errMesg(classname, method, "IOException in closing Zip files", e));
             }
         }
     }
@@ -658,7 +658,7 @@ public class RepnVEO extends Repn {
             try {
                 Files.copy(cssSource, cssDest, StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e) {
-                log.log(Level.WARNING, errMesg(classname, method, "Copying ReportStyle.css file to VEO directory failed: ", e));
+                log.log(Level.WARNING, errMesg(classname, method, "Copying ReportStyle.css file to VEO directory failed", e));
             }
         } else {
             log.log(Level.WARNING, errMesg(classname, method, "File: '" + cssSource.toAbsolutePath().toString() + "' doesn't exist"));

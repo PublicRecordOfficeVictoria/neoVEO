@@ -82,7 +82,7 @@ public class RepnHistory extends RepnXML {
 
         // validate the version...
         if (!version.getValue().equals("3.0")) {
-            version.addWarning("VEOHistory.xml: VEOVersion has a value of '" + version + "' instead of '3.0'");
+            version.addWarning("VEOVersion has a value of '" + version.getValue() + "' instead of '3.0'");
         }
 
         // validate the events...

@@ -12,8 +12,6 @@ import VERSCommon.VEOError;
  * The object represents a unit of data (typically a string)
  */
 final public class RepnItem extends Repn {
-
-    private String id;  // the identifier for this unit of data
     private String label; // label for the unit of data
     private String value; // the value of the data
 
@@ -25,7 +23,6 @@ final public class RepnItem extends Repn {
      */
     public RepnItem(String id, String label) {
         super(id);
-        this.id = id;
         this.label = label;
         value = null;
     }
@@ -36,7 +33,6 @@ final public class RepnItem extends Repn {
     @Override
     public void abandon() {
         super.abandon();
-        id = null;
         label = null;
         value = null;
     }

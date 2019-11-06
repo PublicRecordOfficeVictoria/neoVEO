@@ -66,7 +66,7 @@ public class RepnInformationObject extends Repn {
                 case "http://www.w3.org/1999/02/22-rdf-syntax-ns":
                     break;
                 default:
-                    throw new VEOError("vers:MetadataPackage element had an invalid xmlns:rdf attribute. Was '"+rdfNameSpace+"', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+                    throw new VEOError("Error detected:\n  Error (VEOContent.xml): vers:MetadataPackage element has an invalid xmlns:rdf attribute. Was '"+rdfNameSpace+"', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#");
             }
             
             document.gotoNextElement();
