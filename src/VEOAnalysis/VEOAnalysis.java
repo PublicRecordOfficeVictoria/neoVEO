@@ -404,7 +404,7 @@ public class VEOAnalysis {
             if (rv.hasErrors()) {
                 hasErrors = true;
             }
-            
+
             p = rv.getVEODir();
 
             // delete the unpacked VEO
@@ -417,26 +417,30 @@ public class VEOAnalysis {
         }
         return p;
     }
-    
+
     /**
      * Public subclass to return information about the VEO we just processed
      */
     public class TestVEOResult {
+
         public Path veoDir;     // the path of the created VEO directory
         public String uniqueID; // unique id of this VEO (i.e. the B64 encoded signature
         public boolean hasErrors; // true if the VEO had errors
-                
-        public TestVEOResult(Path veoDir, String uniqueID, boolean hasErrors) {
+        public String result;   // what happened when processing the VEO
+
+        public TestVEOResult(Path veoDir, String uniqueID, boolean hasErrors, String result) {
             this.veoDir = veoDir;
             this.uniqueID = uniqueID;
             this.hasErrors = hasErrors;
+            this.result = result;
         }
-        
+
         public void free() {
             veoDir = null;
             uniqueID = null;
+            result = null;
         }
-}
+    }
 
     /**
      * Test a specific VEO called programmatically
@@ -452,10 +456,12 @@ public class VEOAnalysis {
         TestVEOResult tvr;
         String uniqueId;
         ArrayList<RepnSignature> rs;
+        String result;
 
         // perform the analysis
         hasErrors = false;
         rv = new RepnVEO(veo, debug, dir);
+        result = null;
         try {
             // if validating, do so...
             if (error || report) {
@@ -470,12 +476,13 @@ public class VEOAnalysis {
 
             // if in error mode, print the results for this VEO
             if (error) {
-                LOG.log(Level.WARNING, rv.getStatus());
+                result = rv.getStatus();
+                // LOG.log(Level.WARNING, rv.getStatus());
             }
 
         } finally {
             hasErrors = rv.hasErrors();
-            
+
             // if VEO had at least one signature, get it...
             rs = rv.veoContentSignatures;
             uniqueId = null;
@@ -484,8 +491,8 @@ public class VEOAnalysis {
                     uniqueId = rs.get(0).signature.getValue();
                 }
             }
-            
-            tvr = new TestVEOResult(rv.getVEODir(), uniqueId, hasErrors);
+
+            tvr = new TestVEOResult(rv.getVEODir(), uniqueId, hasErrors, result);
 
             // delete the unpacked VEO
             if (!unpack && !report) {
@@ -497,9 +504,10 @@ public class VEOAnalysis {
         }
         return tvr;
     }
-    
+
     /**
      * Was the VEO error free?
+     *
      * @return true if a VEO had errors
      */
     public boolean isErrorFree() {
