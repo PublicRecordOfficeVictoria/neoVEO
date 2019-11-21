@@ -470,7 +470,7 @@ public class VEOAnalysis {
 
             // if in error mode, print the results for this VEO
             if (error) {
-                LOG.log(Level.INFO, rv.getStatus());
+                LOG.log(Level.WARNING, rv.getStatus());
             }
 
         } finally {
