@@ -28,6 +28,7 @@ import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
+import org.apache.log4j.PropertyConfigurator;
 
 /**
  * This class encapsulates an Information Object in a VEO Content file.
@@ -123,7 +124,7 @@ public class RepnVEO extends Repn {
         DirectoryStream<Path> ds;
 
         // configure the logging used in the RDF validator
-        org.apache.log4j.PropertyConfigurator.configure(schemaDir.resolve("log4j.properties").toAbsolutePath().toString());
+        PropertyConfigurator.configure(schemaDir.resolve("log4j.properties").toAbsolutePath().toString());
 
         // check that the VEO directory has the correct files (and no others)
         // System.out.println("validating " + veoDir.toString());
