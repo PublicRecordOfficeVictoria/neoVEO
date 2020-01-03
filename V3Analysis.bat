@@ -1,5 +1,7 @@
 @echo off
-rem set code="C:\Users\Andrew\Documents\Work\VERS-2015\VPA"
-set code="J:\PROV\TECHNOLOGY MANAGEMENT\Application Development\VERS\VERSCode\neoVEO"
-set versclasspath=%code%/dist/*
-java -classpath %versclasspath% VEOAnalysis.VEOAnalysis -c -v -r -norec -s %code%\neoVEOSchemas %*
+if exist "J:/PROV/TECHNOLOGY MANAGEMENT/Application Development/VERS/VERSCode" (
+	set code="J:/PROV/TECHNOLOGY MANAGEMENT/Application Development/VERS/VERSCode"
+) else (
+	set code="C:/Users/Andrew/Documents/Work/VERSCode"
+)
+java -classpath %code%/neoVEO/dist/* VEOAnalysis.VEOAnalysis -c -v -r -norec -s %code%/neoVEO/neoVEOSchemas  %*
