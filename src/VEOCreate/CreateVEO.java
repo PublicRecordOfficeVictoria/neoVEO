@@ -104,7 +104,7 @@ public class CreateVEO {
         if (!veoName.endsWith(".veo")) {
             veoName = veoName + ".veo";
         }
-        veoDir = Paths.get(directory.toString(), veoName);
+        veoDir = Paths.get(directory.toString(), veoName).toAbsolutePath().normalize();
         if (Files.exists(veoDir)) {
             try {
                 deleteFile(veoDir);
@@ -162,7 +162,7 @@ public class CreateVEO {
         if (!Files.isDirectory(veoDir)) {
             throw new VEOError(classname, 3, "VEO directory '" + name + "' is not a directory");
         }
-        this.veoDir = veoDir;
+        this.veoDir = veoDir.toAbsolutePath().normalize();
 
         // create signer
         cvc = null;
@@ -217,7 +217,7 @@ public class CreateVEO {
         }
 
         // copy the master to the VEO directory
-        dest = Paths.get(veoDir.toString(), "VEOReadme.txt");
+        dest = veoDir.resolve("VEOReadme.txt");
         try {
             Files.copy(master, dest, StandardCopyOption.COPY_ATTRIBUTES);
         } catch (IOException e) {
@@ -806,6 +806,7 @@ public class CreateVEO {
         BufferedOutputStream bos = null;
         ZipOutputStream zos = null;
         String zipName;
+        Path p;
 
         // VEOContent and VEOHistory files must have been finished and signed
         switch (state) {
@@ -832,12 +833,13 @@ public class CreateVEO {
             }
 
             // create Zip Output Stream
-            fos = new FileOutputStream(Paths.get(veoDir.getParent().toString(), zipName).toString());
+            p = veoDir.getParent();
+            fos = new FileOutputStream(Paths.get(p.toString(), zipName).toString());
             bos = new BufferedOutputStream(fos);
             zos = new ZipOutputStream(bos);
 
             // recursively process VEO file
-            zip(zos, veoDir.getParent(), veoDir);
+            zip(zos, p, veoDir);
 
             // include the content files
             zipContentFiles(zos, veoDir);
@@ -892,7 +894,7 @@ public class CreateVEO {
                 // log.log(Level.WARNING, "zipping:" + p.toString());
 
                 // construct the Path between the veoDir and the file being linked
-                relPath = veoDir.relativize(p);
+                relPath = veoDir.relativize(p.toAbsolutePath().normalize());
 
                 // copy a regular file into the ZIP file
                 if (relPath.getNameCount() != 0 && Files.isRegularFile(p)) {
