@@ -38,6 +38,7 @@ public class RepnInformationObject extends Repn {
 
         int i;
         String rdfNameSpace;
+        boolean rdf;
 
         // remember if this is the first information object in VEO
         firstIO = (seq == 1);
@@ -54,24 +55,22 @@ public class RepnInformationObject extends Repn {
         metadata = new ArrayList<>();
         i = 0;
         while (document.checkElement("vers:MetadataPackage")) {
-            
-            // confirm that the RDF namespace is valid (would otherwise cause the
-            // RDF parser to crash
+            rdf = false;
             rdfNameSpace = document.getAttribute("xmlns:rdf");
-            if (rdfNameSpace == null || rdfNameSpace.equals("")) {
-                throw new VEOError("vers:MetadataPackage element does not contain a xmlns:rdf attribute");
+            if (rdfNameSpace != null && !rdfNameSpace.equals("")) {
+                switch (rdfNameSpace) {
+                    case "http://www.w3.org/1999/02/22-rdf-syntax-ns#":
+                    case "http://www.w3.org/1999/02/22-rdf-syntax-ns":
+                        break;
+                    default:
+                        throw new VEOError("Error detected:\n  Error (VEOContent.xml): vers:MetadataPackage element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+                }
+                rdf = true;
             }
-            switch(rdfNameSpace) {
-                case "http://www.w3.org/1999/02/22-rdf-syntax-ns#":
-                case "http://www.w3.org/1999/02/22-rdf-syntax-ns":
-                    break;
-                default:
-                    throw new VEOError("Error detected:\n  Error (VEOContent.xml): vers:MetadataPackage element has an invalid xmlns:rdf attribute. Was '"+rdfNameSpace+"', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-            }
-            
+
             document.gotoNextElement();
             i++;
-            metadata.add(new RepnMetadataPackage(document, getId(), i));
+            metadata.add(new RepnMetadataPackage(document, getId(), i, rdf));
         }
         infoPieces = new ArrayList<>();
         i = 0;
@@ -282,7 +281,7 @@ public class RepnInformationObject extends Repn {
      * Generate an XML representation of the information object
      *
      * @param verbose true if additional information is to be generated
-     * @throws VEOSupport.VEOError  if a fatal error occurred
+     * @throws VEOSupport.VEOError if a fatal error occurred
      */
     public void genReport(boolean verbose) throws VEOError {
         int i;

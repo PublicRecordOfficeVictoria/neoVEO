@@ -61,13 +61,14 @@ public class RepnMetadataPackage extends Repn {
      * @param document the representation of the XML document
      * @param parentId the parent object identifier
      * @param seq the sequence number of this MP in the Information Object
+     * @param rdf true if metadata is expressed in RDF
      * @throws VEOError if the XML document has not been properly parsed
      */
-    public RepnMetadataPackage(RepnXML document, String parentId, int seq) throws VEOError {
+    public RepnMetadataPackage(RepnXML document, String parentId, int seq, boolean rdf) throws VEOError {
         super(parentId + ":MP-" + seq);
 
         metadata = new ArrayList<>();
-        rdf = false;
+        this.rdf = rdf;
         rdfModel = null;
 
         // VERS:MetadataSchemaIdentifier
@@ -77,6 +78,9 @@ public class RepnMetadataPackage extends Repn {
         // VERS:MetadataSyntaxIdentifier
         syntaxId = new RepnItem(getId(), "Metadata syntax id:");
         syntaxId.setValue(document.getTextValue());
+        if (rdf && !syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
+            throw new VEOError("Error. Metadata Package has xmlns:rdf attribute, but vers:MetadataSyntaxIdentifier is not http://www.w3.org/1999/02/22-rdf-syntax-ns");
+        }
         document.gotoNextElement();
 
         // remember the roots of the metadata subtrees
@@ -102,7 +106,32 @@ public class RepnMetadataPackage extends Repn {
         StringWriter parseErrs;     // place where parse errors can be captured
         int i;
         Element e;
-        String schemaIdValue;
+        
+        // confirm that there is a non empty vers:MetadataSchemaIdentifier element
+        if (schemaId.getValue() == null) {
+            addError("vers:MetadataSchemaIdentifier element is missing or has a null value");
+            return false;
+        }
+        if (schemaId.getValue().trim().equals("") || schemaId.getValue().trim().equals(" ")) {
+            addError("vers:MetadataSchemaIdentifier element is empty");
+            return false;
+        }
+
+        // confirm that there is a non empty vers:MetadataSyntaxIdentifier element
+        if (syntaxId.getValue() == null) {
+            addError("vers:MetadataSyntaxIdentifier element is missing or has a null value");
+            return false;
+        }
+        if (syntaxId.getValue().trim().equals("") || schemaId.getValue().trim().equals(" ")) {
+            addError("vers:MetadataSyntaxIdentifier element is empty");
+            return false;
+        }
+        
+        // can only validate metadata if RDF, with further validation possible
+        // if AGLS or AS5478
+        if (!rdf) {
+            return true;
+        }
 
         // create a place to put the RDF metadata (if any)
         rdfModel = ModelFactory.createDefaultModel();
@@ -122,7 +151,6 @@ public class RepnMetadataPackage extends Repn {
 
             // if this is RDF metadata, attempt to parse it...
             if (e.getTagName().equals("rdf:RDF")) {
-                rdf = true;
 
                 // clear any previous errors in the RDF logging facility
                 parseErrs.getBuffer().setLength(0);
@@ -160,26 +188,6 @@ public class RepnMetadataPackage extends Repn {
             parseErrs.close();
         } catch (IOException ioe) {
             LOG.log(Level.WARNING, errMesg(classname, method, "Failed to close StringWriter used to capture parse errors", ioe));
-        }
-
-        // confirm that there is a non empty vers:MetadataSchemaIdentifier element
-        if (schemaId.getValue() == null) {
-            addError("vers:MetadataSchemaIdentifier element is missing or has a null value");
-            return false;
-        }
-        if (schemaId.getValue().trim().equals("") || schemaId.getValue().trim().equals(" ")) {
-            addError("vers:MetadataSchemaIdentifier element is empty");
-            return false;
-        }
-
-        // confirm that there is a non empty vers:MetadataSyntaxIdentifier element
-        if (syntaxId.getValue() == null) {
-            addError("vers:MetadataSyntaxIdentifier element is missing or has a null value");
-            return false;
-        }
-        if (syntaxId.getValue().trim().equals("") || schemaId.getValue().trim().equals(" ")) {
-            addError("vers:MetadataSyntaxIdentifier element is empty");
-            return false;
         }
 
         // if ANZS5478 check to see if the required properties are present and valid
