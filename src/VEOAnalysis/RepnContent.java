@@ -19,7 +19,7 @@ import java.util.Iterator;
  *
  * @author Andrew Waugh
  */
-public class RepnContent extends RepnXML {
+class RepnContent extends RepnXML {
 
     String classname = "RepnContent";
     RepnItem version; // version identifier of this VEOContent.xml file
@@ -246,7 +246,7 @@ public class RepnContent extends RepnXML {
      *
      * @param veoDir the directory in which to create the report
      * @param verbose true if additional information is to be generated
-     * @throws VEOSupport.VEOError if an error occurred
+     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
      */
     public void genReport(boolean verbose, Path veoDir) throws VEOError {
         int i;

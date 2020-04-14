@@ -1,0 +1,48 @@
+!	Demonstration construction of VEOs
+hash	SHA-256
+pfx	testSigner.pfx	password
+
+!	Create the same VEO as that in the main program of CreateVEO
+BV	testVEO
+AC	./S-37-6
+
+!	add first information object with a depth of 1. A VEO need only
+!	have one information object; if you are only creating one
+!	(or a VEO with a simple list of information objects), use a depth of 0.
+!	This will have one AGLS metadata package with a minimum of metadata
+!	one information piece with two content files
+IO	Record	1
+MP	v3create-min-agls	http://prov.vic.gov.au/112344	This is a Test Record	Thomas Bent	Test Organisation
+IP	Label1	S-37-6/S-37-6-Nov.docx	S-37-6/S-37-6-Nov.pdf
+
+!	add a second information that is a child of the first
+!	this has no metadata package or information pieces
+!	in all cases when creating a new information object, it is the
+!	immediate child of the most recent information object with a
+!	depth one less (in this case 1).
+IO	Structural IO	2
+
+!	add another information object, with two metadata packages, but
+!	no information pieces
+IO	Record	3
+MP	v3create-min-agls	http://prov.vic.gov.au/112345	3rd level IO	John Cain	Test Organisation
+MP	v3create-min-agls	http://prov.vic.gov.au/112345	Another Metadata Package	Henry Bolte	Test Organisation
+
+!	add a sibling information object to the previous information
+!	object with a metadata package, and
+!	two information pieces, each with one content file
+IO	Record	3
+MP	v3create-min-agls	http://prov.vic.gov.au/112346	Yet another IO	Jeff Kennett	Test Organisation
+IP	Label1	S-37-6/S-37-6-Nov.docx
+IP	Label2	S-37-6/S-37-6-Nov.pdf
+
+!	and go all the way back to the root of the tree of IOs and add
+!	a second child, just to show how its done by changing the depth.
+!	Doesn't contain a metadata package (to show it's not necessary)
+IO	Record	2
+IP	Label1	S-37-6/S-37-6-Nov.docx
+
+!	create VEO history with two events (normally there will be
+!	different descriptions and errors!
+E	2020-01-01	Created	Creator Name	1st description	2nd description	$$	1st error report	2nd error report
+E	2020-01-01	Registrar	1st description	2nd description	$$	1st error report	2nd error report

@@ -17,7 +17,7 @@ import java.util.HashMap;
  *
  * @author Andrew Waugh
  */
-public class RepnInformationObject extends Repn {
+class RepnInformationObject extends Repn {
 
     private RepnItem type;  // information object type
     private RepnItem depth;   // depth of the information object
@@ -281,7 +281,7 @@ public class RepnInformationObject extends Repn {
      * Generate an XML representation of the information object
      *
      * @param verbose true if additional information is to be generated
-     * @throws VEOSupport.VEOError if a fatal error occurred
+     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
      */
     public void genReport(boolean verbose) throws VEOError {
         int i;

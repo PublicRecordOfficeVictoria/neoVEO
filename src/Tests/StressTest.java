@@ -6,7 +6,7 @@
  */
 package Tests;
 
-import VEOAnalysis.RepnVEO;
+// import VEOAnalysis.RepnVEO;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFatal;
 import java.io.BufferedReader;
@@ -17,18 +17,14 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  *
- * @author Andrew Waugh
  */
-public final class StressTest {
+final class StressTest {
 
     Path schemaDir; // directory in which XML schemas are to be found
     Path outputDir; // directory in which the VEOs are generated
@@ -74,6 +70,7 @@ public final class StressTest {
     }
 
     public void testVEO(String veo, int i) throws VEOError {
+        /*
         RepnVEO rv;
 
         rv = null;
@@ -93,7 +90,7 @@ public final class StressTest {
                 rv.deleteVEO();
                 rv.abandon();
             }
-        }
+        }*/
     }
 
     /**

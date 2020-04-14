@@ -22,7 +22,7 @@ import java.util.logging.*;
  * This class creates a generic XML document. It is subclassed to produce the
  * specific XML documents in the VEO
  */
-public class CreateXMLDoc {
+class CreateXMLDoc {
 
     String rootElement;     // root element
     Path veoDir;            // directory in which the VEO is being created

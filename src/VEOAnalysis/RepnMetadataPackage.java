@@ -38,7 +38,7 @@ import org.xml.sax.SAXParseException;
  *
  * @author Andrew Waugh
  */
-public class RepnMetadataPackage extends Repn {
+class RepnMetadataPackage extends Repn {
 
     String classname = "RepnMetadataPackage";
     private RepnItem schemaId;  // schema identifier
@@ -779,7 +779,7 @@ public class RepnMetadataPackage extends Repn {
      * Generate a HTML representation of the metadata package.
      *
      * @param verbose true if additional information is to be generated
-     * @throws VEOSupport.VEOError if a fatal error occurred
+     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
      */
     public void genReport(boolean verbose) throws VEOError {
         Node n;

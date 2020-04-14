@@ -20,7 +20,7 @@ import java.util.logging.Logger;
  *
  * Versions
  */
-public class TestCreateVEO {
+class TestCreateVEO {
 
     private final static Logger log = Logger.getLogger("veocreate.CreateVEO");
     String classname = "TestCreateVEO"; // for reporting

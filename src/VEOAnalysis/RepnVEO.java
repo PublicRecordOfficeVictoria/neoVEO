@@ -35,7 +35,7 @@ import org.apache.log4j.PropertyConfigurator;
  *
  * @author Andrew Waugh
  */
-public class RepnVEO extends Repn {
+class RepnVEO extends Repn {
 
     String classname = "RepnVEO";
     Path schemaDir; // directory in which XML schemas are to be found
@@ -274,7 +274,7 @@ public class RepnVEO extends Repn {
      * @param ltpfs HashMap of valid long term preservation formats
      * @param noRec true if not to complain about missing recommended metadata
      * elements
-     * @throws VEOSupport.VEOError if validation couldn't be completed
+     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
      */
     public final void validate(HashMap<String, String> ltpfs, boolean noRec) throws VEOError {
         int i;
@@ -644,7 +644,7 @@ public class RepnVEO extends Repn {
      * validate().
      *
      * @param verbose true if additional information is to be generated
-     * @throws VEOSupport.VEOError if a fatal error occurred
+     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
      */
     public void genReport(boolean verbose) throws VEOError {
         String method = "genReport";

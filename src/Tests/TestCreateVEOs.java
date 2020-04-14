@@ -19,7 +19,7 @@ import java.util.logging.Logger;
  *
  * Versions
  */
-public class TestCreateVEOs {
+class TestCreateVEOs {
 
     private final static Logger log = Logger.getLogger("veocreate.TestCreateVEOs");
     String classname = "TestCreateVEOs"; // for reporting

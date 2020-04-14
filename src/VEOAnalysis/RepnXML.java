@@ -37,7 +37,7 @@ import org.xml.sax.SAXParseException;
  *
  * @author Andrew Waugh
  */
-abstract public class RepnXML extends Repn implements ErrorHandler {
+abstract class RepnXML extends Repn implements ErrorHandler {
 
     private final String classname = "RepnXML";
     private Document doc;    // internal DOM representation of XML document
@@ -54,8 +54,7 @@ abstract public class RepnXML extends Repn implements ErrorHandler {
      * the document.
      *
      * @param id the identifier to use in describing this
-     * @throws VEOSupport.VEOFatal if a system error occurred would prevent
-     * processing any VEO
+     * @throws VERSCommon.VEOFatal if prevented from continuing processing at all
      */
     protected RepnXML(String id) throws VEOFatal {
         super(id);

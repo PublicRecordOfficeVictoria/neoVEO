@@ -15,7 +15,7 @@ import VERSCommon.VEOError;
  * date and time in an ISO8061 format. Warning: Do not directly call this
  * class. Use the CreateVEO or CreateVEOs classes.
  */
-public class DateFragment extends Fragment {
+class DateFragment extends Fragment {
 
 /**
  * Construct a fragment that will output the current date/time.

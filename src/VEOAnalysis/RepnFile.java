@@ -23,7 +23,7 @@ import java.util.logging.Logger;
  *
  * @author Andrew Waugh
  */
-public class RepnFile extends Repn {
+class RepnFile extends Repn {
 
     String classname = "RepnFile";
     int id;     // unique identifier of this RepnFile
@@ -278,7 +278,7 @@ public class RepnFile extends Repn {
      * @param verbose true if additional information is to be generated
      * @param veoDir the directory in which to create the report
      * @param directory the name of the content directory
-     * @throws VEOSupport.VEOError if a fatal error occurred
+     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
      */
     public void genReport(boolean verbose, Path veoDir, String directory) throws VEOError {
         createReport(veoDir, "Report-" + directory + ".html", "Report for content directory '" + directory + "'");
@@ -291,7 +291,7 @@ public class RepnFile extends Repn {
      * Generate an HTML representation of the content file
      * @param verbose true if additional information is to be generated
      * @param veoDir the VEO directory
-     * @throws VEOSupport.VEOError if a fatal error occurred
+     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
      */
     public void genReport(boolean verbose, Path veoDir) throws VEOError {
         int i;

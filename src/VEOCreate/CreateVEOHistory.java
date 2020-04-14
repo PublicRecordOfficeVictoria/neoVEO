@@ -12,11 +12,10 @@ import java.nio.file.Paths;
 import java.util.logging.Logger;
 
 /**
- * This class creates a VEOHistory.xml file.
- * This class should not be called directly, instead the CreateVEOs class
- * should be used.
+ * This class creates a VEOHistory.xml file. This class should not be called
+ * directly, instead the CreateVEOs class should be used.
  */
-public class CreateVEOHistory extends CreateXMLDoc {
+class CreateVEOHistory extends CreateXMLDoc {
 
     private final String version; // version to use (default is "3.0")
     private int state;      // state of creation
@@ -28,9 +27,10 @@ public class CreateVEOHistory extends CreateXMLDoc {
 
     /**
      * Default constructor.
+     *
      * @param veoDir VEO directory in which to create history file
      * @param version version number
-     * @throws VEOError  if a fatal error occurred
+     * @throws VEOError if a fatal error occurred
      */
     public CreateVEOHistory(Path veoDir, String version) throws VEOError {
         super(veoDir);
@@ -132,10 +132,11 @@ public class CreateVEOHistory extends CreateXMLDoc {
         write(contents6);
 
         // write descriptions
-        if (descriptions.length == 0) {
+        if (descriptions == null || descriptions.length == 0) {
             write(contents7);
-            write("No descriptions given");
+            write("No event description specified");
             write(contents8);
+
         } else {
             for (i = 0; i < descriptions.length; i++) {
                 write(contents7);
@@ -145,10 +146,12 @@ public class CreateVEOHistory extends CreateXMLDoc {
         }
 
         // write errors
-        for (i = 0; i < errors.length; i++) {
-            write(contents9);
-            writeValue(errors[i]);
-            write(contents10);
+        if (errors != null) {
+            for (i = 0; i < errors.length; i++) {
+                write(contents9);
+                writeValue(errors[i]);
+                write(contents10);
+            }
         }
 
         // finish event

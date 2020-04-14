@@ -27,7 +27,7 @@ import javax.xml.bind.DatatypeConverter;
  *
  * @author Andrew Waugh
  */
-public class RepnContentFile extends Repn {
+class RepnContentFile extends Repn {
 
     private final String classname = "RepnContentFile";
     private final int id; // unique id for this content file
@@ -210,6 +210,7 @@ public class RepnContentFile extends Repn {
     /**
      * Was this content file a long term preservation file? Note this is only
      * valid *after* a call to validate
+     * @return true if a long term preservation format
      */
     public boolean isLTPF() {
         return ltpf;

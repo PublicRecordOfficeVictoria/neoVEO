@@ -3,6 +3,9 @@
  * Licensed under the CC-BY license http://creativecommons.org/licenses/by/3.0/au/
  * Author Andrew Waugh
  * Version 1.0 February 2015
+ * History 20170608 File references in control file can be absolute, or relative
+ * to either control file or current working directory 20170825 Added -e &lt;str&gt;
+ * so that non ASCII control files are handled correctly
  */
 package VEOCreate;
 
@@ -75,7 +78,7 @@ import java.util.regex.PatternSyntaxException;
  * </pre>
  * <h3>Control File</h3>
  * A control file is a text file with multiple lines. Each line contains tab
- * separate text. The first entry on each line is the command, subsequent
+ * separated text. The first entry on each line is the command, subsequent
  * entries on the line are arguments to the command. The commands are:
  * <ul>
  * <li><b>'!'</b> A comment line. The remainder of the line is ignored.</li>
@@ -88,13 +91,13 @@ import java.util.regex.PatternSyntaxException;
  * BV command.</li>
  * <li><b>'BV' &lt;veoName&gt;</b> Begin a new VEO. The single argument is the
  * VEO name (i.e. the file name of the VEO to be generated). If a VEO is already
- * being constructed, a BV command will cause the generation of previous
+ * being constructed, a BV command will cause the generation of the previous
  * VEO.</li>
- * <li><b>'IO' &lt;label&gt; [&lt;level&gt;]</b> Begin a new Information Object
- * within a VEO. The Information Object will have the specified label (which may
+ * <li><b>'IO' &lt;type&gt; [&lt;level&gt;]</b> Begin a new Information Object
+ * within a VEO. The Information Object will have the specified type (which may
  * be blank) and level. If the level is not present, it will be set to 0. If an
- * Information Object is already being constructed, an IO will finish the
- * previous Information Object.</li>
+ * Information Object is already being constructed, a new IO command will finish
+ * the previous Information Object.</li>
  * <li><b>'MP' &lt;template&gt; [&lt;subs&gt;...]</b> Begin a new Metadata
  * Package within an Information Object. The first argument is the template
  * name, subsequent arguments are the substitutions. An MP command may be
@@ -150,23 +153,13 @@ import java.util.regex.PatternSyntaxException;
  * <li>
  * $$ date $$ - substitute the current date and time in VERS format</li>
  * <li>
- * $$ [column] &gt;x&gt; $$ - substitute the contents of column &lt;x&gt;. Note
+ * $$ [column] &lt;x&gt; $$ - substitute the contents of column &lt;x&gt;. Note
  * that keyword 'column' is optional.</li>
- * <li>
- * $$ file utf8|xml [column] &lt;x&gt; $$ - include the contents of the file
- * specified in column &lt;x&gt;. The file is encoded depending on the second
- * keyword: a 'binary' file is encoded in Base64; a 'utf8' file has the
- * characters &lt;, &gt;, and &amp; encoded; and an 'xml' file is included as
- * is. Note that keyword 'column' is optional.</li>
  * </ul>
  * <p>
  * The MP/MPC commands in the control file contain the information used in the
  * column or file substitutions. Note that the command occupies column 1, and
  * the template name column 2. So real data starts at column 3.
- *
- * History 20170608 File references in control file can be absolute, or relative
- * to either control file or current working directory 20170825 Added -e <str>
- * so that non ASCII control files are handled correctly
  */
 public class CreateVEOs {
 
@@ -201,9 +194,8 @@ public class CreateVEOs {
      * parses the metadata templates from the template directory.
      * <p>
      * The defaults are as follows. The templates are found in "./Templates".
-     * Output is created in the current directory. The hash algorithm is "SHA1",
-     * and the signature algorithm is "SHA1+DSA". Content files are linked to
-     * the VEO directory.
+     * Output is created in the current directory. The hash algorithm is
+     * "SHA256".
      *
      * @param args command line arguments
      * @throws VEOFatal when cannot continue to generate any VEOs
@@ -239,7 +231,7 @@ public class CreateVEOs {
 
     /**
      * This method configures the VEO creator from the arguments on the command
-     * line. See the comment at the start of this file for the command line
+     * line. See the general description of this class for the command line
      * arguments.
      *
      * @param args[] the command line arguments
@@ -403,9 +395,9 @@ public class CreateVEOs {
     }
 
     /**
-     * Build VEOs specified by the control file. See the start of this file for
-     * a description of the control file and the various commands that can
-     * appear in it.
+     * Build VEOs specified by the control file. See the general description of
+     * this class for a description of the control file and the various commands
+     * that can appear in it.
      *
      * @throws VEOFatal if an error occurs that prevents any further VEOs from
      * being constructed
@@ -452,10 +444,12 @@ public class CreateVEOs {
     }
 
     /**
-     * Read commands from the Reader to build VEOs
+     * Read commands from the Reader to build VEOs. See the general description of
+     * this class for a description of the control file and the various commands
+     * that can appear in it.
      *
-     * @param br
-     * @throws VEOFatal
+     * @param br file to read the commands from
+     * @throws VERSCommon.VEOFatal if prevented from continuing processing at all
      */
     public void buildVEOs(BufferedReader br) throws VEOFatal {
         String method = "buildVEOs";
@@ -1086,7 +1080,7 @@ public class CreateVEOs {
     }
 
     /**
-     * Abandon construction of these VEO and free any resources associated with
+     * Abandon construction of these VEOs and free any resources associated with
      * it.
      *
      * @param debug true if information is to be left for debugging

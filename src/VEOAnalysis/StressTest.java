@@ -24,7 +24,7 @@ import java.util.logging.Logger;
  *
  * @author Andrew Waugh
  */
-public final class StressTest {
+final class StressTest {
 
     Path schemaDir; // directory in which XML schemas are to be found
     Path outputDir; // directory in which the VEOs are generated

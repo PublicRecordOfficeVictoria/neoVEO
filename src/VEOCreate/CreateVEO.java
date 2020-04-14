@@ -16,7 +16,6 @@ import VERSCommon.VEOFatal;
 import java.nio.file.Path;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -34,9 +33,18 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 /**
- * This class creates a single VEO. Normally the methods in this class are
- * driven by a control file from createVEOs, but it is possible to call these
- * methods directly as an API to construct VEOs.
+ * This class creates a single VEO. These methods can be called directly as an
+ * API to create a single VEO, or indirectly from the
+ * {@link VEOCreate.CreateVEOs} class to create multiple VEOs.
+ * <p>
+ * Two types of errors are thrown by the methods in this class:
+ * {@link VERSCommon.VEOError} and {@link VERSCommon.VEOFatal}. VEOError is
+ * thrown when an error occurs that requires the construction of this VEO to be
+ * abandoned, but construction of further VEOs
+ * can be attempted. VEOFatal is thrown when an error occurs that means there is
+ * no point attempting to construct further VEOs (typically a system error).
+ * 
+ * @author Andrew Waugh, Public Record Office Victoria
  */
 public class CreateVEO {
 
@@ -69,13 +77,20 @@ public class CreateVEO {
      * constructed. A VEO directory named veoName is created in the specified
      * directory. The specified hash algorithm is used to generate fixity
      * information for the content files and to generate the digital signatures.
+     * <p>
+     * Valid hashAlg values are 'SHA-1', 'SHA-256', 'SHA-384', and 'SHA-512'.
+     * MD2 and MD5 are NOT supported as these are considered insecure today. The
+     * signature algorithm is implicitly specified by the PFX file.
+     * <p>
+     * Note that this CreateVEO instance can only create ONE VEO. A new instance
+     * must be created for each VEO.
      *
      * @param directory directory in which to create the VEO directory
      * @param veoName name of the VEO to be created
      * @param hashAlg the name of the hash algorithm to be used to protect
      * content files
      * @param debug true if operating in debug mode
-     * @throws VEOError if the directory doesn't exist, or the veoName does
+     * @throws VERSCommon.VEOError if the instance could not be constructed
      */
     public CreateVEO(Path directory, String veoName, String hashAlg, boolean debug) throws VEOError {
         String name;    // string representation of a file name
@@ -136,15 +151,20 @@ public class CreateVEO {
     }
 
     /**
-     * Auxiliary constructor used when the VEO directory has already been
-     * created and it is only necessary to sign and zip it. The specified hash
-     * algorithm is used to generate the digital signatures.
+     * Auxiliary constructor used when the VEO directory and all its contents
+     * has already been created and it is only necessary to sign and zip the
+     * VEO.
+     * <p>
+     * The specified hash algorithm is used to generate the digital signatures.
+     * Valid hashAlg values are 'SHA-1', 'SHA-256', 'SHA-384', and 'SHA-512'.
+     * MD2 and MD5 are NOT supported as these are considered insecure today. The
+     * signature algorithm is implicitly specified by the PFX file.
      *
-     * @param veoDir directory containing the VEO (including the '.veo')
+     * @param veoDir directory containing the partially constructed VEO
      * @param hashAlg the name of the hash algorithm to be used to protect
      * content files
      * @param debug true if operating in debug mode
-     * @throws VEOError if the directory doesn't exist, or the veoName does
+     * @throws VERSCommon.VEOError if an error occurred
      */
     public CreateVEO(Path veoDir, String hashAlg, boolean debug) throws VEOError {
         String name;    // string representation of a file name
@@ -172,7 +192,8 @@ public class CreateVEO {
     }
 
     /**
-     * Get a Path to the VEO directory.
+     * Get the file path to the VEO directory. The VEO directory is the
+     * directory containing the contents of the VEO before it is zipped.
      *
      * @return Path pointing to the VEO directory
      */
@@ -183,10 +204,13 @@ public class CreateVEO {
     /**
      * Copy the VEOReadme.txt file to the VEO directory being created. The
      * master VEOReadme.txt file is found in the template directory.
+     * <p>
+     * This method is normally called immediately after creating a CreateVEO
+     * object, but may be called anytime until the call to the finaliseFiles().
      *
      * @param templateDir the template directory
-     * @throws VEOError if the error affects this VEO only
-     * @throws VEOFatal if the error means no VEOs can be generated
+     * @throws VERSCommon.VEOError if the error affects this VEO only
+     * @throws VERSCommon.VEOFatal if the error means no more VEOs can be generated
      */
     public void addVEOReadme(Path templateDir) throws VEOError, VEOFatal {
         String method = "AddVEOReadMe";
@@ -226,69 +250,27 @@ public class CreateVEO {
     }
 
     /**
-     * Add content files to the VEO being created. Content files can be copied,
-     * moved, or linked into the VEO directory. Linking the files is the
-     * fastest, but is not supported across file systems
+     * Add a new Information Object with a specific IOType and IODepth. A IOType
+     * is an arbitrary string identifying this Information Object. IOType must
+     * not be null. IODepth must be a positive integer or zero.
+     * <p>
+     * After adding a new Information Object you must add all of its contents
+     * (Metadata Packages and Information Pieces) before adding a new
+     * Information Object. Once an Information Object has been started, all the
+     * Metadata Packages must be added before any of the Information Pieces.
      *
-     * @param directories a list of directories to be added
-     * @throws VEOError if the error affects this VEO only
-     * @throws VEOFatal if the error means no VEOs can be generated
+     * @param IOType the IOType of this information object
+     * @param IODepth the IODepth of this information object
+     * @throws VERSCommon.VEOError if an error occurred
      */
-    public void addContent(Path... directories) throws VEOError {
-        String method = "addContent";
-        int i;
-
-        // check there is at least one directory to add...
-        if (directories.length == 0) {
-            throw new VEOError(classname, method, 1, "must be passed at least one directory");
-        }
-
-        // can only add content until the VEO has been signed
-        switch (state) {
-            case VEO_STARTED:
-            case IO_STARTED:
-            case ADDING_MP:
-            case ADDING_IP:
-                break;
-            case FINISHED_FILES:
-                throw new VEOError(classname, method, 2, "Content cannot be added after finishFiles() has been called");
-            case SIGNED:
-                throw new VEOError(classname, method, 3, "Content cannot be added after sign() has been called");
-            case FINISHED:
-                throw new VEOError(classname, method, 4, "Content cannot be added after finalise() has been called");
-        }
-        // add directories...
-        for (i = 0; i < directories.length; i++) {
-
-            // check that the source content directory exists
-            if (directories[i] == null) {
-                throw new VEOError(classname, method, 5, "a content directory is null");
-            }
-            if (!Files.exists(directories[i])) {
-                throw new VEOError(classname, method, 6, "content directory '" + directories[i].toString() + "' does not exist");
-            }
-
-            // remember content directory prefix
-            contentPrefixes.put(directories[i].getFileName().toString(), directories[i]);
-        }
-    }
-
-    /**
-     * Add a new Information Object with a specific label and depth. A label is
-     * an arbitrary string identifying this Information Object.
-     *
-     * @param label the label of this information object
-     * @param depth the depth of this information object
-     * @throws VEOError if a fatal error occurred
-     */
-    public void addInformationObject(String label, int depth) throws VEOError {
+    public void addInformationObject(String IOType, int IODepth) throws VEOError {
         String method = "addInformationObject";
 
         // sanity checks
-        if (label == null) {
+        if (IOType == null) {
             throw new VEOError(classname, method, 1, "label parameter is null");
         }
-        if (depth < 0) {
+        if (IODepth < 0) {
             throw new VEOError(classname, method, 2, "depth parameter is a negative number");
         }
 
@@ -314,18 +296,39 @@ public class CreateVEO {
             case FINISHED:
                 throw new VEOError(classname, method, 5, "Information Object cannot be added after finalise() has been called");
         }
-        cvc.startInfoObject(label, depth);
+        cvc.startInfoObject(IOType, IODepth);
 
         // now ready to add metadata packages or information pieces
         state = VEOState.IO_STARTED;
     }
 
     /**
-     * Add a new Metadata Package using the specified template and data.
+     * Add a new Metadata Package using the specified template and data. The
+     * template is expressed as a Fragment, but use the Templates class to
+     * obtain the desired Fragment.
+     * <p>
+     * Read the description for the Templates class to understand Fragments and
+     * their use.
+     * <p>
+     * The data to be substituted into the template (fragment) is contained in a
+     * String array. Substitution $$1$$ obtains data from array element 0, and
+     * so on. (Yes, having the substitution number be one greater than the array
+     * index is not ideal, but this is for historical reasons.)
+     * <p>
+     * Neither the template or data arguments may be null.
+     * <p>
+     * If required, the Metadata Package can be created using multiple API
+     * calls. Once a Metadata Package has been started, use the
+     * continueMetadataPackage() methods to add more content to this Metadata
+     * Package. Metadata Packages are automatically finalised when a new
+     * Metadata Package is started, or an Information Piece is added.
+     * <p>
+     * All of the Metadata Packages associated with the Information Object must
+     * be added to the Information Object before any Information Piece is added.
      *
      * @param template the template to use
      * @param data an array of data to populate the template
-     * @throws VEOError if a fatal error occurred
+     * @throws VERSCommon.VEOError if an error occurred
      */
     public void addMetadataPackage(Fragment template, String[] data) throws VEOError {
         String method = "addMetadataPackage";
@@ -366,16 +369,28 @@ public class CreateVEO {
     }
 
     /**
-     * Add a new Metadata Package using a prebuilt XML fragment
+     * Add a new Metadata Package using a piece of XML text. This method creates
+     * a Metadata Package consisting of an arbitrary piece of XML. The schemaId
+     * and syntaxId are URIs and are defined in the VERS V3 specifications. None
+     * of the arguments can be null.
+     * <p>
+     * If required, the Metadata Package can be created using multiple API
+     * calls. Once a Metadata Package has been started, use the
+     * continueMetadataPackage() methods to add more content to this Metadata
+     * Package. Metadata Packages are automatically finalised when a new
+     * Metadata Package is started, or an Information Piece is added.
+     * <p>
+     * All of the Metadata Packages associated with the Information Object must
+     * be added to the Information Object before any Information Piece is added.
      *
-     * @param schemaId a string containing the URI identifying the schema for
-     * the XML fragment
-     * @param syntaxId a string containing the URI identifying the syntax for
-     * the XML fragment
-     * @param data an array of data to populate the template
-     * @throws VEOError if a fatal error occurred
+     * @param schemaId a string containing the URI identifying the schema of the
+     * Metadata Package being commenced.
+     * @param syntaxId a string containing the URI identifying the syntax of the
+     * Metadata Package being commenced.
+     * @param text text to put in the Metadata Package
+     * @throws VERSCommon.VEOError if an error occurred
      */
-    public void addMetadataPackage(String schemaId, String syntaxId, StringBuilder data) throws VEOError {
+    public void addMetadataPackage(String schemaId, String syntaxId, StringBuilder text) throws VEOError {
         String method = "addMetadataPackage";
 
         // sanity checks
@@ -407,8 +422,8 @@ public class CreateVEO {
 
         // start metadata package and apply parameters to first template
         cvc.startMetadataPackage(schemaId, syntaxId);
-        if (data != null) {
-            cvc.addPrebuiltMP(data);
+        if (text != null) {
+            cvc.addPrebuiltMP(text);
         }
 
         // now ready to add further metadata packages
@@ -416,11 +431,21 @@ public class CreateVEO {
     }
 
     /**
-     * Continue a metadata package, applying new data to a new template.
+     * Continue a metadata package, applying new data into a new template. This
+     * method can be called after an addMetadataPackage() call, or a previous
+     * continueMetadataPackage() call.
+     * <p>
+     * Any number of calls to either continueMetadataPackage() method can be
+     * made. The Metadata Package is automatically finalised when a new Metadata
+     * Package is added, or an Information Piece is added.
+     * <p>
+     * The Syntax and Semantic Identifiers in the template are ignored.
+     * <p>
+     * Neither argument may be null.
      *
      * @param template the template to use
      * @param data an array of data to populate the template
-     * @throws VEOError if a fatal error occurred
+     * @throws VERSCommon.VEOError if an error occurred
      */
     public void continueMetadataPackage(Fragment template, String[] data) throws VEOError {
         String method = "continueMetadataPackage";
@@ -443,17 +468,23 @@ public class CreateVEO {
     }
 
     /**
-     * Continue a metadata package by adding static text
+     * Continue a metadata package by adding text. This method uses additional
+     * text to extend a previously commenced Metadata Package. Any number of
+     * calls to either continueMetadataPackage() method can be made. The
+     * Metadata Package is automatically finalised when a new Metadata Package
+     * is added, or an Information Piece is added.
+     * <p>
+     * Neither argument may be null.
      *
-     * @param data static text to be added to metadata package
-     * @throws VEOError if a fatal error occurred
+     * @param text static text to be added to metadata package
+     * @throws VERSCommon.VEOError if an error occurred
      */
-    public void continueMetadataPackage(String data) throws VEOError {
+    public void continueMetadataPackage(String text) throws VEOError {
         String method = "continueMetadataPackage";
 
         // sanity checks
-        if (data == null) {
-            throw new VEOError(classname, method, 2, "data parameter is null");
+        if (text == null) {
+            throw new VEOError(classname, method, 2, "text parameter is null");
         }
 
         // we must be already creating a Metadata Package
@@ -462,15 +493,35 @@ public class CreateVEO {
         }
 
         // apply parameters to template
-        cvc.addPrebuiltMP(data);
+        cvc.addPrebuiltMP(text);
     }
 
     /**
-     * Add a new Information Piece with a particular label.
+     * Continue a metadata package by adding text. This method uses additional
+     * text to extend a previously commenced Metadata Package. Any number of
+     * calls to either continueMetadataPackage() method can be made. The
+     * Metadata Package is automatically finalised when a new Metadata Package
+     * is added, or an Information Piece is added.
+     * <p>
+     * The data argument can not be null.
+     *
+     * @param text static text to be added to metadata package
+     * @throws VERSCommon.VEOError if an error occurred
+     */
+    public void continueMetadataPackage(StringBuilder text) throws VEOError {
+        continueMetadataPackage(text.toString());
+    }
+
+    /**
+     * Add a new Information Piece to the Information Object with a particular
+     * label.
+     * <p>
+     * Information Pieces must be added to an Information Object after all of
+     * the Metadata Packages have been added to the Information Object.
      *
      * @param label the label to apply (can be null if no label is to be
      * included)
-     * @throws VEOError if a fatal error occurred
+     * @throws VERSCommon.VEOError if an error occurred
      */
     public void addInformationPiece(String label) throws VEOError {
         String method = "startInformationPiece";
@@ -502,10 +553,110 @@ public class CreateVEO {
     }
 
     /**
-     * Add a reference to a content file to an Information Piece.
+     * Add a Content File to an Information Piece. A Content File is a reference
+     *  to a real physical computer veoReference.
+     *  <p>
+     *  In order to understand this method, it is important to know that the
+     *  Content Files are represented in the VEO in an arbitrary directory
+     *  structure. The arguments to this method are the veoReference (the
+     * directory structure in the VEO) and the source (the actual location of
+     * the Content File in the file system). For example, if the veoReference is
+     * 'c/d/e.txt', and the source 'm:/a/b/c/f.txt', this would incorporate the
+     * file m:/a/b/c/f.txt into the VEO with the path in the VEO of c/d/e.txt
+     * (note the Content File name has changed from 'f.txt' to 'e.txt' in this
+     * case. The veoReference must have at least one directory level.
+     * <p>
+     * The veoReference argument cannot contain self ('.') or parent ('..')
+     * directory references.
+     * <p>
+     * The actual veoReference is not physically included in the VEO until it is
+     * ZIPped, and so it must exist until the finalise() method is called.
+     * <p>
+     * All the Content Files contained within an Information Piece must be added
+     * to the Information Piece before a new Information Piece or Information
+     * Object is added.
+     * <p>
+     * The neither argument is allowed to be null.
      *
-     * @param file content file to add
-     * @throws VEOError if an error occurs
+     * @param veoReference path name of content file in the VEO
+     * @param source actual real veoReference in the veoReference system
+     * @throws VERSCommon.VEOError if an error occurred
+     */
+    public void addContentFile(String veoReference, Path source) throws VEOError {
+        String method = "addContentFile";
+
+        // sanity checks
+        if (veoReference == null) {
+            throw new VEOError(classname, method, 1, "veoFile parameter is null");
+        }
+        if (source == null) {
+            throw new VEOError(classname, method, 2, "source parameter is null");
+        }
+
+        // can only add Content Files when adding an Information Piece
+        if (state != VEOState.ADDING_IP) {
+            throw new VEOError(classname, method, 3, "Can only add a Content File when adding an Information Piece");
+        }
+
+        // veoReference must have a directory, and cannot be relative.
+        if (veoReference.startsWith("./") || veoReference.startsWith("../")
+                || veoReference.contains("/./") || veoReference.contains("/../")
+                || veoReference.endsWith("/.") || veoReference.endsWith("/..")) {
+            throw new VEOError(classname, method, 4, "veoFile argument (" + veoReference + ") cannot contain file compenents '.' or '..'");
+        }
+        if (Paths.get(veoReference).getNameCount() < 2) {
+            throw new VEOError(classname, method, 5, "veoFile argument (" + veoReference + ") must have at least one directory");
+        }
+        
+        // source file must exist
+        if (!Files.exists(source)) {
+            throw new VEOError(classname, method, 3, "content file '" + source.toString() + "' does not exist");
+        }
+
+        // remember file to be zipped later
+        filesToInclude.add(new FileToInclude(source, veoReference));
+
+        // if ZIPping files, remember it...
+        cvc.addContentFile(veoReference, source);
+    }
+
+    /**
+     * Add a Content File to an Information Piece. A Content File is a reference
+     * to a real physical computer file.
+     * <p>
+     * <b>
+     * This method is retained for backwards compatability. Users should use the
+     * simpler and more easily understood addContentFile(String, Path) method.
+     * </b>
+     * <p>
+     * The files are referenced by a two part scheme, the parts are the path to
+     * a Content Directory and a file reference relative to the Content
+     * Directory. For example, to include the file m:/a/b/c/d/e.txt, you might
+     * divide this up into a Content Directory m:a/b/c and a relative reference
+     * c/d/e.txt. Note that the directory c appears in both parts.
+     * <p>
+     * The purpose of this division is that the relative part (c/d/e.txt in this
+     * case) explicitly appears as a directory structure in the VEO when it is
+     * generated.
+     * <p>
+     * The Content Directories (m:a/b/c in this example) are registered using
+     * the registerContentDirectories() method. The portion relative to the
+     * Content Directory (c/d/e.txt in this example) is passed as an argument to
+     * the addContentFile() method. Note that the directory 'c' is used to link
+     * the two portions together.
+     * <p>
+     * The actual file is not physically included in the VEO until it is ZIPped,
+     * and so it must exist until the finalise() method is called.
+     * <p>
+     * All the Content Files contained within an Information Piece must be added
+     * to the Information Piece before a new Information Piece or Information
+     * Object is added.
+     * <p>
+     * The file argument must not be null, and the actual referenced file must
+     * exist.
+     *
+     * @param file the relative portion of the Content File being added
+     * @throws VERSCommon.VEOError if an error occurred
      */
     public void addContentFile(String file) throws VEOError {
         String method = "addContentFile";
@@ -532,37 +683,15 @@ public class CreateVEO {
     }
 
     /**
-     * Add a reference to a content file to an Information Piece.
-     *
-     * @param file content file to add
-     * @throws VEOError if an error occurs
-     */
-    public void addContentFile(String file, Path source) throws VEOError {
-        String method = "addContentFile";
-
-        // sanity checks
-        if (file == null) {
-            throw new VEOError(classname, method, 1, "file parameter is null");
-        }
-
-        // can only add Content Files when adding an Information Piece
-        if (state != VEOState.ADDING_IP) {
-            throw new VEOError(classname, method, 2, "Can only add a Content File when adding an Information Piece");
-        }
-
-        // if ZIPping files, remember it...
-        cvc.addContentFile(file, source);
-    }
-
-    /**
-     * Get the path to the real source file. THere are two cases. If we are
-     * directly ZIPping the source file, calculate the actual file from the
-     * previously added content directory (if one exists). Otherwise, file
-     * directly points to the source file.
+     * Get the path to the real source file. This method can only be used if you
+     * are using the addContentFile(String) and
+     * registerContentDirectories(Path...) methods. It converts the short hand
+     * form 'c/d/e.txt' into a fully qualified name. If no directory 'c' has
+     * been loaded by a registerContentDirectories() call, a VEOError is thrown.
      *
      * @param file the path name to be used in the VEO
      * @return the real file
-     * @throws VEOError if the content directory hasn't been loaded
+     * @throws VERSCommon.VEOError if an error occurred
      */
     public Path getActualSourcePath(String file) throws VEOError {
         String method = "getSourcePath";
@@ -573,11 +702,105 @@ public class CreateVEO {
         rootName = destination.getName(0).toString();
         rootPath = contentPrefixes.get(rootName);
         if (rootPath == null) {
-            source = Paths.get(file);
+            throw new VEOError(classname, method, 4, "cannot match veoFile '" + file + "' to a content directory");
         } else {
             source = rootPath.resolve(destination.subpath(1, destination.getNameCount()));
         }
         return source;
+    }
+
+    /**
+     * Register content directories where content files will be found. This has
+     * two purposes. First, it allows shorthand references to content files.
+     * Second, the shorthand references will be the content directories in the
+     * final ZIP file.
+     * <p>
+     * <b>
+     * This method is only used with the addContentFile(String) method. Users
+     * should use the simpler and more easily understood addContentFile(String,
+     * Path) method instead.
+     * </b>
+     * <p>
+     * For example, if the content files are m:/a/b/c/d/e.txt and
+     * m:/a/b/c/d/f.txt, you can register 'm:/a/b/c' and subsequently add
+     * content files 'c/d/e.txt' and 'c/d/f.txt'. This will eventually create a
+     * content directory 'c' in the VEO, which contains the files 'c/d/e.txt'
+     * and 'c/d/f.txt'.
+     * <p>
+     * Note that the final directory name ('c') has to appear in both the
+     * registered directory, and the content file; this forms the linkage. You
+     * cannot register two directories with the same name (e.g. m:/a/b/c and
+     * m:/r/s/c).
+     * <p>
+     * Multiple directories to be registered can be passed in one call to this
+     * method. In addition, this method may be called multiple times to add
+     * multiple directories. At least one directory must be listed in each call
+     * to this method.
+     * <p>
+     * A directory must be registered before it is referenced in the
+     * addContentFile() methods.
+     *
+     * @param directories a list of directories to be registered
+     * @throws VERSCommon.VEOError if an error occurred
+     */
+    public void registerContentDirectories(Path... directories) throws VEOError {
+        String method = "addContent";
+        int i;
+        String dirName;
+
+        // check there is at least one directory to add...
+        if (directories.length == 0) {
+            throw new VEOError(classname, method, 1, "must be passed at least one directory");
+        }
+
+        // can only add content until the VEO has been signed
+        switch (state) {
+            case VEO_STARTED:
+            case IO_STARTED:
+            case ADDING_MP:
+            case ADDING_IP:
+                break;
+            case FINISHED_FILES:
+                throw new VEOError(classname, method, 2, "Content cannot be added after finishFiles() has been called");
+            case SIGNED:
+                throw new VEOError(classname, method, 3, "Content cannot be added after sign() has been called");
+            case FINISHED:
+                throw new VEOError(classname, method, 4, "Content cannot be added after finalise() has been called");
+        }
+        // add directories...
+        for (i = 0; i < directories.length; i++) {
+
+            // check that the source content directory exists and is a directory
+            if (directories[i] == null) {
+                throw new VEOError(classname, method, 5, "a content directory is null");
+            }
+            if (!Files.exists(directories[i])) {
+                throw new VEOError(classname, method, 6, "content directory '" + directories[i].toString() + "' does not exist");
+            }
+            if (!Files.isDirectory(directories[i])) {
+                throw new VEOError(classname, method, 7, "content directory '" + directories[i].toString() + "' is not a directory");
+            }
+
+            // check that we are not adding a directory name twice
+            dirName = directories[i].getFileName().toString();
+            if (contentPrefixes.get(dirName) != null) {
+                throw new VEOError(classname, method, 8, "content directory '" + dirName + "' (refenced in '" + directories[i].toString() + "') has already been registered");
+            }
+
+            // remember content directory prefix
+            contentPrefixes.put(dirName, directories[i]);
+        }
+    }
+
+    /**
+     * A synonym for registerContentDirectories(), retained for backwards
+     * compatability.
+     *
+     * @param directories a list of directories to be registered
+     * @throws VERSCommon.VEOError if an error occurred
+     */
+    public void addContent(Path... directories) throws VEOError {
+        registerContentDirectories(directories);
     }
 
     /**
@@ -590,6 +813,7 @@ public class CreateVEO {
      * @throws VEOError if the error affects this VEO only
      * @throws VEOFatal if the error means no VEOs can be generated
      */
+    /*
     public void addIndividualContentFiles(Path... files) throws VEOError {
         String method = "addIndividualContentFiles";
         int i;
@@ -639,36 +863,34 @@ public class CreateVEO {
             throw new VEOError(classname, method, 1, "must be passed at least one (non blank) file");
         }
     }
-
+     */
+    
     /**
-     * Add an event to the VEOHistory.xml file. Events may be added at any time
-     * until the finishFiles() method has been called.
+     * Add an event to the VEOHistory.xml file. An event has five parameters:
+     * the timestamp (optionally including the time) the event occurred; a label
+     * naming the event, the name of the person who initiated the event; an
+     * array of descriptions about the event; and an array of errors that the
+     * event generated (if any).
+     * <p>
+     * Only the timestamp is mandatory, but it is expected that if the event is
+     * null, at least one description would be present to describe the event.
+     * <p>
+     * Events may be added at any time until the finishFiles() method has been
+     * called.
      *
-     * @param date the date/time of the event in standard VEO format
+     * @param timestamp the timestamp/time of the event in standard VEO format
      * @param event a string labelling the type of event
      * @param initiator a string labelling the initiator of the event
      * @param descriptions an array of descriptions of the event
      * @param errors an array of errors resulting
-     * @throws VEOError if a fatal error occurred
+     * @throws VERSCommon.VEOError if an error occurred
      */
-    public void addEvent(String date, String event, String initiator, String[] descriptions, String[] errors) throws VEOError {
+    public void addEvent(String timestamp, String event, String initiator, String[] descriptions, String[] errors) throws VEOError {
         String method = "addEvent";
 
         // sanity checks
-        if (date == null) {
+        if (timestamp == null) {
             throw new VEOError(classname, method, 1, "date parameter is null");
-        }
-        if (event == null) {
-            throw new VEOError(classname, method, 2, "event parameter is null");
-        }
-        if (initiator == null) {
-            throw new VEOError(classname, method, 3, "initiator parameter is null");
-        }
-        if (descriptions == null) {
-            throw new VEOError(classname, method, 4, "descriptions parameter is null");
-        }
-        if (errors == null) {
-            throw new VEOError(classname, method, 5, "errors parameter is null");
         }
 
         // can only add an Event before the VEOHistory file has been finalised
@@ -687,18 +909,20 @@ public class CreateVEO {
         }
 
         // add event
-        cvhf.addEvent(date, event, initiator, descriptions, errors);
+        cvhf.addEvent(timestamp, event, initiator, descriptions, errors);
     }
 
     /**
      * Finalise the VEOContent and VEOHistory files. This method commences the
      * finishing of the VEO construction. It completes the VEOContent.xml and
-     * VEOHistory.xml files. It must be called before the sign() method. When
-     * completing the VEOContent.xml file, any uncompleted Information Object,
-     * Metadata Package, or Information Piece is completed. This method may only
-     * be called once.
+     * VEOHistory.xml files.
+     * <p>
+     * This method must be called before the sign() method. Once this method has
+     * been called, no further information can be added to the VEO (i.e.
+     * Information Objects, Information Pieces, Content Files, or Events). This
+     * method may be called only once.
      *
-     * @throws VEOError if a fatal error occurred
+     * @throws VERSCommon.VEOError if an error occurred
      */
     public void finishFiles() throws VEOError {
         String method = "finishFiles";
@@ -746,14 +970,21 @@ public class CreateVEO {
      * Sign the VEOContent.xml and VEOHistory.xml files. This method generates a
      * pair of VEOContentSignature and VEOHistorySignature files using the
      * specified signer and hash algorithm. (Note the private key in the signer
-     * controls the signature algorithm that is used.) This method must be
-     * called after calling the finaliseFiles() method. This method may be
-     * called repeatedly to generate new pairs of signature files for different
-     * signers.
+     * controls the signature algorithm to be used.)
+     * <p>
+     * This method can be called repeatedly to create multiple pairs of
+     * signature files by different signers.
+     * <p>
+     * This method must be called after calling the finaliseFiles() method.
+     * <p>
+     * Valid hashAlg values are 'SHA-1', 'SHA-256', 'SHA-384', and 'SHA-512'.
+     * MD2 and MD5 are NOT supported as these are considered insecure today.
+     * This hashAlg may be different to that specified when instantiating this
+     * CreateVEO instance.
      *
      * @param signer PFX file representing the signer
      * @param hashAlg algorithm to use to hash file
-     * @throws VEOError if a fatal error occurred
+     * @throws VERSCommon.VEOError if an error occurred
      */
     public void sign(PFXUser signer, String hashAlg) throws VEOError {
         String method = "sign";
@@ -790,15 +1021,18 @@ public class CreateVEO {
     /**
      * Produce the actual VEO (a Zip file) and clean up. This method turns the
      * VEO directory and its contents into a ZIP file. The ZIP file has the same
-     * name as the VEO directory with the suffix '.veo.zip'. The method must be
-     * called after the last sign() method call. In normal operation, this
-     * method will delete the VEO directory after the ZIP file has been created,
-     * unless the debug flag was specified when the VEO was created or the
-     * keepVEODir flag is set). Once this method has been called none of the
-     * other methods of this class can be called.
+     * name as the VEO directory with the suffix '.veo.zip'.
+     * <p>
+     * In normal operation, this method will delete the VEO directory after the
+     * ZIP file has been created, unless the debug flag was specified when the
+     * VEO was created or the keepVEODir flag is set).
+     * <p>
+     * The method must be called after the last sign() method call. Once this
+     * method has been called the VEO has been completed and none of the other
+     * methods of this class can be called.
      *
      * @param keepVEODir if true the VEO directory is kept
-     * @throws VEOError if a fatal error occurred
+     * @throws VERSCommon.VEOError if an error occurred
      */
     public void finalise(boolean keepVEODir) throws VEOError {
         String method = "finalise";
@@ -954,7 +1188,7 @@ public class CreateVEO {
         }
 
         seen = new HashMap<>();
-        
+
         // go through list and for each file
         for (i = 0; i < filesToInclude.size(); i++) {
             fi = filesToInclude.get(i);
@@ -995,11 +1229,13 @@ public class CreateVEO {
 
     /**
      * Abandon construction of this VEO and free any resources associated with
-     * it. This method is called automatically by the finalise() method. It may
-     * also be called at any other time to abandon construction of the VEO (e.g.
-     * after an error) and free all the resources associated with the VEO. If
-     * the debug flag is set to true, some information is preserved (e.g. the
-     * VEO directory)
+     * it (including any files created). It is only necessary to use this method
+     * in the event of a VEOError or VEOFatal thrown, or if it is otherwise
+     * desired to not finish constructing the VEO. For normal use, this method
+     * is automatically called from the finalise() method.
+     * <p>
+     * If the debug flag is set to true the constructed VEO directory is
+     * retained.
      *
      * @param debug true if in debugging mode
      */
@@ -1083,69 +1319,94 @@ public class CreateVEO {
     }
 
     /**
-     * Test program...
+     * Test program and example code
      *
      * @param args the command line arguments
      */
     public static void main(String[] args) {
         CreateVEO cv;
-        CreateVEOContent cvc;
-        Path veoDir;
-        DirectoryStream<Path> ds;
-        CreateVEOHistory cvhf;
+        Path templateDir, outputDir, testData;
+        Templates templates;
         String[] descriptions, errors;
-        CreateSignatureFile csf;
         PFXUser signer;
+        String filename;
 
+        cv = null;
         try {
-            cv = new CreateVEO(Paths.get("Test"), "testVEO", "SHA-1", true);
-            veoDir = cv.getVEODir();
-            cv.addVEOReadme(Paths.get("Test"));
+            templateDir = Paths.get("demo", "templates");
+            outputDir = Paths.get("f:", "output");
+            testData = Paths.get("f:", "VERS-V3-Package", "neoVEO", "demo");
+            templates = new Templates(templateDir);
+            System.out.println("Starting construction of VEO");
 
-            // add content files
-            cv.addContent(Paths.get("Test", "testDir"));
+            // create an empty VEO. You need to create a new VEO for each VEO
+            // constructed
+            cv = new CreateVEO(outputDir, "testVEO", "SHA-256", true);
+            cv.addVEOReadme(templateDir);
+            filename = cv.getVEODir().toString();
 
-            // create VEO Content file
-            cvc = new CreateVEOContent(veoDir, "3.0", "SHA-1");
-            cvc.startInfoObject("Record", 1);
-            //cvc.StartMetadataPackage();
-            // cvc.addFromTemplate();
-            cvc.finishMetadataPackage();
-            //cvc.StartMetadataPackage();
-            cvc.finishMetadataPackage();
-            cvc.startInfoPiece("Label");
-            ds = Files.newDirectoryStream(Paths.get(veoDir.toString(), "testDir"));
-            for (Path p : ds) {
-                cvc.addContentFile((veoDir.relativize(p)).toString(), null);
-            }
-            cvc.finishInfoPiece();
-            cvc.finishInfoObject();
-            cvc.finalise();
+            // add first information object with a depth of 1. A VEO need only
+            // have one information object; if you are only creating one
+            // (or a VEO with a simple list of information objects), use a
+            // depth of 0.
+            // this will have one AGLS metadata package with a minimum of metadata
+            // one information piece with two content files
+            cv.addInformationObject("Record", 1);
+            cv.addMetadataPackage(templates.findTemplate("VEOCreate-min-agls"), new String[]{"http://prov.vic.gov.au/112344", "This is a Test Record", "Thomas Bent", "Test Organisation"});
+            cv.addInformationPiece("Label");
+            cv.addContentFile("S-37-6/S-37-6-Nov.docx", testData.resolve(Paths.get("S-37-6", "S-37-6-Nov.docx")));
+            cv.addContentFile("S-37-6/S-37-6-Nov.pdf", testData.resolve(Paths.get("S-37-6", "S-37-6-Nov.pdf")));
 
-            // create VEO History file
-            cvhf = new CreateVEOHistory(veoDir, "3.0");
-            cvhf.start();
-            descriptions = new String[]{"One"};
-            errors = new String[]{"Two"};
-            cvhf.addEvent("20140101", "Created", "Andrew", descriptions, errors);
-            cvhf.finalise();
+            // add a second information that is a child of the first
+            // this has no metadata package or information pieces
+            // in all cases when creating a new information object, it is the
+            // immediate child of the most recent information object with a
+            // depth one less (in this case 1).
+            cv.addInformationObject("Structural IO", 2);
 
-            // sign VEO Content file
-            signer = new PFXUser(new File("Test", "signer.pfx").toString(), "Ag0nc1eS");
-            csf = new CreateSignatureFile(veoDir, "3.0");
-            csf.sign("VEOContent.xml", signer, "SHA1withRSA");
+            // add another information object, with two metadata packages, but
+            // no information pieces
+            cv.addInformationObject("Record", 3);
+            cv.addMetadataPackage(templates.findTemplate("VEOCreate-min-agls"), new String[]{"http://prov.vic.gov.au/112345", "3rd level IO", "John Cain", "Test Organisation"});
+            cv.addMetadataPackage(templates.findTemplate("VEOCreate-min-agls"), new String[]{"http://prov.vic.gov.au/112345", "Another Metadata Package", "Henry Bolte", "Test Organisation"});
 
-            // sign VEO History file
-            signer = new PFXUser(new File("Test", "signer.pfx").toString(), "Ag0nc1eS");
-            csf = new CreateSignatureFile(veoDir, "3.0");
-            csf.sign("VEOHistory.xml", signer, "SHA1withRSA");
+            // add a sibling information object to the previous information
+            // object with a metadata package, and
+            // two information pieces, each with one content file
+            cv.addInformationObject("Record", 3);
+            cv.addMetadataPackage(templates.findTemplate("VEOCreate-min-agls"), new String[]{"http://prov.vic.gov.au/112346", "Yet another IO", "Jeff Kennett", "Test Organisation"});
+            cv.addInformationPiece("Label1");
+            cv.addContentFile("S-37-6/S-37-6-Nov.docx", testData.resolve(Paths.get("S-37-6", "S-37-6-Nov.docx")));
+            cv.addInformationPiece("Label2");
+            cv.addContentFile("S-37-6/S-37-6-Nov.pdf", testData.resolve(Paths.get("S-37-6", "S-37-6-Nov.pdf")));
+
+            // and go all the way back to the root of the tree of IOs and add
+            // a second child, just to show how its done by changing the depth.
+            // Doesn't contain a metadata package (to show it's not necessary)
+            cv.addInformationObject("Record", 2);
+            cv.addInformationPiece("Label1");
+            cv.addContentFile("S-37-6/S-37-6-Nov.docx", testData.resolve(Paths.get("S-37-6", "S-37-6-Nov.docx")));
+
+            // create VEO history with two events (normally there will be
+            // different descriptions and errors!
+            descriptions = new String[]{"1st description", "2nd description"};
+            errors = new String[]{"1st error report", "2nd error report"};
+            cv.addEvent("2020-01-01", "Created", "Creator Name", descriptions, errors);
+            cv.addEvent("2020-01-01", "Registered", "Registrar", descriptions, errors);
+            cv.finishFiles();
+
+            // sign the VEO
+            signer = new PFXUser(testData.resolve("testSigner.pfx").toString(), "password");
+            cv.sign(signer, "SHA-256");
 
             // zip
             cv.finalise(true);
+            System.out.println("VEO '"+filename+".zip' constructed");
         } catch (VEOError e) {
             System.out.println(e.toString());
-        } catch (IOException e) {
-            System.out.println("IOException: " + e.toString());
+            if (cv != null) {
+                cv.abandon(false);
+            }
         }
     }
 }

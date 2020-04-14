@@ -17,7 +17,7 @@ import java.util.ArrayList;
  *
  * @author Andrew Waugh
  */
-public class RepnHistory extends RepnXML {
+class RepnHistory extends RepnXML {
 
     RepnItem version; // version identifier of this VEOHistory.xml file
     ArrayList<RepnEvent> events;    // list of events associated with this history

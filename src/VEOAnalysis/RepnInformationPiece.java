@@ -17,7 +17,7 @@ import java.util.HashMap;
  *
  * @author Andrew Waugh
  */
-public class RepnInformationPiece extends Repn {
+class RepnInformationPiece extends Repn {
 
     private RepnItem label;  // label of the piece
     private ArrayList<RepnContentFile> contents;  // list of metadata packages
@@ -198,7 +198,7 @@ public class RepnInformationPiece extends Repn {
      * Generate an XML representation of the information piece
      *
      * @param verbose true if additional information is to be generated
-     * @throws VEOSupport.VEOError if a fatal error occurred
+     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
      */
     public void genReport(boolean verbose) throws VEOError {
         int i;

@@ -20,7 +20,7 @@ import javax.xml.bind.DatatypeConverter;
  * This class creates a VEOContent.xml file. This class should not be directly
  * used, instead use the CreateVEO or CreateVEOs classes.
  */
-public class CreateVEOContent extends CreateXMLDoc {
+class CreateVEOContent extends CreateXMLDoc {
 
     String version; // version to use (default is "3.0")
 

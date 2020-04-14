@@ -11,7 +11,7 @@ import VERSCommon.VEOError;
 /**
  * This class represents a dynamic fragment that will be finalised with the
  * value from a column. Warning: Do not directly call this class.
- * Use the CreateVEO or CreateVEOs classes.
+ * Use the Template class.
  * <p>
  * This fragment represents dynamic content that is obtained from an array of
  * Strings.
@@ -31,7 +31,7 @@ import VERSCommon.VEOError;
  * Version 2.0 20141010 Repurposed for the new Toolkit.
  *
  */
-public class ColumnFragment extends Fragment {
+class ColumnFragment extends Fragment {
 
     int column; // the column to obtain value from
     boolean isXML; // true if no XML mapping is to be done to the column value

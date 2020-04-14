@@ -17,7 +17,7 @@ import java.util.ArrayList;
  * textual descriptions of the event, and an array of errors that occurred
  * during the event.
  */
-public class RepnEvent extends Repn {
+class RepnEvent extends Repn {
 
     private RepnItem dateTime;   // date and time of the event
     private RepnItem eventType;  // event type
@@ -228,7 +228,7 @@ public class RepnEvent extends Repn {
     /**
      * Generate a HTML representation of the Event
      * @param verbose true if additional information is to be generated
-     * @throws VEOSupport.VEOError if a fatal error occurred
+     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
      */
     public void genReport(boolean verbose) throws VEOError {
         int i;

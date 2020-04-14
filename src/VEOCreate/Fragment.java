@@ -12,7 +12,7 @@ import java.io.*;
 
 /**
  * This class represents a fragment of a VEO. Warning: Do not directly call this
- * class. Use the CreateVEO or CreateVEOs classes.
+ * class. Use the Templates class.
  * <p>
  * A fragment might be a piece of static
  * text that is identical for all constructed VEOs, or it might be a piece of
@@ -231,7 +231,7 @@ abstract public class Fragment {
     }
 
     /**
-     * Parse substitution for commands
+     * Parse substitution for commands.
      *
      * This method parses a substitution to identify what type it is. The method
      * returns a Fragment containing the substitution. If no substitution is

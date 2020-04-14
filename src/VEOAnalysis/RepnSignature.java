@@ -36,7 +36,7 @@ import javax.xml.bind.DatatypeConverter;
  *
  * @author Andrew Waugh
  */
-public class RepnSignature extends RepnXML {
+class RepnSignature extends RepnXML {
 
     String classname = "RepnSignature";
     Path source; // file that generated this signature file

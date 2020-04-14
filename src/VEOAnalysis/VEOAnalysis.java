@@ -29,7 +29,17 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Test and visualise VEOs. The class has several operating modes which can be
+ * Test and visualise VEOs. This class has three functions: it tests VEOs to
+ * determine if they conform to the specification; it (optionally) unzips the
+ * VEOs; and it (optionally) generates a set of HTML pages detailing the
+ * contents of the VEO.
+ * <p>
+ * The class can be used in two ways: it can be run as a program with options
+ * controlled from the command line; or it can be call programatically in
+ * two ways as an API.
+ * <h1>COMMAND LINE ARGUMENTS</h1>
+ * <p>
+ * The class has several operating modes which can be
  * used together or separately. These are:
  * <ul>
  * <li>'-e': produce a summary of the errors and warnings found in the listed
@@ -57,6 +67,10 @@ import java.util.logging.Logger;
  * problems with the program.</li>
  * <li>'-o directory'. Create the VEO directories in this output directory</li>
  * </ul>
+ * <h1>API</h1>
+ * <P>
+ * All of the options available on the command line are directly available as
+ * an API. 
  *
  * @author Andrew Waugh
  */
@@ -76,22 +90,27 @@ public class VEOAnalysis {
     ArrayList<String> veos; // The list of VEOS to process
     HashMap<String, String> ltpfs; // valid long term preservation formats
     private final static Logger LOG = Logger.getLogger("VEOAnalysis.VEOAnalysis");
+    
+    private final static String USAGE =
+            "AnalyseVEOs [-e] [-r] [-u] [-v] [-d] [-c] [-norec] -s schemaDir [-o outputDir] [files*]";
 
     /**
-     * Initialise the analysis regime for the headless mode. In this mode,
-     * VEOAnalysis is called by another program to unpack and validate the VEO.
+     * Instantiate an VEOAnalysis instance to be used as an API. In this mode,
+     * VEOAnalysis is called by another program to unpack and validate VEOs.
+     * Once an instance of a VEOAnalysis class has been created it can be used
+     * to validate multiple VEOs.
      *
      * @param schemaDir directory in which VERS3 schema information is found
      * @param outputDir directory in which the VEO will be unpacked
      * @param hndlr where to send the LOG reports
-     * @param chatty true if report when starting a new VEO
      * @param error true if produce a summary error report
      * @param report true if produce HTML reports
      * @param unpack true if leave the VEO directories after execution
-     * @param debug true if debugging information is to be generated
-     * @param verbose true if verbose descriptions are to be generated
      * @param norec true if asked to not complain about missing recommended
      * metadata elements
+     * @param chatty true if report when starting a new VEO
+     * @param debug true if debugging information is to be generated
+     * @param verbose true if verbose descriptions are to be generated
      * @throws VEOError if something goes wrong
      */
     public VEOAnalysis(Path schemaDir, Path outputDir,
@@ -143,7 +162,9 @@ public class VEOAnalysis {
     }
 
     /**
-     * Initialise the analysis regime.
+     * Initialise the analysis regime using command line arguments. Note that
+     * in this mode *all* of the VEOs to be checked are passed in as
+     * command line arguments.
      *
      * @param args the command line arguments
      * @throws VEOError if something goes wrong
@@ -165,7 +186,6 @@ public class VEOAnalysis {
      */
     private void configure(String args[]) throws VEOFatal {
         int i;
-        String usage = "AnalyseVEOs [-e] [-r] [-u] [-v] [-d] [-c] [-norec] -s schemaDir [-o outputDir] [files*]";
 
         schemaDir = null;
         outputDir = Paths.get(".").toAbsolutePath();
@@ -255,7 +275,7 @@ public class VEOAnalysis {
                     // otherwise, check if it starts with a '-' and complain, otherwise assume it is a VEO pathname
                     default:
                         if (args[i].startsWith("-")) {
-                            throw new VEOFatal(classname, 2, "Unrecognised argument '" + args[i] + "'. Usage: " + usage);
+                            throw new VEOFatal(classname, 2, "Unrecognised argument '" + args[i] + "'. Usage: " + USAGE);
                         } else {
                             veos.add(args[i]);
                             i++;
@@ -263,7 +283,7 @@ public class VEOAnalysis {
                 }
             }
         } catch (ArrayIndexOutOfBoundsException ae) {
-            throw new VEOFatal(classname, 3, "Missing argument. Usage: " + usage);
+            throw new VEOFatal(classname, 3, "Missing argument. Usage: " + USAGE);
         }
 
         // check to see that user wants to do something
@@ -273,7 +293,7 @@ public class VEOAnalysis {
 
         // check to see that user specified a schema directory
         if (schemaDir == null) {
-            throw new VEOFatal(classname, 4, "No schema directory specified. Usage: " + usage);
+            throw new VEOFatal(classname, 4, "No schema directory specified. Usage: " + USAGE);
         }
 
         // read valid long term preservation formats
@@ -309,7 +329,8 @@ public class VEOAnalysis {
     }
 
     /**
-     * Test the VEOs listed in the command line argument...
+     * Test the VEOs listed in the command line arguments. You can only use
+     * this call if the VEOs have been passed in on the command line.
      *
      * @throws VEOError if a fatal error occurred
      */
@@ -354,7 +375,7 @@ public class VEOAnalysis {
     }
 
     /**
-     * Test a specific VEO for the internal
+     * Test a VEO. This is an internal private call.
      *
      * @param veo the file name of the zip file containing the VEO
      * @param dir the directory in which to unpack this VEO
@@ -419,7 +440,7 @@ public class VEOAnalysis {
     }
 
     /**
-     * Public subclass to return information about the VEO we just processed
+     * Public subclass to return information about the VEO we just processed.
      */
     public class TestVEOResult {
 
@@ -443,14 +464,14 @@ public class VEOAnalysis {
     }
 
     /**
-     * Test a specific VEO called programmatically
+     * Test an individual VEO. 
      *
-     * @param veo the file name of the zip file containing the VEO
-     * @param dir the directory in which to unpack this VEO
+     * @param veo the file path of the VEO
+     * @param outputDir the directory in which to unpack this VEO
      * @return a structure containing information about the VEO
      * @throws VEOError if something went wrong
      */
-    public TestVEOResult testVEO(String veo, Path dir) throws VEOError {
+    public TestVEOResult testVEO(String veo, Path outputDir) throws VEOError {
         Path p;
         RepnVEO rv;
         TestVEOResult tvr;
@@ -460,7 +481,7 @@ public class VEOAnalysis {
 
         // perform the analysis
         hasErrors = false;
-        rv = new RepnVEO(veo, debug, dir);
+        rv = new RepnVEO(veo, debug, outputDir);
         result = null;
         try {
             // if validating, do so...
@@ -604,8 +625,7 @@ public class VEOAnalysis {
         VEOAnalysis va;
 
         if (args.length == 0) {
-            args = new String[]{"-r", "-s", "../VERS Std 2013/Release/test/neoVEOSchemas", "-o", "../VERS Std 2013/Release/test/testOutput", "../VERS Std 2013/Release/test/testOutput/demoVEO1.veo.zip"};
-            // args = new String[]{"-r", "-s", "Test/Demo/Schemas", "-o", "../neoVEOOutput/TestAnalysis", "../neoVEOOutput/TestAnalysis/parseError.veo.zip"};
+            LOG.log(Level.SEVERE, USAGE);
         }
         try {
             va = new VEOAnalysis(args);

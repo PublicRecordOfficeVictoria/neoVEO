@@ -14,7 +14,7 @@ import VERSCommon.VEOError;
  * VEO with no further processing.  Warning: Do not directly call this
  * class. Use the CreateVEO or CreateVEOs classes.
  */
-public class StringFragment extends Fragment {
+class StringFragment extends Fragment {
 	String string;
 
 /**

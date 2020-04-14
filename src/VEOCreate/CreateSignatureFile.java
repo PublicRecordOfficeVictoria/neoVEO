@@ -28,7 +28,7 @@ import javax.xml.bind.DatatypeConverter;
  *
  * Copyright 2014 Public Record Office Victoria
  */
-public class CreateSignatureFile extends CreateXMLDoc {
+class CreateSignatureFile extends CreateXMLDoc {
 
     String version; // version to use (default is "3.0"
     String classname = "CreateSignatureFile";

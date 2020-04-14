@@ -11,7 +11,7 @@ import VERSCommon.VEOError;
 /**
  * The object represents a unit of data (typically a string)
  */
-final public class RepnItem extends Repn {
+final class RepnItem extends Repn {
     private String label; // label for the unit of data
     private String value; // the value of the data
 
@@ -88,7 +88,7 @@ final public class RepnItem extends Repn {
      * Generate a HTML representation of the item
      *
      * @param verbose true if additional information is to be generated
-     * @throws VEOSupport.VEOError  if a fatal error occurred
+     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
      */
     public void genReport(boolean verbose) throws VEOError {
         genReport(verbose, null);
@@ -99,7 +99,7 @@ final public class RepnItem extends Repn {
      *
      * @param verbose true if additional information is to be generated
      * @param mesg a String message to add to report
-     * @throws VEOSupport.VEOError  if a fatal error occurred
+     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
      */
     public void genReport(boolean verbose, String mesg) throws VEOError {
         startDiv("Item", null);
