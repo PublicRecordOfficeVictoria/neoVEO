@@ -2,9 +2,11 @@ VERS V3 Development Package
 ===========================
 
 Copyright Public Records Office Victoria 2020
-License CC-BY
+License CC BY 4.0
 
-This package contains the code for tools to produce and analyse VERS V3 VEOs.
+This package contains the code for tools to produce and analyse Version 3 (V3) VERS
+Encapsulated Objects (VEOs).
+
 It contains:
 * Java code for the tools
 * Supporting Jar files
