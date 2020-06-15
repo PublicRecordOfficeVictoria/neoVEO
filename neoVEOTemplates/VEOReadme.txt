@@ -7,7 +7,7 @@ The two specifications are Constructing VEOs (PROS 19/05 S4) and Adding
 Metadata Packages to VEOs (PROS 19/05 S5).
 
 This VEOReadme.txt file contains a summary of the information in
-PROS 15/03 S4.
+PROS 19/05 S4.
 
 This zip file contains a collection of information that it is desired to
 keep accessible for a long period. The content of this information is
