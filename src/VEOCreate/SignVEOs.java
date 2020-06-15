@@ -139,7 +139,7 @@ public class SignVEOs {
         verbose = false;
         printComments = false;
         debug = false;
-        hashAlg = "SHA1";
+        hashAlg = "SHA-512";
         state = State.PREAMBLE;
 
         // process command line arguments
@@ -163,6 +163,8 @@ public class SignVEOs {
 
         // process command line arguments
         i = 0;
+        pfxFile = null;
+        password = null;
         try {
             while (i < args.length) {
                 switch (args[i].toLowerCase()) {
@@ -172,14 +174,12 @@ public class SignVEOs {
                         i++;
                         controlFile = checkFile("control file", args[i], false);
                         i++;
-                        log.log(Level.INFO, "Control file is ''{0}''", controlFile.toString());
                         break;
 
                     // force deletion of VEOContent.xml files
                     case "-f":
                         i++;
                         forceDel = true;
-                        log.log(Level.INFO, "Force deletion of VEOContent.xml files");
                         break;
 
                     // get pfx file
@@ -188,8 +188,8 @@ public class SignVEOs {
                         pfxFile = checkFile("PFX file", args[i], false);
                         i++;
                         password = args[i];
-                        log.log(Level.INFO, "PFX file is ''{0}'' with password ''{1}''", new Object[]{pfxFile.toString(), password});
                         i++;
+                        log.log(Level.INFO, "PFX file is ''{0}'' with password ''{1}''", new Object[]{pfxFile.toString(), password});
                         user = new PFXUser(pfxFile.toString(), password);
                         signers.add(user);
                         break;
@@ -198,7 +198,6 @@ public class SignVEOs {
                     case "-o":
                         i++;
                         outputDir = checkFile("output directory", args[i], true);
-                        log.log(Level.INFO, "Output directory is ''{0}''", outputDir.toString());
                         i++;
                         break;
 
@@ -206,7 +205,6 @@ public class SignVEOs {
                     case "-ha":
                         i++;
                         hashAlg = args[i];
-                        log.log(Level.INFO, "Hash algorithm is ''{0}''", hashAlg);
                         i++;
                         break;
 
@@ -215,14 +213,12 @@ public class SignVEOs {
                         verbose = true;
                         i++;
                         rootLog.setLevel(Level.INFO);
-                        log.log(Level.INFO, "Verbose output is selected");
                         break;
 
                     // print comments from control file
                     case "-i":
                         printComments = true;
                         i++;
-                        log.log(Level.INFO, "Printing comments output is selected");
                         break;
 
                     // if debugging...
@@ -230,7 +226,6 @@ public class SignVEOs {
                         debug = true;
                         i++;
                         rootLog.setLevel(Level.FINE);
-                        log.log(Level.INFO, "Debug output is selected");
                         break;
 
                     // if unrecognised arguement, print help string and exit
@@ -244,6 +239,26 @@ public class SignVEOs {
             }
         } catch (ArrayIndexOutOfBoundsException ae) {
             throw new VEOFatal(classname, 3, "Missing argument. Usage: " + usage);
+        }
+
+        if (outputDir != null) {
+            log.log(Level.INFO, "Output directory is ''{0}''", outputDir.toString());
+        }
+        log.log(Level.INFO, "Hash algorithm is ''{0}''", hashAlg);
+        if (forceDel) {
+            log.log(Level.INFO, "Delete any old signature files in VEO directory before signing");
+        }
+        if (debug) {
+            log.log(Level.INFO, "Debug output is selected");
+        }
+        if (verbose) {
+            log.log(Level.INFO, "Verbose output is selected");
+        }
+        if (controlFile != null) {
+            log.log(Level.INFO, "Control file is ''{0}''", controlFile.toString());
+            if (printComments) {
+                log.log(Level.INFO, "Printing comments output is selected");
+            }
         }
     }
 
