@@ -1,10 +1,13 @@
 This zip file is a VERS Encapsulated Object (VEO). VEO files are
-specified in Public Record Office Victoria (PROV) Standard
-PROS 15/03 “Long term management of Electronic Rcords”. As at 2015 this
-Standard was available from http://prov.vic.gov.au/government/vers
+specified in specifications associated with Public Record Office Victoria (PROV) Standard PROS 19/05 “Create, Capture and Control Standard”. As at
+2020 this Standard was available from
+https://prov.vic.gov.au/recordkeeping-government/document-library/pros-1905-create-capture-and-control-standard
+
+The two specifications are Constructing VEOs (PROS 19/05 S4) and Adding
+Metadata Packages to VEOs (PROS 19/05 S5).
 
 This VEOReadme.txt file contains a summary of the information in
-PROS 15/03.
+PROS 15/03 S4.
 
 This zip file contains a collection of information that it is desired to
 keep accessible for a long period. The content of this information is
