@@ -118,10 +118,15 @@ class RepnVEO extends Repn {
      * found
      * @throws VEOError If an error occurred in processing this VEO
      */
+    // this array contains the valid lengths of the VEOReadMe.txt over time
+    static int expVEOSize[] = {4840, 5061};
+
     public void constructRepn(Path schemaDir) throws VEOError {
         String fileName;
         RepnSignature rs;
         DirectoryStream<Path> ds;
+        int i;
+        StringBuilder sb;
 
         // configure the logging used in the RDF validator
         PropertyConfigurator.configure(schemaDir.resolve("log4j.properties").toAbsolutePath().toString());
@@ -149,9 +154,25 @@ class RepnVEO extends Repn {
                         veoHistory = new RepnHistory(veoDir, schemaDir);
                         break;
                     case "VEOReadme.txt":
-                        int expVEOSize = 4840;
-                        if (Files.size(entry) != expVEOSize) {
-                            readme.addWarning("VEOReadme.txt has an unexpected size(" + Files.size(entry) + ") instead of " + expVEOSize);
+                        
+                        // check that the length of the VEOReadme.txt file is
+                        // one of the valid lengths, if not complain.
+                        for (i = 0; i < expVEOSize.length; i++) {
+                            if (Files.size(entry) == expVEOSize[i]) {
+                                break;
+                            }
+                        }
+                        if (i == expVEOSize.length) {
+                            sb = new StringBuilder();
+                            for (i = 0; i < expVEOSize.length; i++) {
+                                sb.append(expVEOSize[i]);
+                                if (i == expVEOSize.length - 2) {
+                                    sb.append(", or ");
+                                } else if (i < expVEOSize.length - 1) {
+                                    sb.append(", ");
+                                }
+                            }
+                            readme.addWarning("VEOReadme.txt has an unexpected size (" + Files.size(entry) + ") instead of the valid values of " + sb.toString());
                         }
                         veoReadmePresent = true;
                         break;
@@ -274,7 +295,8 @@ class RepnVEO extends Repn {
      * @param ltpfs HashMap of valid long term preservation formats
      * @param noRec true if not to complain about missing recommended metadata
      * elements
-     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
+     * @throws VERSCommon.VEOError if prevented from continuing processing this
+     * VEO
      */
     public final void validate(HashMap<String, String> ltpfs, boolean noRec) throws VEOError {
         int i;
@@ -644,7 +666,8 @@ class RepnVEO extends Repn {
      * validate().
      *
      * @param verbose true if additional information is to be generated
-     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
+     * @throws VERSCommon.VEOError if prevented from continuing processing this
+     * VEO
      */
     public void genReport(boolean verbose) throws VEOError {
         String method = "genReport";
