@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.LTSF;
 import VERSCommon.VEOError;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -292,20 +293,20 @@ class RepnVEO extends Repn {
     /**
      * Validate the data in the RepnVEO.
      *
-     * @param ltpfs HashMap of valid long term preservation formats
+     * @param ltsfs List of valid long term sustainable formats
      * @param noRec true if not to complain about missing recommended metadata
      * elements
      * @throws VERSCommon.VEOError if prevented from continuing processing this
      * VEO
      */
-    public final void validate(HashMap<String, String> ltpfs, boolean noRec) throws VEOError {
+    public final void validate(LTSF ltsfs, boolean noRec) throws VEOError {
         int i;
 
         // check to see that the required files are present
         if (veoContent == null) {
             addError("VEOContents.xml file is not present");
         } else {
-            veoContent.validate(veoDir, contentFiles, ltpfs, noRec);
+            veoContent.validate(veoDir, contentFiles, ltsfs, noRec);
         }
         if (veoHistory == null) {
             addError("VEOHistory.xml file is not present");

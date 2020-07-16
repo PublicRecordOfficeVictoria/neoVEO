@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.LTSF;
 import VERSCommon.VEOError;
 import java.io.BufferedWriter;
 import java.nio.file.Path;
@@ -78,11 +79,11 @@ class RepnInformationPiece extends Repn {
      * @param veoDir the directory containing the contents of the VEO
      * @param hashAlgorithm the hash algorithm used to check integrity of the
      * @param contentFiles the collection of content files in the VEO files
-     * @param ltpfs HashMap of valid long term preservation formats
+     * @param ltsfs List of valid long term sustainable formats
      * @throws VEOError if an error occurred that won't preclude processing
      * another VEO
      */
-    public void validate(Path veoDir, String hashAlgorithm, HashMap<Path, RepnFile> contentFiles, HashMap<String, String> ltpfs) throws VEOError {
+    public void validate(Path veoDir, String hashAlgorithm, HashMap<Path, RepnFile> contentFiles, LTSF ltsfs) throws VEOError {
         int i;
         RepnContentFile rcf;
         boolean validLTPF;
@@ -90,7 +91,7 @@ class RepnInformationPiece extends Repn {
         // validate Content Files within Information Piece        
         for (i = 0; i < contents.size(); i++) {
             rcf = contents.get(i);
-            rcf.validate(veoDir, hashAlgorithm, contentFiles, ltpfs);
+            rcf.validate(veoDir, hashAlgorithm, contentFiles, ltsfs);
         }
 
         // must have at least one valid long term preservation format

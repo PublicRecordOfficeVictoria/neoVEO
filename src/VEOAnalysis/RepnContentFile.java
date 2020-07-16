@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.LTSF;
 import VERSCommon.VEOError;
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
@@ -84,17 +85,17 @@ class RepnContentFile extends Repn {
      * <ul>
      * <li>named file exists in the VEO</li>
      * <li>the calculated hash value has not been altered</li>
-     * <li>whether the file format is one of the valid LTPFs</li>
+     * <li>whether the file format is one of the valid LTSFs</li>
      * </ul>
      *
      * @param veoDir directory in which to find the content files
      * @param hashAlgorithm algorithm to verify the digital signature
      * @param contentFiles the collection of content files in this VEO
-     * @param ltpfs HashMap of valid long term preservation formats
+     * @param ltsfs valid long term preservation formats
      * @return true if the file was a valid long term preservation format
      * @throws VEOError if a unrecoverable error occurred
      */
-    public boolean validate(Path veoDir, String hashAlgorithm, HashMap<Path, RepnFile> contentFiles, HashMap<String, String> ltpfs) throws VEOError {
+    public boolean validate(Path veoDir, String hashAlgorithm, HashMap<Path, RepnFile> contentFiles, LTSF ltsfs) throws VEOError {
         String method = "validate";
         Path p;
         Path fileToHash;    // path of content file
@@ -118,11 +119,11 @@ class RepnContentFile extends Repn {
             return false;
         }
 
-        // test to see if this file is a LTPF (using the file name extension)
+        // test to see if this file is a LTSF (using the file name extension)
         i = s.lastIndexOf(".");
         if (i != -1) {
             fmt = s.substring(i).toLowerCase();
-            ltpf = (ltpfs.get(fmt) != null);
+            ltpf = ltsfs.isV3LTSF(fmt);
         }
 
         // check that the file exists

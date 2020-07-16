@@ -8,11 +8,9 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.LTSF;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFatal;
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -22,7 +20,6 @@ import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.TimeZone;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -54,8 +51,8 @@ import java.util.logging.Logger;
  * The default mode is '-r' if none of these arguments are specified. The
  * mandatory command line arguments are:
  * <ul>
- * <li> '-s schemaDir': specifies the directory in which the XML schemas will be
- * found.</li>
+ * <li> '-s supportDir': specifies the directory in which the VERS support files
+ * (e.g. XML schemas, long term sustainable file) will be found.</li>
  * <li> list of VEOs (or directories of VEOs) to process.</li>
  * </ul>
  * The other optional command line arguments are:
@@ -77,7 +74,7 @@ import java.util.logging.Logger;
 public class VEOAnalysis {
 
     String classname = "VEOAnalysis";
-    Path schemaDir;     // directory in which XML schemas are to be found
+    Path supportDir;     // directory in which XML schemas are to be found
     Path outputDir;     // directory in which the VEOs are generated
     boolean chatty;     // true if report when starting a new VEO
     boolean error;      // true if produce a summary error report
@@ -88,11 +85,11 @@ public class VEOAnalysis {
     boolean norec;      // true if asked to not complain about missing recommended metadata elements
     boolean hasErrors;  // true if VEO had errors
     ArrayList<String> veos; // The list of VEOS to process
-    HashMap<String, String> ltpfs; // valid long term preservation formats
+    LTSF ltsfs;         // valid long term preservation formats
     private final static Logger LOG = Logger.getLogger("VEOAnalysis.VEOAnalysis");
     
     private final static String USAGE =
-            "AnalyseVEOs [-e] [-r] [-u] [-v] [-d] [-c] [-norec] -s schemaDir [-o outputDir] [files*]";
+            "AnalyseVEOs [-e] [-r] [-u] [-v] [-d] [-c] [-norec] -s supportDir [-o outputDir] [files*]";
 
     /**
      * Instantiate an VEOAnalysis instance to be used as an API. In this mode,
@@ -100,7 +97,8 @@ public class VEOAnalysis {
      * Once an instance of a VEOAnalysis class has been created it can be used
      * to validate multiple VEOs.
      *
-     * @param schemaDir directory in which VERS3 schema information is found
+     * @param supportDir directory in which VERS3 support information is found
+     * @param ltsfs long term sustainable formats
      * @param outputDir directory in which the VEO will be unpacked
      * @param hndlr where to send the LOG reports
      * @param error true if produce a summary error report
@@ -113,7 +111,7 @@ public class VEOAnalysis {
      * @param verbose true if verbose descriptions are to be generated
      * @throws VEOError if something goes wrong
      */
-    public VEOAnalysis(Path schemaDir, Path outputDir,
+    public VEOAnalysis(Path supportDir, LTSF ltsfs, Path outputDir,
             Handler hndlr, boolean chatty, boolean error, boolean report, boolean unpack,
             boolean debug, boolean verbose, boolean norec) throws VEOError {
         Handler h[];
@@ -134,10 +132,10 @@ public class VEOAnalysis {
         LOG.getParent().setLevel(Level.WARNING);
         LOG.setLevel(null);
 
-        if (schemaDir == null || !Files.isDirectory(schemaDir)) {
+        if (supportDir == null || !Files.isDirectory(supportDir)) {
             throw new VEOError("Specified schema directory is null or is not a directory");
         }
-        this.schemaDir = schemaDir;
+        this.supportDir = supportDir;
         if (outputDir == null || !Files.isDirectory(outputDir)) {
             throw new VEOError("Specified output directory is null or is not a directory");
         }
@@ -156,9 +154,8 @@ public class VEOAnalysis {
         }
         this.norec = norec;
         veos = null;
-        ltpfs = new HashMap<>();
         hasErrors = false;
-        readValidLTPFs(schemaDir);
+        this.ltsfs = ltsfs;
     }
 
     /**
@@ -187,7 +184,7 @@ public class VEOAnalysis {
     private void configure(String args[]) throws VEOFatal {
         int i;
 
-        schemaDir = null;
+        supportDir = null;
         outputDir = Paths.get(".").toAbsolutePath();
         chatty = false;
         error = false;
@@ -197,7 +194,7 @@ public class VEOAnalysis {
         verbose = false;
         norec = false;
         veos = new ArrayList<>();
-        ltpfs = new HashMap<>();
+        ltsfs = null;
 
         // process command line arguments
         i = 0;
@@ -242,11 +239,11 @@ public class VEOAnalysis {
                         i++;
                         break;
 
-                    // get schema directory
+                    // get support directory
                     case "-s":
                         i++;
-                        schemaDir = checkFile("schema directory", args[i], true);
-                        LOG.log(Level.INFO, "Schema directory is ''{0}''", schemaDir.toString());
+                        supportDir = checkFile("support directory", args[i], true);
+                        LOG.log(Level.INFO, "support directory is ''{0}''", supportDir.toString());
                         i++;
                         break;
 
@@ -292,12 +289,12 @@ public class VEOAnalysis {
         }
 
         // check to see that user specified a schema directory
-        if (schemaDir == null) {
-            throw new VEOFatal(classname, 4, "No schema directory specified. Usage: " + USAGE);
+        if (supportDir == null) {
+            throw new VEOFatal(classname, 4, "No support directory specified. Usage: " + USAGE);
         }
 
         // read valid long term preservation formats
-        readValidLTPFs(schemaDir);
+        ltsfs = new LTSF(supportDir.resolve("validLTSF.txt"));
     }
 
     /**
@@ -406,8 +403,8 @@ public class VEOAnalysis {
         try {
             // if validating, do so...
             if (error || report) {
-                rv.constructRepn(schemaDir);
-                rv.validate(ltpfs, norec);
+                rv.constructRepn(supportDir);
+                rv.validate(ltsfs, norec);
             }
 
             // if generating HTML report, do so...
@@ -486,8 +483,8 @@ public class VEOAnalysis {
         try {
             // if validating, do so...
             if (error || report) {
-                rv.constructRepn(schemaDir);
-                rv.validate(ltpfs, norec);
+                rv.constructRepn(supportDir);
+                rv.validate(ltsfs, norec);
             }
 
             // if generating HTML report, do so...
@@ -559,60 +556,6 @@ public class VEOAnalysis {
         sdf.setTimeZone(tz);
         System.out.println(sdf.format(new Date()));
         System.out.println("");
-    }
-
-    /**
-     * Read a file containing a list of accepted LTPFs. The file is
-     * 'validLTPF.txt' located in schemaDir. The file will contain multiple
-     * lines. Each line will contain one file format extension string (e.g.
-     * '.pdf').
-     *
-     * @param schemaDir the directory in which the file is to be found
-     * @throws VEOFatal if the file could not be read
-     */
-    private void readValidLTPFs(Path schemaDir) throws VEOFatal {
-        String method = "readValidLTPF";
-        Path f;
-        FileReader fr;
-        BufferedReader br;
-        String s;
-
-        f = schemaDir.resolve("validLTPF.txt");
-
-        // open validLTPF.txt for reading
-        fr = null;
-        br = null;
-        try {
-            fr = new FileReader(f.toString());
-            br = new BufferedReader(fr);
-
-            // go through validLTPF.txt line by line, copying patterns into hash map
-            // ignore lines that do begin with a '!' - these are comment lines
-            while ((s = br.readLine()) != null) {
-                s = s.trim();
-                if (s.length() == 0 || s.charAt(0) == '!') {
-                    continue;
-                }
-                ltpfs.put(s, s);
-            }
-        } catch (FileNotFoundException e) {
-            throw new VEOFatal(classname, method, 2, "Failed to open LTPF file '" + f.toAbsolutePath().toString() + "'" + e.toString());
-        } catch (IOException ioe) {
-            throw new VEOFatal(classname, method, 1, "unexpected error: " + ioe.toString());
-        } finally {
-            if (br != null) {
-                try {
-                    br.close();
-                } catch (IOException e) {
-                    /* ignore */ }
-            }
-            if (fr != null) {
-                try {
-                    fr.close();
-                } catch (IOException e) {
-                    /* ignore */ }
-            }
-        }
     }
 
     /**

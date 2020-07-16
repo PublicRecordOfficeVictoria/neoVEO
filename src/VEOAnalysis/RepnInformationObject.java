@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.LTSF;
 import VERSCommon.VEOError;
 import java.io.BufferedWriter;
 import java.nio.file.Path;
@@ -120,7 +121,7 @@ class RepnInformationObject extends Repn {
      * @param veoDir the directory containing the contents of the VEO
      * @param hashAlgorithm hash algorithm to be used for hashing and signing
      * @param contentFiles the collection of content files in the VEO
-     * @param ltpfs HashMap of valid long term preservation formats
+     * @param ltsfs List of valid long term sustainable formats
      * @param oneLevel true if the information objects are a flat list
      * @param prevDepth depth of previous information object
      * @param noRec true if not to complain about missing recommended metadata elements
@@ -128,7 +129,7 @@ class RepnInformationObject extends Repn {
      * another VEO
      * @return the depth of this Information Object
      */
-    public int validate(Path veoDir, String hashAlgorithm, HashMap<Path, RepnFile> contentFiles, HashMap<String, String> ltpfs, boolean oneLevel, int prevDepth, boolean noRec) throws VEOError {
+    public int validate(Path veoDir, String hashAlgorithm, HashMap<Path, RepnFile> contentFiles, LTSF ltsfs, boolean oneLevel, int prevDepth, boolean noRec) throws VEOError {
         int i;
         boolean stdMetadata;
 
@@ -163,7 +164,7 @@ class RepnInformationObject extends Repn {
             addError("The first information object did not contain an AGLS or AGRKMS metadata package");
         }
         for (i = 0; i < infoPieces.size(); i++) {
-            infoPieces.get(i).validate(veoDir, hashAlgorithm, contentFiles, ltpfs);
+            infoPieces.get(i).validate(veoDir, hashAlgorithm, contentFiles, ltsfs);
         }
         return getDepth();
     }

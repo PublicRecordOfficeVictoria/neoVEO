@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.LTSF;
 import VERSCommon.VEOError;
 import java.io.BufferedWriter;
 import java.nio.file.Path;
@@ -99,12 +100,12 @@ class RepnContent extends RepnXML {
      *
      * @param veoDir the directory containing the contents of the VEO
      * @param contentFiles the collection of content files in the VEO
-     * @param ltpfs HashMap of valid long term preservation formats
+     * @param ltsfs List of valid long term sustainable formats
      * @param noRec true if not to complain about missing recommended metadata elements
      * @throws VEOError if an error occurred that won't preclude processing
      * another VEO
      */
-    public final void validate(Path veoDir, HashMap<Path, RepnFile> contentFiles, HashMap<String, String> ltpfs, boolean noRec) throws VEOError {
+    public final void validate(Path veoDir, HashMap<Path, RepnFile> contentFiles, LTSF ltsfs, boolean noRec) throws VEOError {
         String s;
         Boolean oneLevel;
         int prevDepth, i;
@@ -138,7 +139,7 @@ class RepnContent extends RepnXML {
                     oneLevel = true;
                 }
             }
-            prevDepth = rio.validate(veoDir, hashAlgorithm.getValue(), contentFiles, ltpfs, oneLevel, prevDepth, noRec);
+            prevDepth = rio.validate(veoDir, hashAlgorithm.getValue(), contentFiles, ltsfs, oneLevel, prevDepth, noRec);
         }
     }
 

@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.LTSF;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFatal;
 import java.io.BufferedReader;
@@ -29,7 +30,7 @@ final class StressTest {
     Path schemaDir; // directory in which XML schemas are to be found
     Path outputDir; // directory in which the VEOs are generated
     String veo;
-    HashMap<String, String> ltpfs; // valid long term preservation formats
+    LTSF ltsfs; // valid long term preservation formats
     private final static Logger LOG = Logger.getLogger("VEOAnalysis.StressTest");
 
     public StressTest(String args[]) throws VEOError {
@@ -39,8 +40,7 @@ final class StressTest {
         schemaDir = Paths.get("neoVEOSchemas");
         outputDir = Paths.get("testOutput");
         veo = "testVEOs";
-        ltpfs = new HashMap<>();
-        readValidLTPFs(schemaDir);
+        ltsfs = new LTSF(schemaDir.resolve("validLTSF.txt"));
         LOG.getParent().setLevel(Level.INFO);
     }
 
@@ -80,7 +80,7 @@ final class StressTest {
         try {
             rv = new RepnVEO(veo, true, outputDir);
             rv.constructRepn(schemaDir);
-            rv.validate(ltpfs, false);
+            rv.validate(ltsfs, false);
             rv.genReport(false);
         } catch (VEOError e) {
             System.out.println(e.getMessage());
@@ -91,59 +91,7 @@ final class StressTest {
             }
         }
     }
-
-    /**
-     * Read a file containing a list of accepted LTPFs. The file is
-     * 'validLTPF.txt' located in schemaDir. The file will contain multiple
-     * lines. Each line will contain one file format extension string (e.g.
-     * '.pdf').
-     *
-     * @param schemaDir the directory in which the file is to be found
-     * @throws VEOFatal if the file could not be read
-     */
-    public void readValidLTPFs(Path schemaDir) throws VEOFatal {
-        String method = "readValidLTPF";
-        Path f;
-        FileReader fr;
-        BufferedReader br;
-        String s;
-
-        f = Paths.get(schemaDir.toString(), "validLTPF.txt");
-
-        // open validLTPF.txt for reading
-        fr = null;
-        br = null;
-        try {
-            fr = new FileReader(f.toString());
-            br = new BufferedReader(fr);
-
-            // go through validLTPF.txt line by line, copying patterns into hash map
-            // ignore lines that do begin with a '!' - these are comment lines
-            while ((s = br.readLine()) != null) {
-                s = s.trim();
-                if (s.length() == 0 || s.charAt(0) == '!') {
-                    continue;
-                }
-                ltpfs.put(s, s);
-            }
-        } catch (FileNotFoundException e) {
-            throw new VEOFatal("StressTest", method, 2, "Failed to open LTPF file '" + f.toAbsolutePath().toString() + "'" + e.toString());
-        } catch (IOException ioe) {
-            throw new VEOFatal("StressTest", method, 1, "unexpected error: " + ioe.toString());
-        } finally {
-            if (br != null) {
-                try {
-                    br.close();
-                } catch (IOException e) { /* ignore */ }
-            }
-            if (fr != null) {
-                try {
-                    fr.close();
-                } catch (IOException e) { /* ignore */ }
-            }
-        }
-    }
-
+    
     public static void main(String args[]) {
         StressTest va;
 
