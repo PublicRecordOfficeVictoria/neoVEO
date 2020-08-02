@@ -267,7 +267,11 @@ public class CreateVEOs {
                     case "-c":
                         i++;
                         controlFile = checkFile("control file", args[i], false);
-                        baseDir = controlFile.getParent();
+                        try {
+                            baseDir = controlFile.toRealPath().getParent();
+                        } catch (IOException ioe) {
+                            throw new VEOFatal("Couldn't convert control file '" + args[i] + "' to a path:" + ioe.getMessage());
+                        }
                         log.log(Level.INFO, "Control file is ''{0}''", controlFile.toString());
                         i++;
                         break;
@@ -444,12 +448,13 @@ public class CreateVEOs {
     }
 
     /**
-     * Read commands from the Reader to build VEOs. See the general description of
-     * this class for a description of the control file and the various commands
-     * that can appear in it.
+     * Read commands from the Reader to build VEOs. See the general description
+     * of this class for a description of the control file and the various
+     * commands that can appear in it.
      *
      * @param br file to read the commands from
-     * @throws VERSCommon.VEOFatal if prevented from continuing processing at all
+     * @throws VERSCommon.VEOFatal if prevented from continuing processing at
+     * all
      */
     public void buildVEOs(BufferedReader br) throws VEOFatal {
         String method = "buildVEOs";
@@ -1009,7 +1014,7 @@ public class CreateVEOs {
 
             // if it is absolute (starts at the root)
         } else if (!f.isAbsolute()) {
-            f = Paths.get(baseDir.toString(), fileRef);
+            f = baseDir.resolve(fileRef);
         }
         try {
             f = f.toRealPath();
