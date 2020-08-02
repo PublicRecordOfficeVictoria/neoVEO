@@ -166,6 +166,7 @@ public class CreateVEOs {
     static String classname = "CreateVEOs"; // for reporting
     FileOutputStream fos;   // underlying file stream for file channel
     Path templateDir;       // directory that holds the templates
+    Path supportDir;        // directory that holds the V3 support files (especially the VEOReadme.txt file)
     Path controlFile;       // control file to generate the VEOs
     Path baseDir;           // directory which to interpret the files in the control file
     Path outputDir;         // directory in which to place the VEOs
@@ -211,7 +212,8 @@ public class CreateVEOs {
         log.setLevel(null);
         System.setProperty("java.util.logging.SimpleFormatter.format", "%4$s: %5$s%n");
         rootLog.setLevel(Level.WARNING);
-        templateDir = Paths.get(".", "Templates");
+        templateDir = null;
+        supportDir = null;
         outputDir = Paths.get("."); // default is the current working directory
         controlFile = null;
         signers = new LinkedList<>();
@@ -242,7 +244,7 @@ public class CreateVEOs {
         PFXUser user;   // details about user
         Path pfxFile;   // path of a PFX file
         String password;// password to PFX file
-        String usage = "CreateVEOs [-vv] [-v] [-d] -t <templateDir> -c <controlFile> [-s <pfxFile> <password>] [-o <outputDir>] [-ha <hashAlgorithm] [-copy|move|link] [-e <encoding>]";
+        String usage = "CreateVEOs [-vv] [-v] [-d] -t <templateDir> -sf <supportDir> -c <controlFile> [-s <pfxFile> <password>] [-o <outputDir>] [-ha <hashAlgorithm] [-copy|move|link] [-e <encoding>]";
 
         // check for no arguments...
         if (args.length == 0) {
@@ -260,6 +262,14 @@ public class CreateVEOs {
                         i++;
                         templateDir = checkFile("template directory", args[i], true);
                         log.log(Level.INFO, "Template directory is ''{0}''", templateDir.toString());
+                        i++;
+                        break;
+                        
+                    // get supoort directory
+                    case "-sf":
+                        i++;
+                        supportDir = checkFile("support directory", args[i], true);
+                        log.log(Level.INFO, "Support directory is ''{0}''", supportDir.toString());
                         i++;
                         break;
 
@@ -362,9 +372,12 @@ public class CreateVEOs {
             throw new VEOFatal(classname, 3, "Missing argument. Usage: " + usage);
         }
 
-        // check to see that user specified a template directory and control file
+        // check to see that user specified a template directory, support directory and control file
         if (templateDir == null) {
             throw new VEOFatal(classname, 4, "No template directory specified. Usage: " + usage);
+        }
+        if (supportDir == null) {
+            throw new VEOFatal(classname, 4, "No support directory specified. Usage: " + usage);
         }
         if (controlFile == null) {
             throw new VEOFatal(classname, 5, "No control file specified. Usage: " + usage);
@@ -570,7 +583,7 @@ public class CreateVEOs {
                         // create VEO & add VEOReadme.txt from template directory
                         try {
                             veo = new CreateVEO(outputDir, tokens[1], hashAlg, debug);
-                            veo.addVEOReadme(templateDir);
+                            veo.addVEOReadme(supportDir);
                         } catch (VEOError e) {
                             veoFailed(line, "Failed in starting new VEO in BV command", e);
                             if (veo != null) {
@@ -921,7 +934,7 @@ public class CreateVEOs {
                         try {
                             // create VEO & add VEOReadme.txt from template directory
                             veo = new CreateVEO(outputDir, tokens[1], hashAlg, debug);
-                            veo.addVEOReadme(templateDir);
+                            veo.addVEOReadme(supportDir);
 
                             // which contains one anonymous IO
                             veo.addInformationObject(tokens[2], 0);

@@ -1,3 +1,7 @@
 @echo off
-set code="F:/VERS-V3-Package/neoVEO"
-java -classpath %code%/dist/* VEOCreate.CreateVEOs -v -t %code%/demo/templates  %* -s %code%/demo/testSigner.pfx password -c %code%/demo/demoVEOCreateControl.txt -o ../../..
+if exist "J:/PROV/TECHNOLOGY MANAGEMENT/Application Development/VERS/VERSCode" (
+	set code="J:/PROV/TECHNOLOGY MANAGEMENT/Application Development/VERS/VERSCode"
+) else (
+	set code="C:/Users/Andrew/Documents/Work/VERSCode"
+)
+java -classpath %code%/neoVEO/dist/* VEOCreate.CreateVEOs -v -t %code%/neoVEO/demo/templates -sf %code%/VERSCommon/VERSSupportFiles -s %code%/neoVEO/demo/testSigner.pfx password %code%/neoVEO/demo/demoVEOCreateControl.txt -o ../../..

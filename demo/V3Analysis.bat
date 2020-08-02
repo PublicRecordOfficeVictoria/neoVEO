@@ -1,3 +1,7 @@
 @echo off
-set code="F:/VERS-V3-Package/neoVEO"
-java -classpath %code%/dist/* VEOAnalysis.VEOAnalysis -c -v -r -norec -s %code%/neoVEOSchemas -o F:/ %*
+if exist "J:/PROV/TECHNOLOGY MANAGEMENT/Application Development/VERS/VERSCode" (
+	set code="J:/PROV/TECHNOLOGY MANAGEMENT/Application Development/VERS/VERSCode"
+) else (
+	set code="C:/Users/Andrew/Documents/Work/VERSCode"
+)
+java -classpath %code%/neoVEO/dist/* VEOAnalysis.VEOAnalysis -c -v -r -norec -s %code%/VERSCommon/VERSSupportFiles %* -o f:/ %*

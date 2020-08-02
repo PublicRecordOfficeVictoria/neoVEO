@@ -4,4 +4,4 @@ if exist "J:/PROV/TECHNOLOGY MANAGEMENT/Application Development/VERS/VERSCode" (
 ) else (
 	set code="C:/Users/Andrew/Documents/Work/VERSCode"
 )
-java -classpath %code%/neoVEO/dist/* VEOAnalysis.VEOAnalysis -c -v -r -norec -s %code%/neoVEO/neoVEOSchemas  %*
+java -classpath %code%/neoVEO/dist/* VEOAnalysis.VEOAnalysis -c -v -r -norec -s %code%/VERSCommon/VERSSupportFiles %*
