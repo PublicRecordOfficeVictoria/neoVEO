@@ -956,7 +956,7 @@ public class CreateVEOs {
 
                                     // add the content file to the information piece
                                     log.log(Level.FINE, "Adding ''{0}''", tokens[i]);
-                                    veo.addContentFile(tokens[i]);
+                                    veo.addAbsContentFile(tokens[i]);
                                 }
                             }
 
