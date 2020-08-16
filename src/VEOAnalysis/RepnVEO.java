@@ -155,7 +155,7 @@ class RepnVEO extends Repn {
                         veoHistory = new RepnHistory(veoDir, schemaDir);
                         break;
                     case "VEOReadme.txt":
-                        
+
                         // check that the length of the VEOReadme.txt file is
                         // one of the valid lengths, if not complain.
                         for (i = 0; i < expVEOSize.length; i++) {
@@ -336,7 +336,12 @@ class RepnVEO extends Repn {
     }
 
     /**
-     * Private function to unzip a VEO file.
+     * Private function to unzip a VEO file. When unzipping, we follow the
+     * advice in the PKWARE application developer notes
+     * https://support.pkware.com/home/pkzip/developer-tools/appnote/application-developer-considerations
+     * These recommend checking that the file name in the ZIP entries doesn't
+     * point to arbitrary locations in the file system (especially containing
+     * '..') and that the file sizes are reasonable.
      *
      * @param zipFilePath the path to the VEO file
      * @throws VEOError
@@ -347,14 +352,14 @@ class RepnVEO extends Repn {
         ZipFile zipFile;
         Enumeration entries;
         ZipEntry entry;
-        Path vze, zipEntryPath;
+        Path vze, zipEntryPath, p;
         InputStream is;
         BufferedInputStream bis;
         FileOutputStream fos;
         BufferedOutputStream bos;
         byte[] b = new byte[1024];
-        int len;
-        String veoName, s;
+        int len, i;
+        String veoName;
         long modTime;
         boolean complainedOnceAlready;
 
@@ -368,16 +373,29 @@ class RepnVEO extends Repn {
         try {
             // get the name of this VEO, stripping off the final '.zip'
             veoName = zipFilePath.getFileName().toString();
-            int i = veoName.lastIndexOf(".");
+            i = veoName.lastIndexOf(".");
             if (i != -1) {
                 veoName = veoName.substring(0, i);
             }
 
             // open the zip file and get the entries in it
             zipFile = new ZipFile(zipFilePath.toFile());
+
+            // be paranoid, just check that the supposed length of the
+            // ZIP entry against the length of the ZIP file itself
             entries = zipFile.entries();
+            long zipFileLength = zipFilePath.toFile().length();
+            long claimedLength = 0;
+            while (entries.hasMoreElements()) {
+                entry = (ZipEntry) entries.nextElement();
+                claimedLength += entry.getCompressedSize();
+            }
+            if (zipFileLength < claimedLength) {
+                    throw new VEOError(errMesg(classname, method, "ZIP file length (" + zipFileLength + ") is less than the sum of the compressed sizes of the ZIP entrys (" + claimedLength + ")"));
+                }
 
             // go through each entry
+            entries = zipFile.entries();
             while (entries.hasMoreElements()) {
                 entry = (ZipEntry) entries.nextElement();
                 log.log(Level.FINE, "Extracting: {0}({1}) {2} {3}", new Object[]{entry.getName(), entry.getSize(), entry.getTime(), entry.isDirectory()});
@@ -402,12 +420,22 @@ class RepnVEO extends Repn {
                 // be in a directory with the same name as the VEO filename
                 // (even if we have complained about this)
                 if (zipEntryPath.getNameCount() == 1) {
-                    vze = veoDir.getParent().resolve(Paths.get(veoName));
+                    p = veoDir.getParent().resolve(Paths.get(veoName));
                 } else {
                     zipEntryPath = zipEntryPath.subpath(1, zipEntryPath.getNameCount());
-                    vze = veoDir.getParent().resolve(Paths.get(veoName)).resolve(zipEntryPath);
+                    p = veoDir.getParent().resolve(Paths.get(veoName)).resolve(zipEntryPath);
                 }
-                vze = vze.normalize();
+
+                // where does the file name in the ZIP entry really point to?
+                vze = p.normalize();
+
+                // be really, really, paranoid - the file we are creating
+                // shouldn't have any 'parent' ('..') elements in the file path
+                for (i = 0; i < vze.getNameCount(); i++) {
+                    if (vze.getName(i).equals("..")) {
+                        throw new VEOError(errMesg(classname, method, "ZIP file contains a pathname that includes '..' elements: '" + zipEntryPath + "'"));
+                    }
+                }
 
                 // just be cynical and check that the file name to be extracted
                 // from the ZIP file is actually in the VEO directory...

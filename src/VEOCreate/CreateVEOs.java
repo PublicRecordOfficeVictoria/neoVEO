@@ -623,7 +623,7 @@ public class CreateVEOs {
                         // go through list of directories adding them
                         try {
                             for (i = 1; i < tokens.length; i++) {
-                                veo.addContent(getRealFile(tokens[i]));
+                                veo.registerContentDirectories(getRealFile(tokens[i]));
                             }
                         } catch (VEOError e) {
                             veoFailed(line, "AC command failed", e);
@@ -1014,18 +1014,14 @@ public class CreateVEOs {
      */
     private Path getRealFile(String fileRef) throws VEOError {
         Path f;
-        Properties p;
-        String cwd;
 
         f = Paths.get(fileRef);
 
         // if it is relative to current working directory
         if (f.startsWith(".")) {
-            p = System.getProperties();
-            cwd = p.getProperty("user.dir");
-            f = Paths.get(cwd, fileRef);
+            f = Paths.get("").resolve(f);
 
-            // if it is absolute (starts at the root)
+        // if it not absolute (relative to the directory containing the control file)
         } else if (!f.isAbsolute()) {
             f = baseDir.resolve(fileRef);
         }

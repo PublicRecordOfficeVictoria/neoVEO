@@ -551,10 +551,49 @@ public class CreateVEO {
 
         state = VEOState.ADDING_IP;
     }
+    
+    /**
+     * Add a Content File to an Information Piece. A
+     * Content File is a reference to a real physical computer file.
+     * <p>
+     * In this call, the files are referenced by a single file name that is
+     * interpreted relative to the current working directory. In the other
+     * addContentFile() calls, the file path is interpreted relative to a
+     * Content Directory. In this call, the current working directory is
+     * equivalent to the Content Directory.
+     * <p>
+     * The purpose of this division is that the relative part (c/d/e.txt in this
+     * case) explicitly appears as a directory structure in the VEO when it is
+     * generated.
+     * <p>
+     * The actual file is not physically included in the VEO until it is ZIPped,
+     * and so it must exist until the finalise() method is called.
+     * <p>
+     * All the Content Files contained within an Information Piece must be added
+     * to the Information Piece before a new Information Piece or Information
+     * Object is added.
+     * <p>
+     * The file argument must not be null, and the actual referenced file must
+     * exist.
+     *
+     * @param file the relative portion of the Content File being added
+     * @throws VERSCommon.VEOError if an error occurred
+     */
+    public void addAbsContentFile(String file) throws VEOError {
+        String method = "addContentFile";
+
+        // sanity checks
+        if (file == null) {
+            throw new VEOError(classname, method, 1, "file parameter is null");
+        }
+        
+        // interpret file relative to the current working directory
+        addContentFile(file, Paths.get("", file));
+    }
 
     /**
      * Add a Content File to an Information Piece. A Content File is a reference
-     *  to a real physical computer veoReference.
+     *  to a real physical computer file.
      *  <p>
      *  In order to understand this method, it is important to know that the
      *  Content Files are represented in the VEO in an arbitrary directory
@@ -567,7 +606,7 @@ public class CreateVEO {
      * case. The veoReference must have at least one directory level.
      * <p>
      * The veoReference argument cannot contain self ('.') or parent ('..')
-     * directory references.
+     * directory references and must not be an absolute file name.
      * <p>
      * The actual veoReference is not physically included in the VEO until it is
      * ZIPped, and so it must exist until the finalise() method is called.
@@ -584,13 +623,14 @@ public class CreateVEO {
      */
     public void addContentFile(String veoReference, Path source) throws VEOError {
         String method = "addContentFile";
+        Path p;
 
         // sanity checks
         if (veoReference == null) {
-            throw new VEOError(classname, method, 1, "veoFile parameter is null");
+            throw new VEOError(classname, method, 1, "veoReference parameter is null");
         }
         if (source == null) {
-            throw new VEOError(classname, method, 2, "source parameter is null");
+            throw new VEOError(classname, method, 2, "source file parameter is null");
         }
 
         // can only add Content Files when adding an Information Piece
@@ -602,15 +642,19 @@ public class CreateVEO {
         if (veoReference.startsWith("./") || veoReference.startsWith("../")
                 || veoReference.contains("/./") || veoReference.contains("/../")
                 || veoReference.endsWith("/.") || veoReference.endsWith("/..")) {
-            throw new VEOError(classname, method, 4, "veoFile argument (" + veoReference + ") cannot contain file compenents '.' or '..'");
+            throw new VEOError(classname, method, 4, "veoReference parameter (" + veoReference + ") cannot contain file compenents '.' or '..'");
         }
-        if (Paths.get(veoReference).getNameCount() < 2) {
-            throw new VEOError(classname, method, 5, "veoFile argument (" + veoReference + ") must have at least one directory");
+        p = Paths.get(veoReference);
+        if (p.isAbsolute()) {
+            throw new VEOError(classname, method, 5, "veoReference parameter (" + veoReference + ") must not be absolute");
+        }
+        if (p.getNameCount() < 2) {
+            throw new VEOError(classname, method, 6, "veoReference parameter (" + veoReference + ") must have at least one directory");
         }
         
         // source file must exist
         if (!Files.exists(source)) {
-            throw new VEOError(classname, method, 3, "content file '" + source.toString() + "' does not exist");
+            throw new VEOError(classname, method, 7, "source file '" + source.toString() + "' does not exist");
         }
 
         // remember file to be zipped later
@@ -660,7 +704,6 @@ public class CreateVEO {
      */
     public void addContentFile(String file) throws VEOError {
         String method = "addContentFile";
-        Path source;
 
         // sanity checks
         if (file == null) {
@@ -672,69 +715,8 @@ public class CreateVEO {
             throw new VEOError(classname, method, 2, "Can only add a Content File when adding an Information Piece");
         }
 
-        // remember file to be zipped later
-        source = getActualSourcePath(file);
-        if (!Files.exists(source)) {
-            throw new VEOError(classname, method, 3, "content file '" + source.toString() + "' does not exist");
-        }
-        filesToInclude.add(new FileToInclude(source, file));
-
-        cvc.addContentFile(file, source);
-    }
-    
-    
-    /**
-     * Add a Content File (absolute reference) to an Information Piece. A
-     * Content File is a reference to a real physical computer file.
-     * <p>
-     * In this call, the files are referenced by a single file name that is
-     * interpreted relative to the current working directory. In the other
-     * addContentFile() calls, the file path is interpreted relative to a
-     * Content Directory. In this call, the current working directory is
-     * equivalent to the Content Directory.
-     * <p>
-     * The purpose of this division is that the relative part (c/d/e.txt in this
-     * case) explicitly appears as a directory structure in the VEO when it is
-     * generated.
-     * <p>
-     * The actual file is not physically included in the VEO until it is ZIPped,
-     * and so it must exist until the finalise() method is called.
-     * <p>
-     * All the Content Files contained within an Information Piece must be added
-     * to the Information Piece before a new Information Piece or Information
-     * Object is added.
-     * <p>
-     * The file argument must not be null, and the actual referenced file must
-     * exist.
-     *
-     * @param file the relative portion of the Content File being added
-     * @throws VERSCommon.VEOError if an error occurred
-     */
-    public void addAbsContentFile(String file) throws VEOError {
-        String method = "addContentFile";
-        Path source;
-
-        // sanity checks
-        if (file == null) {
-            throw new VEOError(classname, method, 1, "file parameter is null");
-        }
-        
-        // the file must be relative, and not be outside the current working
-        // directory
-
-        // can only add Content Files when adding an Information Piece
-        if (state != VEOState.ADDING_IP) {
-            throw new VEOError(classname, method, 2, "Can only add a Content File when adding an Information Piece");
-        }
-
-        // remember file to be zipped later
-        source = Paths.get("").resolve(file);
-        if (!Files.exists(source)) {
-            throw new VEOError(classname, method, 3, "content file '" + source.toString() + "' does not exist");
-        }
-        filesToInclude.add(new FileToInclude(source, file));
-
-        cvc.addContentFile(file, source);
+        // interpret file relative to a content directory
+        addContentFile(file, getActualSourcePath(file));
     }
 
     /**
@@ -757,10 +739,9 @@ public class CreateVEO {
         rootName = destination.getName(0).toString();
         rootPath = contentPrefixes.get(rootName);
         if (rootPath == null) {
-            throw new VEOError(classname, method, 4, "cannot match veoFile '" + file + "' to a content directory");
-        } else {
-            source = rootPath.resolve(destination.subpath(1, destination.getNameCount()));
+            throw new VEOError(classname, method, 1, "cannot match veoFile '" + file + "' to a content directory");
         }
+        source = rootPath.resolve(destination.subpath(1, destination.getNameCount()));
         return source;
     }
 
