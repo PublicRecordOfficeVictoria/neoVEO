@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
@@ -59,20 +60,20 @@ class RepnSignature extends RepnXML {
      * @param schemaDir schemaDir directory that contains vers2-signature.xsd
      * @throws VEOError if an error occurred processing this VEO
      */
-    public RepnSignature(Path veoDir, String sigFileName, Path schemaDir) throws VEOError {
-        super(sigFileName);
+    public RepnSignature(Path veoDir, String sigFileName, Path schemaDir, ResultSummary results) throws VEOError {
+        super(sigFileName, results);
 
         Path file;          // the signature file
         Path schema;        // the source of the VEO*Signature?.xml schema
         RepnItem ri;
         int i;
 
-        version = new RepnItem(getId(), "Version of XML file");
-        sigAlgorithm = new RepnItem(getId(), "Signature algorithm OID");
+        version = new RepnItem(getId(), "Version of XML file", results);
+        sigAlgorithm = new RepnItem(getId(), "Signature algorithm OID", results);
         sa = "";
-        sigDateTime = new RepnItem(getId(), "Date/time signature created");
-        signer = new RepnItem(getId(), "Signer");
-        signature = new RepnItem(getId(), "Signature");
+        sigDateTime = new RepnItem(getId(), "Date/time signature created", results);
+        signer = new RepnItem(getId(), "Signer", results);
+        signature = new RepnItem(getId(), "Signature", results);
         certificates = new ArrayList<>();
 
         // get the files involved
@@ -140,7 +141,7 @@ class RepnSignature extends RepnXML {
         // step through the certificates
         i = 0;
         while (checkElement("vers:Certificate")) {
-            ri = new RepnItem(getId() + ":" + i, "Certificate(" + i + ")");
+            ri = new RepnItem(getId() + ":" + i, "Certificate(" + i + ")", results);
             ri.setValue(getTextValue());
             certificates.add(ri);
             gotoNextElement();
@@ -639,7 +640,7 @@ class RepnSignature extends RepnXML {
         veoDir = Paths.get("..", "neoVEOOutput", "Demo", "BadVEO1.veo");
         schemaDir = Paths.get("Test", "Demo", "Schemas");
         try {
-            rh = new RepnSignature(veoDir, "VEOContentSignature1.xml", schemaDir);
+            rh = new RepnSignature(veoDir, "VEOContentSignature1.xml", schemaDir, null);
             System.out.println(rh.toString());
         } catch (VEOError e) {
             System.out.println(e.getMessage());

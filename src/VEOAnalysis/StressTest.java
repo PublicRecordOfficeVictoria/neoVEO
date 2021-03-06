@@ -9,15 +9,11 @@ package VEOAnalysis;
 import VERSCommon.LTSF;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFatal;
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -78,7 +74,7 @@ final class StressTest {
 
         // perform the analysis
         try {
-            rv = new RepnVEO(veo, true, outputDir);
+            rv = new RepnVEO(veo, true, outputDir, null);
             rv.constructRepn(schemaDir);
             rv.validate(ltsfs, false);
             rv.genReport(false);

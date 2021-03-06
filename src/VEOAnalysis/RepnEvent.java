@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.ResultSummary;
 import VERSCommon.VERSDate;
 import VERSCommon.VEOError;
 import java.io.BufferedWriter;
@@ -33,36 +34,36 @@ class RepnEvent extends Repn {
      * @param seq sequence no of event in history file
      * @throws VEOError if the XML document has not been properly parsed
      */
-    public RepnEvent(RepnXML document, String parentId, int seq) throws VEOError {
-        super(parentId + ":E-" + seq);
+    public RepnEvent(RepnXML document, String parentId, int seq, ResultSummary results) throws VEOError {
+        super(parentId + ":E-" + seq, results);
 
         RepnItem ri;
 
         // vers:EventDateTime
-        dateTime = new RepnItem(getId(), "Event date & time");
+        dateTime = new RepnItem(getId(), "Event date & time", results);
         dateTime.setValue(document.getTextValue());
         document.gotoNextElement();
 
         // vers:EventType
-        eventType = new RepnItem(getId(), "Event type");
+        eventType = new RepnItem(getId(), "Event type", results);
         eventType.setValue(document.getTextValue());
         document.gotoNextElement();
 
         // vers:Initiator
-        initiator = new RepnItem(getId(), "Event initiator");
+        initiator = new RepnItem(getId(), "Event initiator", results);
         initiator.setValue(document.getTextValue());
         document.gotoNextElement();
 
         descriptions = new ArrayList<>();
         while (document.checkElement("vers:Description")) {
-            ri = new RepnItem(getId(), "Event description");
+            ri = new RepnItem(getId(), "Event description", results);
             ri.setValue(document.getTextValue());
             descriptions.add(ri);
             document.gotoNextElement();
         }
         errorDescs = new ArrayList<>();
         while (document.checkElement("vers:Error")) {
-            ri = new RepnItem(getId(), "Event error");
+            ri = new RepnItem(getId(), "Event error", results);
             ri.setValue(document.getTextValue());
             errorDescs.add(ri);
             document.gotoNextElement();

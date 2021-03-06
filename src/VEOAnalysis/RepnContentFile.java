@@ -7,6 +7,7 @@
 package VEOAnalysis;
 
 import VERSCommon.LTSF;
+import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
@@ -48,8 +49,8 @@ class RepnContentFile extends Repn {
      * @param seq the sequence number of this Content File within the IP
      * @throws VEOError if the XML document has not been properly parsed
      */
-    public RepnContentFile(RepnXML document, String parentId, int seq) throws VEOError {
-        super(parentId + ":CF-" + seq);
+    public RepnContentFile(RepnXML document, String parentId, int seq, ResultSummary results) throws VEOError {
+        super(parentId + ":CF-" + seq, results);
 
         // allocate unique id
         id = idCnt;
@@ -58,11 +59,11 @@ class RepnContentFile extends Repn {
         ltpf = false;
 
         // vers:PathName
-        pathName = new RepnItem(getId() + ":pathName", "Path name of content file");
+        pathName = new RepnItem(getId() + ":pathName", "Path name of content file", results);
         pathName.setValue(document.getTextValue());
         document.gotoNextElement();
         // vers:HashValue
-        hashValue = new RepnItem(getId() + ":hashValue", "Hash value of content file");
+        hashValue = new RepnItem(getId() + ":hashValue", "Hash value of content file", results);
         hashValue.setValue(document.getTextValue());
         document.gotoNextElement();
     }

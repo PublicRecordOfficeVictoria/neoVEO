@@ -7,6 +7,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
@@ -64,19 +65,19 @@ class RepnMetadataPackage extends Repn {
      * @param rdf true if metadata is expressed in RDF
      * @throws VEOError if the XML document has not been properly parsed
      */
-    public RepnMetadataPackage(RepnXML document, String parentId, int seq, boolean rdf) throws VEOError {
-        super(parentId + ":MP-" + seq);
+    public RepnMetadataPackage(RepnXML document, String parentId, int seq, boolean rdf, ResultSummary results) throws VEOError {
+        super(parentId + ":MP-" + seq, results);
 
         metadata = new ArrayList<>();
         this.rdf = rdf;
         rdfModel = null;
 
         // VERS:MetadataSchemaIdentifier
-        schemaId = new RepnItem(getId(), "Metadata schema id:");
+        schemaId = new RepnItem(getId(), "Metadata schema id:", results);
         schemaId.setValue(document.getTextValue());
         document.gotoNextElement();
         // VERS:MetadataSyntaxIdentifier
-        syntaxId = new RepnItem(getId(), "Metadata syntax id:");
+        syntaxId = new RepnItem(getId(), "Metadata syntax id:", results);
         syntaxId.setValue(document.getTextValue());
         if (rdf && !syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
             throw new VEOError("Error. Metadata Package has xmlns:rdf attribute, but vers:MetadataSyntaxIdentifier is not http://www.w3.org/1999/02/22-rdf-syntax-ns");

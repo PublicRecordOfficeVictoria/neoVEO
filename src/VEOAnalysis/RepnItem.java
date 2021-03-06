@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 
 /**
@@ -21,8 +22,8 @@ final class RepnItem extends Repn {
      * @param id item identifier
      * @param label label to use to describe this item
      */
-    public RepnItem(String id, String label) {
-        super(id);
+    public RepnItem(String id, String label, ResultSummary results) {
+        super(id, results);
         this.label = label;
         value = null;
     }

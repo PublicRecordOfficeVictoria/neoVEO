@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import java.io.BufferedWriter;
 import java.nio.file.Path;
@@ -30,15 +31,15 @@ class RepnHistory extends RepnXML {
      * @param schemaDir schemaDir directory containing the VEOHistory.xsd file
      * @throws VEOError  if a fatal error occurred
      */
-    public RepnHistory(Path veoDir, Path schemaDir) throws VEOError {
-        super("VEOHistory.xml");
+    public RepnHistory(Path veoDir, Path schemaDir, ResultSummary results) throws VEOError {
+        super("VEOHistory.xml", results);
 
         RepnEvent event;
         Path file, schema;
         int i;
 
         events = new ArrayList<>();
-        version = new RepnItem(getId(), "XML version");
+        version = new RepnItem(getId(), "XML version", results);
 
         // parse the VEOHistory.xml file against the VEOHistory scheme
         file = veoDir.resolve("VEOHistory.xml");
@@ -62,7 +63,7 @@ class RepnHistory extends RepnXML {
         while (checkElement("vers:Event")) {
             gotoNextElement();
             i++;
-            event = new RepnEvent(this, getId(), i);
+            event = new RepnEvent(this, getId(), i, results);
             events.add(event);
         }
     }
@@ -259,7 +260,7 @@ class RepnHistory extends RepnXML {
         veoDir = Paths.get("Test", "TestVEO.veo");
         schemaDir = Paths.get("Test", "Schemas");
         try {
-            rh = new RepnHistory(veoDir, schemaDir);
+            rh = new RepnHistory(veoDir, schemaDir, null);
             System.out.println(rh.toString());
         } catch (VEOError e) {
             System.out.println(e.getMessage());

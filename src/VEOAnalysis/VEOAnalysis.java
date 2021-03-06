@@ -9,9 +9,13 @@
 package VEOAnalysis;
 
 import VERSCommon.LTSF;
+import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFatal;
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -32,12 +36,12 @@ import java.util.logging.Logger;
  * contents of the VEO.
  * <p>
  * The class can be used in two ways: it can be run as a program with options
- * controlled from the command line; or it can be call programatically in
- * two ways as an API.
+ * controlled from the command line; or it can be call programatically in two
+ * ways as an API.
  * <h1>COMMAND LINE ARGUMENTS</h1>
  * <p>
- * The class has several operating modes which can be
- * used together or separately. These are:
+ * The class has several operating modes which can be used together or
+ * separately. These are:
  * <ul>
  * <li>'-e': produce a summary of the errors and warnings found in the listed
  * VEOs on standard out. The VEO directories are removed after execution unless
@@ -66,8 +70,8 @@ import java.util.logging.Logger;
  * </ul>
  * <h1>API</h1>
  * <P>
- * All of the options available on the command line are directly available as
- * an API. 
+ * All of the options available on the command line are directly available as an
+ * API.
  *
  * @author Andrew Waugh
  */
@@ -77,7 +81,7 @@ public class VEOAnalysis {
     Path supportDir;     // directory in which XML schemas are to be found
     Path outputDir;     // directory in which the VEOs are generated
     boolean chatty;     // true if report when starting a new VEO
-    boolean error;      // true if produce a summary error report
+    boolean error;      // true if produce an error report
     boolean report;     // true if produce HTML reports
     boolean unpack;     // true if leave the VEO directories after execution
     boolean debug;      // true if debugging information is to be generated
@@ -87,9 +91,10 @@ public class VEOAnalysis {
     ArrayList<String> veos; // The list of VEOS to process
     LTSF ltsfs;         // valid long term preservation formats
     private final static Logger LOG = Logger.getLogger("VEOAnalysis.VEOAnalysis");
-    
-    private final static String USAGE =
-            "AnalyseVEOs [-e] [-r] [-u] [-v] [-d] [-c] [-norec] -s supportDir [-o outputDir] [files*]";
+    private ResultSummary results;  // summary of the errors & warnings
+
+    private final static String USAGE
+            = "AnalyseVEOs [-e] [-sr] [-r] [-u] [-v] [-d] [-c] [-norec] -s supportDir [-o outputDir] [files*]";
 
     /**
      * Instantiate an VEOAnalysis instance to be used as an API. In this mode,
@@ -109,11 +114,12 @@ public class VEOAnalysis {
      * @param chatty true if report when starting a new VEO
      * @param debug true if debugging information is to be generated
      * @param verbose true if verbose descriptions are to be generated
+     * @param results if not null, create a summary of the errors & warnings
      * @throws VEOError if something goes wrong
      */
     public VEOAnalysis(Path supportDir, LTSF ltsfs, Path outputDir,
             Handler hndlr, boolean chatty, boolean error, boolean report, boolean unpack,
-            boolean debug, boolean verbose, boolean norec) throws VEOError {
+            boolean debug, boolean verbose, boolean norec, ResultSummary results) throws VEOError {
         Handler h[];
         int i;
 
@@ -156,12 +162,13 @@ public class VEOAnalysis {
         veos = null;
         hasErrors = false;
         this.ltsfs = ltsfs;
+        this.results = results;
     }
 
     /**
-     * Initialise the analysis regime using command line arguments. Note that
-     * in this mode *all* of the VEOs to be checked are passed in as
-     * command line arguments.
+     * Initialise the analysis regime using command line arguments. Note that in
+     * this mode *all* of the VEOs to be checked are passed in as command line
+     * arguments.
      *
      * @param args the command line arguments
      * @throws VEOError if something goes wrong
@@ -195,6 +202,7 @@ public class VEOAnalysis {
         norec = false;
         veos = new ArrayList<>();
         ltsfs = null;
+        results = null;
 
         // process command line arguments
         i = 0;
@@ -216,11 +224,19 @@ public class VEOAnalysis {
                         LOG.log(Level.INFO, "Debug mode is selected");
                         break;
 
-                    // produce summary report containing errors and warnings
+                    // produce report containing errors and warnings
                     case "-e":
                         error = true;
                         i++;
-                        LOG.log(Level.INFO, "Summary report mode is selected");
+                        LOG.log(Level.INFO, "Error report mode is selected");
+                        break;
+
+                    // produce summary report summarising the errors and warnings
+                    case "-sr":
+                        error = true;
+                        results = new ResultSummary();
+                        i++;
+                        LOG.log(Level.INFO, "Error and summary report mode is selected");
                         break;
 
                     // do not complain about missing recommended metadata elements
@@ -326,8 +342,8 @@ public class VEOAnalysis {
     }
 
     /**
-     * Test the VEOs listed in the command line arguments. You can only use
-     * this call if the VEOs have been passed in on the command line.
+     * Test the VEOs listed in the command line arguments. You can only use this
+     * call if the VEOs have been passed in on the command line.
      *
      * @throws VEOError if a fatal error occurred
      */
@@ -393,9 +409,14 @@ public class VEOAnalysis {
             printHeader(veo);
         }
 
+        // set this VEO id in the results summary
+        if (results != null) {
+            results.setId(veo);
+        }
+
         // perform the analysis
         try {
-            rv = new RepnVEO(veo, debug, dir);
+            rv = new RepnVEO(veo, debug, dir, results);
         } catch (VEOError e) {
             System.out.println(e.getMessage());
             return null;
@@ -461,7 +482,7 @@ public class VEOAnalysis {
     }
 
     /**
-     * Test an individual VEO. 
+     * Test an individual VEO.
      *
      * @param veo the file path of the VEO
      * @param outputDir the directory in which to unpack this VEO
@@ -476,9 +497,15 @@ public class VEOAnalysis {
         ArrayList<RepnSignature> rs;
         String result;
 
+        // set this VEO id in the results summary
+        if (results != null) {
+            results.setId(veo);
+        }
+
+
         // perform the analysis
         hasErrors = false;
-        rv = new RepnVEO(veo, debug, outputDir);
+        rv = new RepnVEO(veo, debug, outputDir, results);
         result = null;
         try {
             // if validating, do so...
@@ -559,6 +586,28 @@ public class VEOAnalysis {
     }
 
     /**
+     * Write a result summary on the specified Writer. Nothing will be reported
+     * unless the '-rs' flag was used when instantiating the class (or a
+     * ResultSummary passed).
+     * 
+     * @param w the writer
+     * @throws VEOError if something failed
+     */
+    public void resultSummary(Writer w) throws VEOError {
+        BufferedWriter bw;
+
+        if (results != null) {
+            bw = new BufferedWriter(w);
+            try {
+                results.report(bw);
+                bw.close();
+            } catch (IOException ioe) {
+                throw new VEOError("Error producing summary report: " + ioe.getMessage() + " (VEOAnalysis.report()");
+            }
+        }
+    }
+
+    /**
      * Main entry point for the VEOAnalysis program.
      *
      * @param args A set of command line arguments. See the introduction for
@@ -573,6 +622,7 @@ public class VEOAnalysis {
         try {
             va = new VEOAnalysis(args);
             va.test();
+            va.resultSummary(new OutputStreamWriter(System.out));
         } catch (VEOFatal e) {
             LOG.log(Level.SEVERE, e.getMessage());
         } catch (VEOError e) {

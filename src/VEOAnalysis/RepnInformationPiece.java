@@ -7,6 +7,7 @@
 package VEOAnalysis;
 
 import VERSCommon.LTSF;
+import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import java.io.BufferedWriter;
 import java.nio.file.Path;
@@ -31,14 +32,14 @@ class RepnInformationPiece extends Repn {
      * @param seq the sequence number of this IP within the Information Object
      * @throws VEOError if the XML document has not been properly parsed
      */
-    public RepnInformationPiece(RepnXML document, String parentId, int seq) throws VEOError {
-        super(parentId + ":IP-" + seq);
+    public RepnInformationPiece(RepnXML document, String parentId, int seq, ResultSummary results) throws VEOError {
+        super(parentId + ":IP-" + seq, results);
 
         int i;
 
         // vers:Label
         if (document.checkElement("vers:Label")) {
-            label = new RepnItem(getId(), "Information piece label");
+            label = new RepnItem(getId(), "Information piece label", results);
             label.setValue(document.getTextValue());
             document.gotoNextElement();
         } else {
@@ -50,7 +51,7 @@ class RepnInformationPiece extends Repn {
         while (!document.atEnd() && document.checkElement("vers:ContentFile")) {
             document.gotoNextElement();
             i++;
-            contents.add(new RepnContentFile(document, getId(), i));
+            contents.add(new RepnContentFile(document, getId(), i, results));
         }
     }
 

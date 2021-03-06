@@ -6,6 +6,8 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.ResultSummary;
+import VERSCommon.ResultSummary.Type;
 import VERSCommon.VEOError;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -38,6 +40,7 @@ abstract class Repn {
     private BufferedWriter htmlOutput; // if not null, generate a HTML version of this representation
     private boolean infoAvailable; // true if information can be retrieved from this object
     private final static Logger log = Logger.getLogger("VEOAnalysis.Repn");
+    protected ResultSummary results;  // summary of results
 
     /**
      * Construct a representation with default reporting parameters.
@@ -45,7 +48,7 @@ abstract class Repn {
      * @param id the identifier used to identify this object and not debugging
      * information.
      */
-    public Repn(String id) {
+    public Repn(String id, ResultSummary results) {
         fw = null;
         htmlOutput = null;
         errors = new ArrayList<>();
@@ -54,6 +57,7 @@ abstract class Repn {
         hasWarnings = false;
         this.id = id;
         infoAvailable = true;
+        this.results = results;
     }
 
     /**
@@ -115,6 +119,9 @@ abstract class Repn {
         }
         hasErrors = true;
         errors.add(s);
+        if (results != null) {
+            results.recordResult(Type.ERROR, s, null, id);
+        }
     }
 
     /**
@@ -183,6 +190,9 @@ abstract class Repn {
         }
         hasWarnings = true;
         warnings.add(s);
+        if (results != null) {
+            results.recordResult(Type.WARNING, s, null, id);
+        }
     }
 
     /**

@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -51,8 +52,8 @@ class RepnFile extends Repn {
      * @param contentFiles an index to the content files that have been found
      * @throws VEOError if a fatal error occurred
      */
-    public RepnFile(Path file, Path veoDir, HashMap<Path, RepnFile> contentFiles) throws VEOError {
-        super(veoDir.relativize(file).toString());
+    public RepnFile(Path file, Path veoDir, HashMap<Path, RepnFile> contentFiles, ResultSummary results) throws VEOError {
+        super(veoDir.relativize(file).toString(), results);
 
         DirectoryStream<Path> ds;
 
@@ -91,7 +92,7 @@ class RepnFile extends Repn {
             try {
                 ds = Files.newDirectoryStream(file);
                 for (Path entry : ds) {
-                    children.add(new RepnFile(entry, veoDir, contentFiles));
+                    children.add(new RepnFile(entry, veoDir, contentFiles, results));
                 }
             } catch (IOException e) {
                 LOG.log(Level.WARNING, errMesg(classname, "Failed stepping through directory of content", e));

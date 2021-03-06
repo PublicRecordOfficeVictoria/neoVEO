@@ -7,6 +7,7 @@
 package VEOAnalysis;
 
 import VERSCommon.LTSF;
+import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import java.io.BufferedWriter;
 import java.nio.file.Path;
@@ -36,15 +37,15 @@ class RepnContent extends RepnXML {
      * @param contentFiles collection of content files in VEO
      * @throws VEOError if a fatal error occurred
      */
-    public RepnContent(Path veoDir, Path schemaDir, HashMap<Path, RepnFile> contentFiles) throws VEOError {
-        super("VEOContent.xml");
+    public RepnContent(Path veoDir, Path schemaDir, HashMap<Path, RepnFile> contentFiles, ResultSummary results) throws VEOError {
+        super("VEOContent.xml", results);
 
         RepnInformationObject io;
         Path file, schema;
         int i;
 
-        version = new RepnItem(getId(), "Version");
-        hashAlgorithm = new RepnItem(getId(), "Hash algorithm");
+        version = new RepnItem(getId(), "Version", results);
+        hashAlgorithm = new RepnItem(getId(), "Hash algorithm", results);
         infoObjs = new ArrayList<>();
 
         // parse the VEOContent.xml file against the VEOContent scheme
@@ -72,7 +73,7 @@ class RepnContent extends RepnXML {
         while (!atEnd() && checkElement("vers:InformationObject")) {
             gotoNextElement();
             i++;
-            io = new RepnInformationObject(this, getId(), i);
+            io = new RepnInformationObject(this, getId(), i, results);
             infoObjs.add(io);
         }
     }
@@ -303,7 +304,7 @@ class RepnContent extends RepnXML {
         veoDir = Paths.get("..", "neoVEOOutput", "Demo", "BadVEO1.veo");
         schemaDir = Paths.get("Test", "Demo", "Schemas");
         try {
-            rc = new RepnContent(veoDir, schemaDir, null);
+            rc = new RepnContent(veoDir, schemaDir, null, null);
             System.out.println(rc.dumpDOM());
             rc.genReport(false, veoDir);
             // System.out.println(rc.toString());

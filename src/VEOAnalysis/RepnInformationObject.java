@@ -7,6 +7,7 @@
 package VEOAnalysis;
 
 import VERSCommon.LTSF;
+import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import java.io.BufferedWriter;
 import java.nio.file.Path;
@@ -34,8 +35,8 @@ class RepnInformationObject extends Repn {
      * @param seq the sequence number of this IO in the VEOContent file
      * @throws VEOError if the XML document has not been properly parsed
      */
-    public RepnInformationObject(RepnXML document, String parentId, int seq) throws VEOError {
-        super(parentId + ":IO-" + seq);
+    public RepnInformationObject(RepnXML document, String parentId, int seq, ResultSummary results) throws VEOError {
+        super(parentId + ":IO-" + seq, results);
 
         int i;
         String rdfNameSpace;
@@ -45,11 +46,11 @@ class RepnInformationObject extends Repn {
         firstIO = (seq == 1);
 
         // vers:InformationObjectType
-        type = new RepnItem(getId(), "Information Object type");
+        type = new RepnItem(getId(), "Information Object type", results);
         type.setValue(document.getTextValue());
         document.gotoNextElement();
         // vers:InformationObjectDepth
-        depth = new RepnItem(getId(), "Information Object depth");
+        depth = new RepnItem(getId(), "Information Object depth", results);
         depth.setValue(document.getTextValue());
         document.gotoNextElement();
 
@@ -71,14 +72,14 @@ class RepnInformationObject extends Repn {
 
             document.gotoNextElement();
             i++;
-            metadata.add(new RepnMetadataPackage(document, getId(), i, rdf));
+            metadata.add(new RepnMetadataPackage(document, getId(), i, rdf, results));
         }
         infoPieces = new ArrayList<>();
         i = 0;
         while (!document.atEnd() && document.checkElement("vers:InformationPiece")) {
             document.gotoNextElement();
             i++;
-            infoPieces.add(new RepnInformationPiece(document, getId(), i));
+            infoPieces.add(new RepnInformationPiece(document, getId(), i, results));
         }
     }
 

@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFatal;
 import java.io.IOException;
@@ -56,8 +57,8 @@ abstract class RepnXML extends Repn implements ErrorHandler {
      * @param id the identifier to use in describing this
      * @throws VERSCommon.VEOFatal if prevented from continuing processing at all
      */
-    protected RepnXML(String id) throws VEOFatal {
-        super(id);
+    protected RepnXML(String id, ResultSummary results) throws VEOFatal {
+        super(id, results);
         // create parser
         dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
