@@ -2,9 +2,6 @@
  * Copyright Public Record Office Victoria 2015
  * Licensed under the CC-BY license http://creativecommons.org/licenses/by/3.0/au/
  * Author Andrew Waugh
- * Version 1.0 February 2015
- * 20150911 v1.0.1 Set default for output directory to be "."
- * 20180119 v1.1 Provided support for headless mode for new DA
  */
 package VEOAnalysis;
 
@@ -88,13 +85,40 @@ public class VEOAnalysis {
     boolean verbose;    // true if verbose descriptions are to be generated
     boolean norec;      // true if asked to not complain about missing recommended metadata elements
     boolean hasErrors;  // true if VEO had errors
+    boolean help;       // if true, generate a help summary of command line arguements
     ArrayList<String> veos; // The list of VEOS to process
     LTSF ltsfs;         // valid long term preservation formats
     private final static Logger LOG = Logger.getLogger("VEOAnalysis.VEOAnalysis");
     private ResultSummary results;  // summary of the errors & warnings
 
     private final static String USAGE
-            = "AnalyseVEOs [-e] [-sr] [-r] [-u] [-v] [-d] [-c] [-norec] -s supportDir [-o outputDir] [files*]";
+            = "AnalyseVEOs [-help] [-e] [-sr] [-r|-u] [-v] [-d] [-c] [-norec] -s supportDir [-o outputDir] [files*]";
+
+    /**
+     * Report on version...
+     *
+     * <pre>
+     * 201502   1.0 Initial release
+     * 20150911 1.1 Set default for output directory to be "."
+     * 20180119 2.1 Provided support for headless mode for new DA
+     * 20180711 2.1 Fixed bug extracting ZIP files
+     * 20180716 2.2 Handles Windows style filenames in UNIX environment
+     * 20191007 2.3 Improved signature error messages and removed redundant code
+     * 20191024 2.4 Ensure that unpacking cannot write anywhere in file system & minor bug fixes & improvements
+     * 20191122 2.5 Minor bug fixes (see GIT log)
+     * 20191209 2.6 Cleaned up libraries
+     * 20200220 2.7 Fixed bug re non RDF metadata packages
+     * 20200414 3.0 Packaged for release. Lots of minor alterations
+     * 20200620 3.1 Made checking of VEOReadme.txt more flexible
+     * 20200716 3.2 V2 & V3 now use a common code base for checking LTSF
+     * 20200816 3.3 Improved checks to ensure ZIP not creating files anywhere in file system
+     * 20200306 3.4 Added result summary report option
+     * 20210407 3.5 Standardised reporting of run, added versions
+     * </pre>
+     */
+    static String version() {
+        return ("3.05");
+    }
 
     /**
      * Instantiate an VEOAnalysis instance to be used as an API. In this mode,
@@ -163,6 +187,7 @@ public class VEOAnalysis {
         hasErrors = false;
         this.ltsfs = ltsfs;
         this.results = results;
+        this.help = false;
     }
 
     /**
@@ -174,10 +199,126 @@ public class VEOAnalysis {
      * @throws VEOError if something goes wrong
      */
     public VEOAnalysis(String args[]) throws VEOError {
+        SimpleDateFormat sdf;
+        TimeZone tz;
+
+        // configure the run
         System.setProperty("java.util.logging.SimpleFormatter.format", "%4$s: %5$s%n");
         LOG.getParent().setLevel(Level.WARNING);
         LOG.setLevel(null);
         configure(args);
+
+        // say what we are doing
+        System.out.println("******************************************************************************");
+        System.out.println("*                                                                            *");
+        System.out.println("*                 V E O ( V 3 )   A N A L Y S I S   T O O L                  *");
+        System.out.println("*                                                                            *");
+        System.out.println("*                                Version " + version() + "                                *");
+        System.out.println("*               Copyright 2015 Public Record Office Victoria                 *");
+        System.out.println("*                                                                            *");
+        System.out.println("******************************************************************************");
+        System.out.println("");
+        System.out.print("Run at ");
+        tz = TimeZone.getTimeZone("GMT+10:00");
+        sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss+10:00");
+        sdf.setTimeZone(tz);
+        System.out.println(sdf.format(new Date()));
+        System.out.println("");
+
+        // "AnalyseVEOs [-e] [-sr] [-r] [-u] [-v] [-d] [-c] [-norec] -s supportDir [-o outputDir] [files*]
+        if (help) {
+            System.out.println("Command line arguments:");
+            System.out.println(" Mandatory:");
+            System.out.println("  one or more VEO files, or directories where VEOs are to be found");
+            System.out.println("  -s <support directory>: file path to where the support files are located");
+            System.out.println("");
+            System.out.println(" Optional:");
+            System.out.println("  -e: generate a list of errors and warnings as each VEO is processed");
+            System.out.println("  -sr: as for -e, but also generate a summary report of all the unique errors and warnings");
+            System.out.println("  -r: generate a HTML report describing each VEO (implies '-u')");
+            System.out.println("  -u: leave the unpacked VEOs in the file system at the end of the run");
+            System.out.println("  -norec: do not warn about missing recommended metadata elements");
+            System.out.println("  -o <directory>: the directory in which the VEOs are unpacked");
+            System.out.println("");
+            System.out.println("  -c: chatty mode: report when starting a new VEO when using -r or -u");
+            System.out.println("  -v: verbose mode: give more details about processing");
+            System.out.println("  -d: debug mode: give a lot of details about processing");
+            System.out.println("  -help: print this listing");
+            System.out.println("");
+        }
+
+        // check to see that user wants to do something
+        if (!error && !report && !unpack) {
+            throw new VEOFatal(classname, 5, "Must specify at least one of -e, -r, and -u. Usage: " + USAGE);
+        }
+
+        // check to see that user specified a support directory
+        if (supportDir == null) {
+            throw new VEOFatal(classname, 4, "No support directory specified. Usage: " + USAGE);
+        }
+
+        // read valid long term preservation formats
+        ltsfs = new LTSF(supportDir.resolve("validLTSF.txt"));
+
+        // report on what has been asked to do
+        System.out.println("Output mode:");
+        if (error || results != null) {
+            System.out.println(" Report on each VEO processed, including any errors or warnings (-e or -sr set)");
+            if (norec) {
+                System.out.println(" Do not warn about missing recommended metadata elements (-norec set)");
+            } else {
+                System.out.println(" Warn about missing recommended metadata elements");
+            }
+        } else {
+            System.out.println(" Do not list VEOs as they are processed, nor on any errors and warnings (-e not set)");
+        }
+        if (report) {
+            System.out.println(" Unpack each VEO and produce a HTML report for each VEO processed (-r set)");
+            if (!error) {
+                if (norec) {
+                    System.out.println(" Do not warn about missing recommended metadata elements (-norec set)");
+                } else {
+                    System.out.println(" Warn about missing recommended metadata elements");
+                }
+                if (chatty) {
+                    System.out.println(" Report processing each VEO (-c set)");
+                } else {
+                    System.out.println(" Do not report processing each VEO (-c not set)");
+                }
+            }
+        } else if (unpack) {
+            System.out.println(" Leave an unpacked copy of each VEO processed (-u set)");
+            if (!error) {
+                if (chatty) {
+                    System.out.println(" Report processing each VEO (-c set)");
+                } else {
+                    System.out.println(" Do not report processing each VEO (-c not set)");
+                }
+            }
+        } else {
+            System.out.println(" Do not unpack or produce a final HTML report for each VEO processed (neither -u or -r set)");
+        }
+        if (results != null) {
+            System.out.println(" Produce a summary report of errors and warnings at the end (-sr set)");
+        } else {
+            System.out.println(" Do not produce a summary report of errors and warnings at the end (-sr not set)");
+        }
+
+        System.out.println("Configuration:");
+        System.out.println(" Output directory: " + outputDir.toString());
+        if (supportDir != null) {
+            System.out.println(" Support directory: " + supportDir.toString());
+        } else {
+            System.out.println(" Support directory is not set");
+        }
+
+        if (debug) {
+            System.out.println(" Debug mode is selected");
+        }
+        if (verbose) {
+            System.out.println(" Verbose output is selected");
+        }
+        System.out.println("");
     }
 
     /**
@@ -203,6 +344,7 @@ public class VEOAnalysis {
         veos = new ArrayList<>();
         ltsfs = null;
         results = null;
+        help = false;
 
         // process command line arguments
         i = 0;
@@ -213,7 +355,6 @@ public class VEOAnalysis {
                     case "-c":
                         chatty = true;
                         i++;
-                        LOG.log(Level.INFO, "Report when staring new VEO mode is selected");
                         break;
 
                     // if debugging...
@@ -221,14 +362,18 @@ public class VEOAnalysis {
                         debug = true;
                         i++;
                         LOG.getParent().setLevel(Level.FINE);
-                        LOG.log(Level.INFO, "Debug mode is selected");
+                        break;
+
+                    // write a summary of the command line options to the std out
+                    case "-help":
+                        help = true;
+                        i++;
                         break;
 
                     // produce report containing errors and warnings
                     case "-e":
                         error = true;
                         i++;
-                        LOG.log(Level.INFO, "Error report mode is selected");
                         break;
 
                     // produce summary report summarising the errors and warnings
@@ -236,14 +381,12 @@ public class VEOAnalysis {
                         error = true;
                         results = new ResultSummary();
                         i++;
-                        LOG.log(Level.INFO, "Error and summary report mode is selected");
                         break;
 
                     // do not complain about missing recommended metadata elements
                     case "-norec":
                         norec = true;
                         i++;
-                        LOG.log(Level.INFO, "Do not complain about missing recommended metadata elements");
                         break;
 
                     // get output directory
@@ -251,7 +394,6 @@ public class VEOAnalysis {
                         i++;
                         outputDir = checkFile("output directory", args[i], true);
                         outputDir = outputDir.toAbsolutePath();
-                        LOG.log(Level.INFO, "Output directory is ''{0}''", outputDir.toString());
                         i++;
                         break;
 
@@ -259,7 +401,6 @@ public class VEOAnalysis {
                     case "-s":
                         i++;
                         supportDir = checkFile("support directory", args[i], true);
-                        LOG.log(Level.INFO, "support directory is ''{0}''", supportDir.toString());
                         i++;
                         break;
 
@@ -267,14 +408,12 @@ public class VEOAnalysis {
                     case "-r":
                         report = true;
                         i++;
-                        LOG.log(Level.INFO, "Produce HTML report for each VEO mode is selected");
                         break;
 
                     // leave unpacked VEOs after the run
                     case "-u":
                         unpack = true;
                         i++;
-                        LOG.log(Level.INFO, "Leave unpacked VEOs after each run");
                         break;
 
                     // if verbose...
@@ -282,7 +421,6 @@ public class VEOAnalysis {
                         verbose = true;
                         i++;
                         LOG.getParent().setLevel(Level.INFO);
-                        LOG.log(Level.INFO, "Verbose output is selected");
                         break;
 
                     // otherwise, check if it starts with a '-' and complain, otherwise assume it is a VEO pathname
@@ -298,19 +436,6 @@ public class VEOAnalysis {
         } catch (ArrayIndexOutOfBoundsException ae) {
             throw new VEOFatal(classname, 3, "Missing argument. Usage: " + USAGE);
         }
-
-        // check to see that user wants to do something
-        if (!error && !report && !unpack) {
-            throw new VEOFatal(classname, 5, "Must specify at least one of -e, -r, and -u");
-        }
-
-        // check to see that user specified a schema directory
-        if (supportDir == null) {
-            throw new VEOFatal(classname, 4, "No support directory specified. Usage: " + USAGE);
-        }
-
-        // read valid long term preservation formats
-        ltsfs = new LTSF(supportDir.resolve("validLTSF.txt"));
     }
 
     /**
@@ -502,7 +627,6 @@ public class VEOAnalysis {
             results.setId(veo);
         }
 
-
         // perform the analysis
         hasErrors = false;
         rv = new RepnVEO(veo, debug, outputDir, results);
@@ -570,18 +694,13 @@ public class VEOAnalysis {
 
         System.out.println("******************************************************************************");
         System.out.println("*                                                                            *");
-        System.out.println("*                     V E O   A N A L Y S I S   T O O L                      *");
-        System.out.println("*                                                                            *");
-        System.out.println("*                                Version 2.0                                 *");
-        System.out.println("*               Copyright 2015 Public Record Office Victoria                 *");
-        System.out.println("*                                                                            *");
-        System.out.println("******************************************************************************");
-        System.out.println("");
-        System.out.print("VEO analysed: '" + veo + "' at ");
+        System.out.print("* VEO analysed: '" + veo + "' at ");
         tz = TimeZone.getTimeZone("GMT+10:00");
         sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss+10:00");
         sdf.setTimeZone(tz);
         System.out.println(sdf.format(new Date()));
+        System.out.println("*                                                                            *");
+        System.out.println("******************************************************************************");
         System.out.println("");
     }
 
@@ -589,7 +708,7 @@ public class VEOAnalysis {
      * Write a result summary on the specified Writer. Nothing will be reported
      * unless the '-rs' flag was used when instantiating the class (or a
      * ResultSummary passed).
-     * 
+     *
      * @param w the writer
      * @throws VEOError if something failed
      */
@@ -616,12 +735,11 @@ public class VEOAnalysis {
     public static void main(String args[]) {
         VEOAnalysis va;
 
-        if (args.length == 0) {
-            LOG.log(Level.SEVERE, USAGE);
-        }
         try {
             va = new VEOAnalysis(args);
+            System.out.println("Starting analysis:");
             va.test();
+            System.out.println("Finished");
             va.resultSummary(new OutputStreamWriter(System.out));
         } catch (VEOFatal e) {
             LOG.log(Level.SEVERE, e.getMessage());

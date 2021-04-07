@@ -16,9 +16,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.PatternSyntaxException;
@@ -81,7 +84,7 @@ import java.util.regex.PatternSyntaxException;
  */
 public class SignVEOs {
 
-    static String classname = "CreateVEOs"; // for reporting
+    static String classname = "SignVEOs"; // for reporting
     FileOutputStream fos;   // underlying file stream for file channel
     Path controlFile;       // control file to generate the VEOs
     Path outputDir;         // directory in which to place the VEOs
@@ -90,8 +93,11 @@ public class SignVEOs {
     boolean verbose;        // true if generate lots of detail
     boolean printComments;  // true if printing comments from control file
     boolean debug;          // true if debugging
+    boolean help;           // true if printing a cheat list of command line options
     String hashAlg;         // hash algorithm to use
     ArrayList<String> veoDirectories; // list of directories to sign and zip
+
+    static String USAGE = "SignVEOs [-v] [-d] [-f] [-c <controlFile>] [-s <pfxFile> <password>] [-o <outputDir>] [-ha <hashAlgorithm] fileName*";
 
     // state of the VEOs being built
     private enum State {
@@ -102,8 +108,23 @@ public class SignVEOs {
     }
     State state;      // the state of creation of the VEO
 
-    private final static Logger rootLog = Logger.getLogger("veocreate");
-    private final static Logger log = Logger.getLogger("veocreate.CreateVEOs");
+    private final static Logger rootLog = Logger.getLogger("VEOCreate");
+    private final static Logger log = Logger.getLogger("VEOCreate.SignVEOs");
+
+    /**
+     * Report on version...
+     *
+     * <pre>
+     * 201502   1.0 Initial release
+     * 20180601 1.1 Placed under GIT
+     * 20191024 1.2 Improved logging
+     * 20200615 1.3 Improved reporting of run
+     * 20210407 1.4 Standardised reporting of run, added versions
+     * </pre>
+     */
+    static String version() {
+        return ("1.04");
+    }
 
     /**
      * Constructor. Processes the command line arguments to set program up, and
@@ -118,6 +139,10 @@ public class SignVEOs {
      * @throws VEOFatal when cannot continue to generate any VEOs
      */
     public SignVEOs(String[] args) throws VEOFatal {
+        SimpleDateFormat sdf;
+        TimeZone tz;
+        int i;
+        PFXUser pfxu;
 
         // Set up logging
         System.setProperty("java.util.logging.SimpleFormatter.format", "%4$s: %5$s%n");
@@ -144,6 +169,77 @@ public class SignVEOs {
 
         // process command line arguments
         configure(args);
+
+        // tell what is happening
+        System.out.println("******************************************************************************");
+        System.out.println("*                                                                            *");
+        System.out.println("*                V E O ( V 3 )   R E S I G N I N G   T O O L                 *");
+        System.out.println("*                                                                            *");
+        System.out.println("*                                Version " + version() + "                                *");
+        System.out.println("*               Copyright 2015 Public Record Office Victoria                 *");
+        System.out.println("*                                                                            *");
+        System.out.println("******************************************************************************");
+        System.out.println("");
+        System.out.print("Run at ");
+        tz = TimeZone.getTimeZone("GMT+10:00");
+        sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss+10:00");
+        sdf.setTimeZone(tz);
+        System.out.println(sdf.format(new Date()));
+        System.out.println("");
+        if (help) {
+            // SignVEOs [-v] [-d] [-f] [-c <controlFile>] [-s <pfxFile> <password>] [-o <outputDir>] [-ha <hashAlgorithm] fileName*
+            System.out.println("Command line arguments:");
+            System.out.println(" Mandatory:");
+            System.out.println("  one or more VEOs");
+            System.out.println("");
+            System.out.println(" Optional:");
+            System.out.println("  -c <file>: file path to a control file");
+            System.out.println("  -s <pfxFile> <password>: path to a PFX file and its password for signing a VEO (can be repeated)");
+            System.out.println("  -f: delete the old VEOContentSignature*.xml files");
+            System.out.println("  -ha <hashAlgorithm>: specifies the hash algorithm (default SHA-256)");
+            System.out.println("  -o <directory>: the directory in which the VEOs are created (default is current working directory)");
+            System.out.println("");
+            System.out.println("  -v: verbose mode: give more details about processing");
+            System.out.println("  -d: debug mode: give a lot of details about processing");
+            System.out.println("  -help: print this listing");
+            System.out.println("");
+        }
+        System.out.println("Configuration:");
+        if (controlFile != null) {
+            System.out.println(" Control file: '" + controlFile.toString() + "'");
+            if (printComments) {
+                System.out.println("  (and echo the comments in the output)");
+            } else {
+                System.out.println("  (and don't echo the comments in the output)");
+            }
+        }
+        if (outputDir != null) {
+            System.out.println(" Output directory: '" + outputDir.toString() + "'");
+        }
+        System.out.println(" Hash algorithm (specified on command line or default): " + hashAlg);
+        if (forceDel) {
+            System.out.println(" Replace the old VEOContentSignature*.xml files in the VEO");
+        } else {
+            System.out.println(" Retain the old VEOContentSignature*.xml files in the VEO");
+        }
+        if (signers.size() > 0) {
+            System.out.println(" Signers specified on command line:");
+            for (i = 0; i < signers.size(); i++) {
+                pfxu = signers.get(i);
+                System.out.println("  PFX user: '" + pfxu.getUserId() + "'");
+            }
+        } else {
+            System.out.println(" No PFX files specified on command line for signing");
+        }
+        if (verbose) {
+            System.out.println(" Verbose output is selected");
+        }
+        System.out.println("");
+
+        // at least one VEO must be specified
+        if (veoDirectories.isEmpty()) {
+            throw new VEOFatal(classname, 4, "No VEOs specified to resign. Usage: " + USAGE);
+        }
     }
 
     /**
@@ -159,12 +255,9 @@ public class SignVEOs {
         PFXUser user;   // details about user
         Path pfxFile;   // path of a PFX file
         String password;// password to PFX file
-        String usage = "SignVEOs [-v] [-d] [-f] -c <controlFile> [-s <pfxFile> <password>] [-o <outputDir>] [-ha <hashAlgorithm] fileName*";
 
         // process command line arguments
         i = 0;
-        pfxFile = null;
-        password = null;
         try {
             while (i < args.length) {
                 switch (args[i].toLowerCase()) {
@@ -189,7 +282,6 @@ public class SignVEOs {
                         i++;
                         password = args[i];
                         i++;
-                        log.log(Level.INFO, "PFX file is ''{0}'' with password ''{1}''", new Object[]{pfxFile.toString(), password});
                         user = new PFXUser(pfxFile.toString(), password);
                         signers.add(user);
                         break;
@@ -228,37 +320,23 @@ public class SignVEOs {
                         rootLog.setLevel(Level.FINE);
                         break;
 
+                    // write a summary of the command line options to the std out
+                    case "-help":
+                        help = true;
+                        i++;
+                        break;
+
                     // if unrecognised arguement, print help string and exit
                     default:
                         if (args[i].charAt(0) == '-') {
-                            throw new VEOFatal(classname, 2, "Unrecognised argument '" + args[i] + "'. Usage: " + usage);
+                            throw new VEOFatal(classname, 2, "Unrecognised argument '" + args[i] + "'. Usage: " + USAGE);
                         }
                         veoDirectories.add(args[i]);
                         i++;
                 }
             }
         } catch (ArrayIndexOutOfBoundsException ae) {
-            throw new VEOFatal(classname, 3, "Missing argument. Usage: " + usage);
-        }
-
-        if (outputDir != null) {
-            log.log(Level.INFO, "Output directory is ''{0}''", outputDir.toString());
-        }
-        log.log(Level.INFO, "Hash algorithm is ''{0}''", hashAlg);
-        if (forceDel) {
-            log.log(Level.INFO, "Delete any old signature files in VEO directory before signing");
-        }
-        if (debug) {
-            log.log(Level.INFO, "Debug output is selected");
-        }
-        if (verbose) {
-            log.log(Level.INFO, "Verbose output is selected");
-        }
-        if (controlFile != null) {
-            log.log(Level.INFO, "Control file is ''{0}''", controlFile.toString());
-            if (printComments) {
-                log.log(Level.INFO, "Printing comments output is selected");
-            }
+            throw new VEOFatal(classname, 3, "Missing argument. Usage: " + USAGE);
         }
     }
 
@@ -442,17 +520,25 @@ public class SignVEOs {
         Path veoDir;
         CreateVEO veo;      // current VEO being created
 
+        // cannot resign if no signers specified in command args or control file
+        if (signers.isEmpty()) {
+            throw new VEOFatal(classname, method, 1, "No signers specified on command line or in control file");
+        }
+
         // go through list of VEO directories
         for (i = 0; i < veoDirectories.size(); i++) {
 
             // get directory name and sanity check it...
             s = veoDirectories.get(i);
             if (!s.endsWith(".veo")) {
-                throw new VEOFatal(classname, method, 1, "VEO directory '" + s + "' must end with '.veo'");
+                throw new VEOFatal(classname, method, 2, "VEO directory '" + s + "' must end with '.veo'");
             }
             veoDir = checkFile("VEO directory", s, true);
 
             // create a VEO from the VEO directory...
+            if (verbose) {
+                System.out.println(System.currentTimeMillis() / 1000 + " Resigning: " + veoDir.toString());
+            }
             veo = null;
             try {
                 veo = new CreateVEO(veoDir, hashAlg, debug);
@@ -468,7 +554,9 @@ public class SignVEOs {
                 }
             }
         }
-        System.out.println(System.currentTimeMillis() / 1000 + " Finished!");
+        if (verbose) {
+            System.out.println(System.currentTimeMillis() / 1000 + " Finished!");
+        }
     }
 
     /**
@@ -612,7 +700,7 @@ public class SignVEOs {
             sv.processControlFile();
             sv.buildVEOs();
         } catch (VEOFatal e) {
-            System.err.println(e.toString());
+            System.err.println(e.getMessage());
         }
     }
 }

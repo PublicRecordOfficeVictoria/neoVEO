@@ -2,10 +2,6 @@
  * Copyright Public Record Office Victoria 2015
  * Licensed under the CC-BY license http://creativecommons.org/licenses/by/3.0/au/
  * Author Andrew Waugh
- * Version 1.0 February 2015
- * History 20170608 File references in control file can be absolute, or relative
- * to either control file or current working directory 20170825 Added -e &lt;str&gt;
- * so that non ASCII control files are handled correctly
  */
 package VEOCreate;
 
@@ -17,10 +13,12 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Properties;
+import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.PatternSyntaxException;
@@ -174,9 +172,12 @@ public class CreateVEOs {
     boolean chatty;         // true if report the start of each VEO
     boolean verbose;        // true if generate lots of detail
     boolean debug;          // true if debugging
+    boolean help;           // true if printing a cheat list of command line options
     String hashAlg;         // hash algorithm to use
     String inputEncoding;   // how to translate the characters in the control file to UTF-16
     Templates templates;    // database of templates
+
+    private static final String USAGE = "CreateVEOs [-v] [-d] -t <templateDir> -sf <supportDir> -c <controlFile> [-s <pfxFile> <password>]* [-o <outputDir>] [-ha <hashAlgorithm] [-e <encoding>]";
 
     // state of the VEOs being built
     private enum State {
@@ -191,6 +192,26 @@ public class CreateVEOs {
     private final static Logger log = Logger.getLogger("veocreate.CreateVEOs");
 
     /**
+     * Report on version...
+     *
+     * <pre>
+     * 201502   1.0 Initial release
+     * 20170608 1.1 File references in control file can be absolute, or relative to either control file or current working directory
+     * 20170825 1.2 Added -e &lt;str&gt; so that non ASCII control files are handled correctly
+     * 20180625 1.3 Content files are now directly zipped from the source location, not copied or linked.
+     * 20180718 1.4 Handles Windows style filenames in UNIX environment
+     * 20200120 1.5 Bug fixes, general cleanup
+     * 20200414 2.0 Packaged for release. Lots of minor alterations
+     * 20200803 2.1 VEOReadme.txt location changed
+     * 2020803  2.2 Bug fix
+     * 20210407 2.3 Standardised reporting of run, added versions
+     * </pre>
+     */
+    static String version() {
+        return ("2.03");
+    }
+
+    /**
      * Constructor. Processes the command line arguments to set program up, and
      * parses the metadata templates from the template directory.
      * <p>
@@ -202,6 +223,10 @@ public class CreateVEOs {
      * @throws VEOFatal when cannot continue to generate any VEOs
      */
     public CreateVEOs(String[] args) throws VEOFatal {
+        SimpleDateFormat sdf;
+        TimeZone tz;
+        int i;
+        PFXUser pfxu;
 
         // sanity check
         if (args == null) {
@@ -220,12 +245,85 @@ public class CreateVEOs {
         verbose = false;
         chatty = false;
         debug = false;
-        hashAlg = "SHA-1";
+        help = false;
+        hashAlg = "SHA-256";
         inputEncoding = "UTF-8";
         state = State.PREAMBLE;
 
         // process command line arguments
         configure(args);
+
+        // tell what is happening
+        System.out.println("******************************************************************************");
+        System.out.println("*                                                                            *");
+        System.out.println("*                 V E O ( V 3 )   C R E A T I O N   T O O L                  *");
+        System.out.println("*                                                                            *");
+        System.out.println("*                                Version " + version() + "                                *");
+        System.out.println("*               Copyright 2015 Public Record Office Victoria                 *");
+        System.out.println("*                                                                            *");
+        System.out.println("******************************************************************************");
+        System.out.println("");
+        System.out.print("Run at ");
+        tz = TimeZone.getTimeZone("GMT+10:00");
+        sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss+10:00");
+        sdf.setTimeZone(tz);
+        System.out.println(sdf.format(new Date()));
+        System.out.println("");
+        if (help) {
+            // CreateVEOs [-vv] [-v] [-d] -t <templateDir> -sf <supportDir> -c <controlFile> [-s <pfxFile> <password>] [-o <outputDir>] [-ha <hashAlgorithm] [-e <encoding>]";
+            System.out.println("Command line arguments:");
+            System.out.println(" Mandatory:");
+            System.out.println("  -c <file>: file path to the control file");
+            System.out.println("  -t <directory>: file path to where the templates are located");
+            System.out.println("  -sf <directory>: file path to where the support files are located");
+            System.out.println("");
+            System.out.println(" Optional:");
+            System.out.println("  -s <pfxFile> <password>: path to a PFX file and its password for signing a VEO (can be repeated)");
+            System.out.println("  -ha <hashAlgorithm>: specifies the hash algorithm (default SHA-256)");
+            System.out.println("  -e: character encoding for the control file (default UTF-8)");
+            System.out.println("  -o <directory>: the directory in which the VEOs are created (default is current working directory)");
+            System.out.println("");
+            System.out.println("  -v: verbose mode: give more details about processing");
+            System.out.println("  -d: debug mode: give a lot of details about processing");
+            System.out.println("  -help: print this listing");
+            System.out.println("");
+        }
+
+        // check to see that user specified a template directory, support directory and control file
+        if (templateDir == null) {
+            throw new VEOFatal(classname, 4, "No template directory specified. Usage: " + USAGE);
+        }
+        if (supportDir == null) {
+            throw new VEOFatal(classname, 4, "No support directory specified. Usage: " + USAGE);
+        }
+        if (controlFile == null) {
+            throw new VEOFatal(classname, 5, "No control file specified. Usage: " + USAGE);
+        }
+
+        System.out.println("Configuration:");
+        System.out.println(" Template directory: '" + templateDir.toString() + "'");
+        System.out.println(" Support directory: '" + supportDir.toString() + "'");
+        System.out.println(" Control file: '" + controlFile.toString() + "'");
+        if (outputDir != null) {
+            System.out.println(" Output directory: '" + outputDir.toString() + "'");
+        }
+        System.out.println(" Hash algorithm (specified on command line or the default): " + hashAlg);
+        System.out.println(" Character encoding used for the control file: " + inputEncoding);
+        if (signers.size() > 0) {
+            System.out.println(" Signers specified on command line:");
+            for (i = 0; i < signers.size(); i++) {
+                pfxu = signers.get(i);
+                System.out.println("  PFX user: '" + pfxu.getUserId() + "'");
+            }
+        } else {
+            System.out.println(" No PFX files specified on command line for signing");
+        }
+        if (chatty) {
+            System.out.println(" Report when each VEO is commenced & echo comments in the command file");
+        }
+        if (verbose) {
+            System.out.println(" Verbose output is selected");
+        }
 
         // read templates
         templates = new Templates(templateDir);
@@ -244,11 +342,10 @@ public class CreateVEOs {
         PFXUser user;   // details about user
         Path pfxFile;   // path of a PFX file
         String password;// password to PFX file
-        String usage = "CreateVEOs [-vv] [-v] [-d] -t <templateDir> -sf <supportDir> -c <controlFile> [-s <pfxFile> <password>] [-o <outputDir>] [-ha <hashAlgorithm] [-copy|move|link] [-e <encoding>]";
 
         // check for no arguments...
         if (args.length == 0) {
-            throw new VEOFatal(classname, 10, "No arguments. Usage: " + usage);
+            throw new VEOFatal(classname, 10, "No arguments. Usage: " + USAGE);
         }
 
         // process command line arguments
@@ -261,15 +358,13 @@ public class CreateVEOs {
                     case "-t":
                         i++;
                         templateDir = checkFile("template directory", args[i], true);
-                        log.log(Level.INFO, "Template directory is ''{0}''", templateDir.toString());
                         i++;
                         break;
-                        
+
                     // get supoort directory
                     case "-sf":
                         i++;
                         supportDir = checkFile("support directory", args[i], true);
-                        log.log(Level.INFO, "Support directory is ''{0}''", supportDir.toString());
                         i++;
                         break;
 
@@ -282,7 +377,6 @@ public class CreateVEOs {
                         } catch (IOException ioe) {
                             throw new VEOFatal("Couldn't convert control file '" + args[i] + "' to a path:" + ioe.getMessage());
                         }
-                        log.log(Level.INFO, "Control file is ''{0}''", controlFile.toString());
                         i++;
                         break;
 
@@ -292,7 +386,6 @@ public class CreateVEOs {
                         pfxFile = checkFile("PFX file", args[i], false);
                         i++;
                         password = args[i];
-                        log.log(Level.INFO, "PFX file is ''{0}'' with password ''{1}''", new Object[]{pfxFile.toString(), password});
                         i++;
                         user = new PFXUser(pfxFile.toString(), password);
                         signers.add(user);
@@ -302,7 +395,6 @@ public class CreateVEOs {
                     case "-o":
                         i++;
                         outputDir = checkFile("output directory", args[i], true);
-                        log.log(Level.INFO, "Output directory is ''{0}''", outputDir.toString());
                         i++;
                         break;
 
@@ -310,7 +402,6 @@ public class CreateVEOs {
                     case "-ha":
                         i++;
                         hashAlg = args[i];
-                        log.log(Level.INFO, "Hash algorithm is ''{0}''", hashAlg);
                         i++;
                         break;
 
@@ -318,7 +409,12 @@ public class CreateVEOs {
                     case "-e":
                         i++;
                         inputEncoding = args[i];
-                        log.log(Level.INFO, "Input encoding is ''{0}''", inputEncoding);
+                        i++;
+                        break;
+
+                    // write a summary of the command line options to the std out
+                    case "-help":
+                        help = true;
                         i++;
                         break;
 
@@ -344,7 +440,6 @@ public class CreateVEOs {
                     case "-v":
                         chatty = true;
                         i++;
-                        log.log(Level.INFO, "Verbose output is selected");
                         break;
 
                     // if very verbose...
@@ -352,7 +447,6 @@ public class CreateVEOs {
                         verbose = true;
                         i++;
                         rootLog.setLevel(Level.INFO);
-                        log.log(Level.INFO, "Very verbose output is selected");
                         break;
 
                     // if debugging...
@@ -360,27 +454,15 @@ public class CreateVEOs {
                         debug = true;
                         i++;
                         rootLog.setLevel(Level.FINE);
-                        // log.log(Level.FINE, "Debug mode is selected");
                         break;
 
                     // if unrecognised arguement, print help string and exit
                     default:
-                        throw new VEOFatal(classname, 2, "Unrecognised argument '" + args[i] + "'. Usage: " + usage);
+                        throw new VEOFatal(classname, 2, "Unrecognised argument '" + args[i] + "'. Usage: " + USAGE);
                 }
             }
         } catch (ArrayIndexOutOfBoundsException ae) {
-            throw new VEOFatal(classname, 3, "Missing argument. Usage: " + usage);
-        }
-
-        // check to see that user specified a template directory, support directory and control file
-        if (templateDir == null) {
-            throw new VEOFatal(classname, 4, "No template directory specified. Usage: " + usage);
-        }
-        if (supportDir == null) {
-            throw new VEOFatal(classname, 4, "No support directory specified. Usage: " + usage);
-        }
-        if (controlFile == null) {
-            throw new VEOFatal(classname, 5, "No control file specified. Usage: " + usage);
+            throw new VEOFatal(classname, 3, "Missing argument. Usage: " + USAGE);
         }
     }
 
@@ -504,8 +586,9 @@ public class CreateVEOs {
                         }
                         if (chatty) {
                             System.out.println("COMMENT: " + tokens[1]);
+                        } else {
+                            log.log(Level.FINE, "COMMENT: {0}", new Object[]{tokens[1]});
                         }
-                        log.log(Level.FINE, "COMMENT: {0}", new Object[]{tokens[1]});
                         break;
 
                     // set the hash algoritm. Can only do this before the first VEO is started
@@ -517,7 +600,7 @@ public class CreateVEOs {
                             throw createVEOFatal(1, line, "HASH command doesn't specify algorithm (format: 'HASH' <algorithm>");
                         }
                         hashAlg = tokens[1];
-                        log.log(Level.FINE, "Using hash algorithm: ''{0}''", new Object[]{hashAlg});
+                        System.out.println("Now using hash algorithm: " + hashAlg + " (set from control file)");
                         break;
 
                     // set a user to sign the VEO. Can only do this before the first VEO
@@ -537,7 +620,11 @@ public class CreateVEOs {
                             break;
                         }
                         signers.add(pfx);
-                        log.log(Level.FINE, "Using signer {0} with password ''{1}''", new Object[]{pfx.getUserDesc(), tokens[2]});
+                        if (signers.size() == 1) {
+                            System.out.println("Signing using signer: " + pfx.getUserDesc() + " (set from control file)");
+                        } else {
+                            System.out.println("Also signing using signer: " + pfx.getUserDesc() + " (set from control file)");
+                        }
                         break;
 
                     // Begin a new VEO. If necessary, finish the old VEO up
@@ -576,7 +663,7 @@ public class CreateVEOs {
 
                         // tell the world if verbose...
                         if (chatty) {
-                            System.out.println(System.currentTimeMillis() / 1000 + " Starting: " + tokens[1]);
+                            System.out.println(System.currentTimeMillis() / 1000 + " Generating: " + tokens[1]);
                         }
                         log.log(Level.FINE, "Beginning VEO ''{0}'' (State: {1}) at {3}", new Object[]{tokens[1], state, System.currentTimeMillis() / 1000});
 
@@ -996,7 +1083,7 @@ public class CreateVEOs {
                 veo.abandon(debug);
             }
         }
-        if (verbose) {
+        if (chatty) {
             System.out.println(System.currentTimeMillis() / 1000 + " Finished");
         }
     }
@@ -1021,7 +1108,7 @@ public class CreateVEOs {
         if (f.startsWith(".")) {
             f = Paths.get("").resolve(f);
 
-        // if it not absolute (relative to the directory containing the control file)
+            // if it not absolute (relative to the directory containing the control file)
         } else if (!f.isAbsolute()) {
             f = baseDir.resolve(fileRef);
         }
