@@ -120,10 +120,11 @@ public class SignVEOs {
      * 20191024 1.2 Improved logging
      * 20200615 1.3 Improved reporting of run
      * 20210407 1.4 Standardised reporting of run, added versions
+     * 20210409 1.5 Uses new PFXUser function to report on file name
      * </pre>
      */
     static String version() {
-        return ("1.04");
+        return ("1.05");
     }
 
     /**

@@ -205,10 +205,11 @@ public class CreateVEOs {
      * 20200803 2.1 VEOReadme.txt location changed
      * 2020803  2.2 Bug fix
      * 20210407 2.3 Standardised reporting of run, added versions
+     * 20210409 2.4 Uses new PFXUser function to report on file name
      * </pre>
      */
     static String version() {
-        return ("2.03");
+        return ("2.04");
     }
 
     /**
