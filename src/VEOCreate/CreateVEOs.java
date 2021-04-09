@@ -313,7 +313,7 @@ public class CreateVEOs {
             System.out.println(" Signers specified on command line:");
             for (i = 0; i < signers.size(); i++) {
                 pfxu = signers.get(i);
-                System.out.println("  PFX user: '" + pfxu.getUserId() + "'");
+                System.out.println("  PFX file: '" + pfxu.getFileName() + "'");
             }
         } else {
             System.out.println(" No PFX files specified on command line for signing");
@@ -621,9 +621,9 @@ public class CreateVEOs {
                         }
                         signers.add(pfx);
                         if (signers.size() == 1) {
-                            System.out.println("Signing using signer: " + pfx.getUserDesc() + " (set from control file)");
+                            System.out.println("Signing using PFX file: " + pfx.getFileName() + " (set from control file)");
                         } else {
-                            System.out.println("Also signing using signer: " + pfx.getUserDesc() + " (set from control file)");
+                            System.out.println("Also signing using PFX file: " + pfx.getFileName() + " (set from control file)");
                         }
                         break;
 

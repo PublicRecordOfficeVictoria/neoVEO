@@ -226,7 +226,7 @@ public class SignVEOs {
             System.out.println(" Signers specified on command line:");
             for (i = 0; i < signers.size(); i++) {
                 pfxu = signers.get(i);
-                System.out.println("  PFX user: '" + pfxu.getUserId() + "'");
+                System.out.println("  PFX user: '" + pfxu.getFileName() + "'");
             }
         } else {
             System.out.println(" No PFX files specified on command line for signing");
@@ -446,6 +446,11 @@ public class SignVEOs {
                         }
                         pfx = new PFXUser(tokens[1], tokens[2]);
                         signers.add(pfx);
+                        if (signers.size() == 1) {
+                            System.out.println("Signing using PFX file: " + pfx.getFileName() + " (set from control file)");
+                        } else {
+                            System.out.println("Also signing using PFX file: " + pfx.getFileName() + " (set from control file)");
+                        }
                         log.log(Level.INFO, "Using signer {0} with password ''{1}''", new Object[]{pfx.getUserDesc(), tokens[2]});
                         break;
 
