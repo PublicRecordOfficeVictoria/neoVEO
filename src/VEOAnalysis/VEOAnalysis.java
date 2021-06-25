@@ -114,10 +114,11 @@ public class VEOAnalysis {
      * 20200816 3.3 Improved checks to ensure ZIP not creating files anywhere in file system
      * 20200306 3.4 Added result summary report option
      * 20210407 3.5 Standardised reporting of run, added versions
+     * 20210625 3.6 Added additional valid metadata package schemas
      * </pre>
      */
     static String version() {
-        return ("3.05");
+        return ("3.06");
     }
 
     /**

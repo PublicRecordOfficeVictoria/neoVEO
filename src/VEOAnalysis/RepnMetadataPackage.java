@@ -192,7 +192,8 @@ class RepnMetadataPackage extends Repn {
         }
 
         // if ANZS5478 check to see if the required properties are present and valid
-        if (schemaId.getValue().endsWith("ANZS5478")) {
+        if (schemaId.getValue().endsWith("ANZS5478") ||
+            schemaId.getValue().equals("http://www.vic.gov.au/blog/wp-content/uploads/2013/11/AGLS-Victoria-2011-V4-Final-2011.pdf")) {
             if (!syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
                 addError("ANZS-5478 metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'");
                 return false;
@@ -203,7 +204,8 @@ class RepnMetadataPackage extends Repn {
         }
 
         // if AGLS check to see if the required properties are present and valid
-        if (schemaId.getValue().endsWith("AGLS")) {
+        if (schemaId.getValue().endsWith("AGLS") ||
+            schemaId.getValue().equals("http://www.prov.vic.gov.au/VERS-as5478")) {
             if (!syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
                 addError("AGLS metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'");
                 return false;
