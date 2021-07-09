@@ -14,7 +14,7 @@ import java.nio.file.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.logging.Logger;
-import javax.xml.bind.DatatypeConverter;
+import java.util.Base64;
 
 /**
  * This class creates a VEOContent.xml file. This class should not be directly
@@ -427,7 +427,7 @@ class CreateVEOContent extends CreateXMLDoc {
         write(contentsCF2);
 
         // output hash value
-        writeValue(DatatypeConverter.printBase64Binary(hash));
+        writeValue(Base64.getEncoder().encodeToString(hash));
         write(contentsCF3);
     }
 

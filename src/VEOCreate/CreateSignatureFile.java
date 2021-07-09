@@ -17,7 +17,7 @@ import java.nio.file.Paths;
 import java.security.*;
 import java.security.cert.*;
 import java.util.logging.*;
-import javax.xml.bind.DatatypeConverter;
+import java.util.Base64;
 
 /**
  * This class creates a VEO_Content_Signature.xml or VEO_History_Signature.xml
@@ -262,7 +262,7 @@ class CreateSignatureFile extends CreateXMLDoc {
         write(contentsSig9);
 
         // output signature
-        write(DatatypeConverter.printBase64Binary(signature));
+        write(Base64.getEncoder().encodeToString(signature));
 
         // output certificate chain from PFXUser
         write(contentsSig11);
@@ -271,7 +271,7 @@ class CreateSignatureFile extends CreateXMLDoc {
         for (i = 0; i < signer.getCertificateChainLength(); i++) {
             write(contentsSig12);
             b = signer.getCertificateFromChain(i);
-            write(DatatypeConverter.printBase64Binary(b));
+            write(Base64.getEncoder().encodeToString(b));
             write(contentsSig13);
         }
 

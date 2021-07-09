@@ -8,6 +8,7 @@ package VEOAnalysis;
 
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
+import VERSCommon.VERSDate;
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -28,7 +29,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.xml.bind.DatatypeConverter;
+import java.util.Base64;
 
 /**
  * This class represents the content of a VEO*Signature*.xml file. A valid
@@ -212,7 +213,7 @@ class RepnSignature extends RepnXML {
 
         // validate a valid date and time
         try {
-            DatatypeConverter.parseDateTime(sigDateTime.getValue());
+            VERSDate.testValueAsDate(sigDateTime.getValue());
         } catch (IllegalArgumentException e) {
             sigDateTime.addError("Date in event is invalid. Value is '" + sigDateTime + "'. Error was: " + e.getMessage());
         }
@@ -242,7 +243,7 @@ class RepnSignature extends RepnXML {
 
         // extract signature from base64 encoding
         try {
-            sigba = DatatypeConverter.parseBase64Binary(signature.getValue());
+            sigba = Base64.getDecoder().decode(signature.getValue());
         } catch (IllegalArgumentException e) {
             signature.addError("Converting Base64 signature failed: " + e.getMessage());
             return false;
@@ -431,7 +432,8 @@ class RepnSignature extends RepnXML {
         X509Certificate x509c;
 
         try {
-            b = DatatypeConverter.parseBase64Binary(certificate.getValue());
+            b = Base64.getDecoder().decode(certificate.getValue());
+            // b = DatatypeConverter.parseBase64Binary(certificate.getValue());
         } catch (IllegalArgumentException e) {
             certificate.addError("Converting Base64 signature failed: " + e.getMessage());
             b = new byte[]{0};

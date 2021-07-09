@@ -22,7 +22,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.xml.bind.DatatypeConverter;
+import java.util.Base64;
 
 /**
  * This class encapsulates a Content File in a VEO Content file.
@@ -193,7 +193,7 @@ class RepnContentFile extends Repn {
         // extract the stored hash
         storedHash = null;
         try {
-            storedHash = DatatypeConverter.parseBase64Binary(hashValue.getValue());
+            storedHash = Base64.getDecoder().decode(hashValue.getValue());
         } catch (IllegalArgumentException e) {
             hashValue.addError("Converting Base64 signature failed: " + e.getMessage());
         }
