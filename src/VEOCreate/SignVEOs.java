@@ -121,10 +121,11 @@ public class SignVEOs {
      * 20200615 1.3 Improved reporting of run
      * 20210407 1.4 Standardised reporting of run, added versions
      * 20210409 1.5 Uses new PFXUser function to report on file name
+     * 20210709 1.6 Change Base64 handling routines & provided support for PISA
      * </pre>
      */
     static String version() {
-        return ("1.05");
+        return ("1.6");
     }
 
     /**

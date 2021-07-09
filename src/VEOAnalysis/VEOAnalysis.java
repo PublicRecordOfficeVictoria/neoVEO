@@ -115,10 +115,11 @@ public class VEOAnalysis {
      * 20200306 3.4 Added result summary report option
      * 20210407 3.5 Standardised reporting of run, added versions
      * 20210625 3.6 Added additional valid metadata package schemas
+     * 20210709 3.7 Change Base64 handling routines & provided support for PISA
      * </pre>
      */
     static String version() {
-        return ("3.06");
+        return ("3.07");
     }
 
     /**
