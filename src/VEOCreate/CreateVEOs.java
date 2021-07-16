@@ -756,7 +756,7 @@ public class CreateVEOs {
                         // depth is second argument - if empty then default to 0
                         if (tokens.length > 2) {
                             try {
-                                depth = new Integer(tokens[2]);
+                                depth = Integer.parseInt(tokens[2]);
                             } catch (NumberFormatException e) {
                                 veoFailed(line, "Level in IO command is not a valid integer");
                                 veo.abandon(debug);
