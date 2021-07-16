@@ -207,10 +207,11 @@ public class CreateVEOs {
      * 20210407 2.3 Standardised reporting of run, added versions
      * 20210409 2.4 Uses new PFXUser function to report on file name
      * 20210709 2.5 Change Base64 handling routines & provided support for PISA
+     * 20210716 2.6 Changes to fix Lint warning
      * </pre>
      */
     static String version() {
-        return ("2.5");
+        return ("2.6");
     }
 
     /**
