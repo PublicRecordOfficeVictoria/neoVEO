@@ -188,8 +188,8 @@ public class CreateVEOs {
     }
     State state;      // the state of creation of the VEO
 
-    private final static Logger rootLog = Logger.getLogger("veocreate");
-    private final static Logger log = Logger.getLogger("veocreate.CreateVEOs");
+    // private final static Logger rootLog = Logger.getLogger("veocreate");
+    private final static Logger LOG = Logger.getLogger("veocreate.CreateVEOs");
 
     /**
      * Report on version...
@@ -237,9 +237,8 @@ public class CreateVEOs {
         }
 
         // defaults...
-        log.setLevel(null);
         System.setProperty("java.util.logging.SimpleFormatter.format", "%4$s: %5$s%n");
-        rootLog.setLevel(Level.WARNING);
+        LOG.setLevel(Level.WARNING);
         templateDir = null;
         supportDir = null;
         outputDir = Paths.get("."); // default is the current working directory
@@ -424,19 +423,19 @@ public class CreateVEOs {
                     // copy content - ignore
                     case "-copy":
                         i++;
-                        log.log(Level.INFO, "-copy argument is now redundant");
+                        LOG.log(Level.INFO, "-copy argument is now redundant");
                         break;
 
                     // move content
                     case "-move":
                         i++;
-                        log.log(Level.INFO, "-move argument is now redundant");
+                        LOG.log(Level.INFO, "-move argument is now redundant");
                         break;
 
                     // link content
                     case "-link":
                         i++;
-                        log.log(Level.INFO, "-link argument is now reduntant");
+                        LOG.log(Level.INFO, "-link argument is now reduntant");
                         break;
 
                     // if verbose...
@@ -449,14 +448,14 @@ public class CreateVEOs {
                     case "-vv":
                         verbose = true;
                         i++;
-                        rootLog.setLevel(Level.INFO);
+                        LOG.setLevel(Level.INFO);
                         break;
 
                     // if debugging...
                     case "-d":
                         debug = true;
                         i++;
-                        rootLog.setLevel(Level.FINE);
+                        LOG.setLevel(Level.FINE);
                         break;
 
                     // if unrecognised arguement, print help string and exit
@@ -590,7 +589,7 @@ public class CreateVEOs {
                         if (chatty) {
                             System.out.println("COMMENT: " + tokens[1]);
                         } else {
-                            log.log(Level.FINE, "COMMENT: {0}", new Object[]{tokens[1]});
+                            LOG.log(Level.FINE, "COMMENT: {0}", new Object[]{tokens[1]});
                         }
                         break;
 
@@ -668,7 +667,7 @@ public class CreateVEOs {
                         if (chatty) {
                             System.out.println(System.currentTimeMillis() / 1000 + " Generating: " + tokens[1]);
                         }
-                        log.log(Level.FINE, "Beginning VEO ''{0}'' (State: {1}) at {3}", new Object[]{tokens[1], state, System.currentTimeMillis() / 1000});
+                        LOG.log(Level.FINE, "Beginning VEO ''{0}'' (State: {1}) at {3}", new Object[]{tokens[1], state, System.currentTimeMillis() / 1000});
 
                         // create VEO & add VEOReadme.txt from template directory
                         try {
@@ -708,7 +707,7 @@ public class CreateVEOs {
                             veo = null;
                             break;
                         }
-                        log.log(Level.FINE, "Adding content directories (State: {0})", new Object[]{state});
+                        LOG.log(Level.FINE, "Adding content directories (State: {0})", new Object[]{state});
 
                         // go through list of directories adding them
                         try {
@@ -784,7 +783,7 @@ public class CreateVEOs {
                             }
                             break;
                         }
-                        log.log(Level.FINE, "Starting new Information Object ''{0}'' level {1} (State: {2})", new Object[]{label, depth, state});
+                        LOG.log(Level.FINE, "Starting new Information Object ''{0}'' level {1} (State: {2})", new Object[]{label, depth, state});
                         break;
 
                     // start a new Metadata Package
@@ -806,7 +805,7 @@ public class CreateVEOs {
                             break;
                         }
 
-                        log.log(Level.FINE, "Starting new Metadata Package ''{1}'' (State: {0})", new Object[]{state, tokens[1]});
+                        LOG.log(Level.FINE, "Starting new Metadata Package ''{1}'' (State: {0})", new Object[]{state, tokens[1]});
 
                         // get template
                         try {
@@ -843,7 +842,7 @@ public class CreateVEOs {
                             break;
                         }
 
-                        log.log(Level.FINE, "Continuing a Metadata Package ''{1}'' (State: {0})", new Object[]{state, tokens[1]});
+                        LOG.log(Level.FINE, "Continuing a Metadata Package ''{1}'' (State: {0})", new Object[]{state, tokens[1]});
 
                         try {
                             veo.continueMetadataPackage(templates.findTemplate(tokens[1]), tokens);
@@ -896,7 +895,7 @@ public class CreateVEOs {
                                 break;
                             }
                         }
-                        log.log(Level.FINE, "Starting new Information Piece {1} ''{2}'' (State: {0})", new Object[]{state, i, tokens[1]});
+                        LOG.log(Level.FINE, "Starting new Information Piece {1} ''{2}'' (State: {0})", new Object[]{state, i, tokens[1]});
 
                         // add Information Packages...
                         try {
@@ -904,7 +903,7 @@ public class CreateVEOs {
 
                             // go through list of files to add
                             while (i < tokens.length) {
-                                log.log(Level.FINE, "Adding ''{0}''", tokens[i]);
+                                LOG.log(Level.FINE, "Adding ''{0}''", tokens[i]);
                                 veo.addContentFile(tokens[i]);
                                 i++;
                             }
@@ -947,7 +946,7 @@ public class CreateVEOs {
                             veo = null;
                             break;
                         }
-                        log.log(Level.FINE, "Adding an event ''{1}'' ''{2}'' ''{3}'' ''{4}''... (State: {0})", new Object[]{state, tokens[1], tokens[2], tokens[3], tokens[4]});
+                        LOG.log(Level.FINE, "Adding an event ''{1}'' ''{2}'' ''{3}'' ''{4}''... (State: {0})", new Object[]{state, tokens[1], tokens[2], tokens[3], tokens[4]});
 
                         error = false;
                         for (i = 4; i < tokens.length; i++) {
@@ -1018,7 +1017,7 @@ public class CreateVEOs {
                         if (chatty) {
                             System.out.println(System.currentTimeMillis() / 1000 + " Starting: " + tokens[1]);
                         }
-                        log.log(Level.FINE, "Beginning VEO ''{0}'' (State: {1}) at {3}", new Object[]{tokens[1], state, System.currentTimeMillis() / 1000});
+                        LOG.log(Level.FINE, "Beginning VEO ''{0}'' (State: {1}) at {3}", new Object[]{tokens[1], state, System.currentTimeMillis() / 1000});
 
                         // create VEO
                         try {
@@ -1045,7 +1044,7 @@ public class CreateVEOs {
                                     veo.addInformationPiece(null);
 
                                     // add the content file to the information piece
-                                    log.log(Level.FINE, "Adding ''{0}''", tokens[i]);
+                                    LOG.log(Level.FINE, "Adding ''{0}''", tokens[i]);
                                     veo.addAbsContentFile(tokens[i]);
                                 }
                             }
@@ -1068,7 +1067,7 @@ public class CreateVEOs {
                         break;
 
                     default:
-                        log.log(Level.SEVERE, "Error in control file around line {0}: unknown command: ''{1}''", new Object[]{line, tokens[0]});
+                        LOG.log(Level.SEVERE, "Error in control file around line {0}: unknown command: ''{1}''", new Object[]{line, tokens[0]});
                 }
             }
         } catch (PatternSyntaxException | IOException ex) {
@@ -1137,7 +1136,7 @@ public class CreateVEOs {
     private void sign(CreateVEO veo) throws VEOError {
 
         for (PFXUser user : signers) {
-            log.log(Level.FINE, "Signing {0} with ''{1}''", new Object[]{user.toString(), hashAlg});
+            LOG.log(Level.FINE, "Signing {0} with ''{1}''", new Object[]{user.toString(), hashAlg});
             veo.sign(user, hashAlg);
         }
     }
@@ -1179,7 +1178,7 @@ public class CreateVEOs {
      * @param s a string describing error
      */
     private void veoFailed(int line, String s) {
-        log.log(Level.WARNING, "Error in control file around line {0}: {1}.", new Object[]{line, s});
+        LOG.log(Level.WARNING, "Error in control file around line {0}: {1}.", new Object[]{line, s});
         state = State.VEO_FAILED;
     }
 

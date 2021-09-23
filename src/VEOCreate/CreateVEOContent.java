@@ -38,7 +38,7 @@ class CreateVEOContent extends CreateXMLDoc {
 
     String hashAlgorithm; // hash algorithm to use on content files
 
-    private final static Logger log = Logger.getLogger("veocreate.createSignatureFile");
+    private final static Logger LOG = Logger.getLogger("veocreate.createSignatureFile");
 
     static String contents1
             = " <vers:Version>";
@@ -110,7 +110,7 @@ class CreateVEOContent extends CreateXMLDoc {
         write(contents4);
 
         state = State.NOT_STARTED;
-        log.exiting("CreateVEOHistoryFile", "start");
+        LOG.exiting("CreateVEOHistoryFile", "start");
     }
 
     static String contentsIO1
@@ -438,7 +438,7 @@ class CreateVEOContent extends CreateXMLDoc {
      */
     public void finalise() throws VEOError {
         String method = "Finalise";
-        log.entering("CreateVEOContentFile", "finalise");
+        LOG.entering("CreateVEOContentFile", "finalise");
 
         // check start is only called once...
         if (state != State.FINISHED_INFO_OBJ) {
@@ -448,7 +448,7 @@ class CreateVEOContent extends CreateXMLDoc {
         // close XML document
         endXMLDoc();
 
-        log.exiting("CreateVEOContentFile", "finalise");
+        LOG.exiting("CreateVEOContentFile", "finalise");
     }
 
     /**

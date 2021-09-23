@@ -31,7 +31,7 @@ class CreateXMLDoc {
     FileChannel xml;        // XML document being written
     String classname = "CreateXMLDoc";       // String describing this class for error & logging
 
-    private final static Logger log = Logger.getLogger("veocreate.createXMLDoc");
+    private final static Logger LOG = Logger.getLogger("veocreate.createXMLDoc");
 
     /**
      * Creates an XML Document in the specified directory.
@@ -74,7 +74,7 @@ class CreateXMLDoc {
     static String contentsXML02 = "\r\n"
             + "  xmlns:vers=\"http://www.prov.vic.gov.au/VERS\">\r\n";
 
-    public void startXMLDoc(String xmlDoc, String rootElement) throws VEOError {
+    public final void startXMLDoc(String xmlDoc, String rootElement) throws VEOError {
         String module = "startXMLDoc";
         Path doc;   // document to create
 
@@ -104,7 +104,7 @@ class CreateXMLDoc {
      *
      * @throws VEOError  if a fatal error occurred
      */
-    public void endXMLDoc() throws VEOError {
+    public final void endXMLDoc() throws VEOError {
         String module = "startXMLDoc";
 
         write(contentsXML04);
@@ -129,7 +129,7 @@ class CreateXMLDoc {
      * @param s string to write to XML document
      * @throws VEOError  if a fatal error occurred
      */
-    public void write(String s) throws VEOError {
+    public final void write(String s) throws VEOError {
         String module = "write";
 
         try {
@@ -147,7 +147,7 @@ class CreateXMLDoc {
      * @param c character to write to XML document
      * @throws VEOError  if a fatal error occurred
      */
-    public void write(char c) throws VEOError {
+    public final void write(char c) throws VEOError {
         String module = "write";
         CharBuffer cb;
         try {
@@ -167,7 +167,7 @@ class CreateXMLDoc {
      * @param s string to write to XML document
      * @throws VEOError  if a fatal error occurred
      */
-    public void writeValue(String s) throws VEOError {
+    public final void writeValue(String s) throws VEOError {
         String module = "write";
         StringBuilder sb = new StringBuilder();
         int i;
@@ -180,18 +180,25 @@ class CreateXMLDoc {
         // quote the special characters in the string
         for (i = 0; i < s.length(); i++) {
             c = s.charAt(i);
-            if (c == '&') {
-                sb.append("&amp;");
-            } else if (c == '<') {
-                sb.append("&lt;");
-            } else if (c == '>') {
-                sb.append("&gt;");
-            } else if (c == '"') {
-                sb.append("&quot;");
-            } else if (c == '\'') {
-                sb.append("&apos;");
-            } else {
-                sb.append(c);
+            switch (c) {
+                case '&':
+                    sb.append("&amp;");
+                    break;
+                case '<':
+                    sb.append("&lt;");
+                    break;
+                case '>':
+                    sb.append("&gt;");
+                    break;
+                case '"':
+                    sb.append("&quot;");
+                    break;
+                case '\'':
+                    sb.append("&apos;");
+                    break;
+                default:
+                    sb.append(c);
+                    break;
             }
         }
         try {

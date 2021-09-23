@@ -23,7 +23,7 @@ class CreateVEOHistory extends CreateXMLDoc {
     private final static int ADDING_EVENTS = 2;// Opened and events being written
     private final static int CLOSED = 3;      // History file has been finalised
 
-    private final static Logger log = Logger.getLogger("veocreate.createSignatureFile");
+    private final static Logger LOG = Logger.getLogger("veocreate.createSignatureFile");
 
     /**
      * Default constructor.
@@ -51,7 +51,7 @@ class CreateVEOHistory extends CreateXMLDoc {
      */
     public void start() throws VEOError {
         String method = "start";
-        log.entering("CreateVEOHistoryFile", "start");
+        LOG.entering("CreateVEOHistoryFile", "start");
 
         // check start is only called once...
         if (state != NOT_STARTED) {
@@ -67,7 +67,7 @@ class CreateVEOHistory extends CreateXMLDoc {
         writeValue(version);
         write(contents2);
 
-        log.exiting("CreateVEOHistoryFile", "start");
+        LOG.exiting("CreateVEOHistoryFile", "start");
     }
 
     static String contents3
@@ -102,7 +102,7 @@ class CreateVEOHistory extends CreateXMLDoc {
         String method = "addEvent";
         int i;
 
-        log.entering("CreateVEOHistoryFile", "addEvent");
+        LOG.entering("CreateVEOHistoryFile", "addEvent");
 
         // check start is only called once...
         if (state != ADDING_EVENTS) {
@@ -157,7 +157,7 @@ class CreateVEOHistory extends CreateXMLDoc {
         // finish event
         write(contents11);
 
-        log.exiting("CreateVEOHistoryFile", "addEvent");
+        LOG.exiting("CreateVEOHistoryFile", "addEvent");
     }
 
     /**
@@ -167,7 +167,7 @@ class CreateVEOHistory extends CreateXMLDoc {
      */
     public void finalise() throws VEOError {
         String method = "finalise";
-        log.entering("CreateVEOHistoryFile", "finalise");
+        LOG.entering("CreateVEOHistoryFile", "finalise");
 
         // check start is only called once...
         if (state != ADDING_EVENTS) {
@@ -177,7 +177,7 @@ class CreateVEOHistory extends CreateXMLDoc {
         // close XML document
         endXMLDoc();
 
-        log.exiting("CreateVEOHistoryFile", "finalise");
+        LOG.exiting("CreateVEOHistoryFile", "finalise");
     }
 
     /**

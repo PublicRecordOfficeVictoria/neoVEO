@@ -50,7 +50,7 @@ import java.util.logging.Logger;
  */
 public class Templates {
 
-    private final static Logger log = Logger.getLogger("veocreate.Templates");
+    private final static Logger LOG = Logger.getLogger("veocreate.Templates");
     private final static String classname = "Templates"; // for reporting
     HashMap<String, Fragment> templates; //collection of templates
 
@@ -81,7 +81,7 @@ public class Templates {
      * Initialise the templates database.
      */
     private void initTemplates() {
-        log.setLevel(null);
+        LOG.setLevel(null);
         templates = new HashMap<>();
     }
 
@@ -230,7 +230,7 @@ public class Templates {
         if (f == null) {
             throw new VEOError(classname, method, 1, "template '" + id + "' not found");
         }
-        log.log(Level.FINE, "Found template. Schema ''{0}'' Syntax ''{1}''", new Object[]{f.getSchemaId(), f.getSyntaxId()});
+        LOG.log(Level.FINE, "Found template. Schema ''{0}'' Syntax ''{1}''", new Object[]{f.getSchemaId(), f.getSyntaxId()});
         return f;
     }
 }

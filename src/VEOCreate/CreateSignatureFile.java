@@ -32,7 +32,7 @@ class CreateSignatureFile extends CreateXMLDoc {
 
     String version; // version to use (default is "3.0"
     String classname = "CreateSignatureFile";
-    private final static Logger log = Logger.getLogger("veocreate.createSignatureFile");
+    private final static Logger LOG = Logger.getLogger("veocreate.createSignatureFile");
 
     /**
      * Create an instance which can be used multiple times to create signature
@@ -102,7 +102,7 @@ class CreateSignatureFile extends CreateXMLDoc {
         String preamble;
 
         // general
-        log.entering(classname, method, new Object[]{toSign, signer, algorithmId});
+        LOG.entering(classname, method, new Object[]{toSign, signer, algorithmId});
         preamble = null;
         fileToSign = Paths.get(veoDir.toString(), toSign);
 
@@ -281,7 +281,7 @@ class CreateSignatureFile extends CreateXMLDoc {
         // close signature file
         endXMLDoc();
 
-        log.exiting("CreateSignatureFile", "sign");
+        LOG.exiting("CreateSignatureFile", "sign");
     }
 
     /**

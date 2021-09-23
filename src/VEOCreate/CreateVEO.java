@@ -48,7 +48,7 @@ import java.util.zip.ZipOutputStream;
  */
 public class CreateVEO {
 
-    private final static Logger log = Logger.getLogger("veocreate.CreateVEO");
+    private final static Logger LOG = Logger.getLogger("veocreate.CreateVEO");
     String classname = "CreateVEO"; // for reporting
     Path veoDir;            // VEO directory to create
     boolean debug;          // if true, we are operating in debug mode
@@ -1305,7 +1305,7 @@ public class CreateVEO {
                 deleteFile(veoDir);
             }
         } catch (IOException e) {
-            log.log(Level.SEVERE, "Deleting {0} failed: {1}", new Object[]{veoDir.toString(), e.toString()});
+            LOG.log(Level.SEVERE, "Deleting {0} failed: {1}", new Object[]{veoDir.toString(), e.toString()});
         }
         veoDir = null;
     }

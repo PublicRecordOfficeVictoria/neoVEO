@@ -108,8 +108,8 @@ public class SignVEOs {
     }
     State state;      // the state of creation of the VEO
 
-    private final static Logger rootLog = Logger.getLogger("VEOCreate");
-    private final static Logger log = Logger.getLogger("VEOCreate.SignVEOs");
+    // private final static Logger rootLog = Logger.getLogger("VEOCreate");
+    private final static Logger LOG = Logger.getLogger("VEOCreate.SignVEOs");
 
     /**
      * Report on version...
@@ -148,7 +148,7 @@ public class SignVEOs {
 
         // Set up logging
         System.setProperty("java.util.logging.SimpleFormatter.format", "%4$s: %5$s%n");
-        log.setLevel(Level.WARNING);
+        LOG.setLevel(Level.WARNING);
 
         // sanity check
         if (args == null) {
@@ -156,8 +156,6 @@ public class SignVEOs {
         }
 
         // defaults...
-        log.setLevel(null);
-        rootLog.setLevel(Level.WARNING);
         outputDir = Paths.get("."); // default is the current working directory
         controlFile = null;
         signers = new LinkedList<>();
@@ -306,7 +304,7 @@ public class SignVEOs {
                     case "-v":
                         verbose = true;
                         i++;
-                        rootLog.setLevel(Level.INFO);
+                        LOG.setLevel(Level.INFO);
                         break;
 
                     // print comments from control file
@@ -319,7 +317,7 @@ public class SignVEOs {
                     case "-d":
                         debug = true;
                         i++;
-                        rootLog.setLevel(Level.FINE);
+                        LOG.setLevel(Level.FINE);
                         break;
 
                     // write a summary of the command line options to the std out
@@ -422,7 +420,7 @@ public class SignVEOs {
                         if (printComments) {
                             System.out.println("COMMENT: " + tokens[1]);
                         }
-                        log.log(Level.INFO, "COMMENT: {0}", new Object[]{tokens[1]});
+                        LOG.log(Level.INFO, "COMMENT: {0}", new Object[]{tokens[1]});
                         break;
 
                     // set the hash algoritm. Can only do this before the first VEO is started
@@ -434,7 +432,7 @@ public class SignVEOs {
                             throw createVEOFatal(1, line, "HASH command doesn't specify algorithm (format: 'HASH' <algorithm>");
                         }
                         hashAlg = tokens[1];
-                        log.log(Level.INFO, "Using hash algorithm: ''{0}''", new Object[]{hashAlg});
+                        LOG.log(Level.INFO, "Using hash algorithm: ''{0}''", new Object[]{hashAlg});
                         break;
 
                     // set a user to sign the VEO. Can only do this before the first VEO
@@ -453,7 +451,7 @@ public class SignVEOs {
                         } else {
                             System.out.println("Also signing using PFX file: " + pfx.getFileName() + " (set from control file)");
                         }
-                        log.log(Level.INFO, "Using signer {0} with password ''{1}''", new Object[]{pfx.getUserDesc(), tokens[2]});
+                        LOG.log(Level.INFO, "Using signer {0} with password ''{1}''", new Object[]{pfx.getUserDesc(), tokens[2]});
                         break;
 
                     // add an event to the VEO history file
@@ -506,7 +504,7 @@ public class SignVEOs {
                      break;
                      */
                     default:
-                        log.log(Level.SEVERE, "Error in control file around line {0}: unknown command: ''{1}''", new Object[]{line, tokens[0]});
+                        LOG.log(Level.SEVERE, "Error in control file around line {0}: unknown command: ''{1}''", new Object[]{line, tokens[0]});
                 }
             }
         } catch (PatternSyntaxException | IOException ex) {
@@ -554,7 +552,7 @@ public class SignVEOs {
                 sign(veo);
                 veo.finalise(true);
             } catch (VEOError e) {
-                log.log(Level.WARNING, "Failed building VEO ''{0}''. Cause: {1}", new Object[]{veoDir.toAbsolutePath().toString(), e.getMessage()});
+                LOG.log(Level.WARNING, "Failed building VEO ''{0}''. Cause: {1}", new Object[]{veoDir.toAbsolutePath().toString(), e.getMessage()});
             } finally {
                 if (veo != null) {
                     veo.abandon(true);
@@ -664,7 +662,7 @@ public class SignVEOs {
     private void sign(CreateVEO veo) throws VEOError {
 
         for (PFXUser user : signers) {
-            log.log(Level.FINE, "Signing {0} with ''{1}''", new Object[]{user.toString(), hashAlg});
+            LOG.log(Level.FINE, "Signing {0} with ''{1}''", new Object[]{user.toString(), hashAlg});
             veo.sign(user, hashAlg);
         }
     }
