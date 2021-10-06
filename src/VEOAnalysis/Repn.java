@@ -91,6 +91,7 @@ abstract class Repn {
     final public String getId() {
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, "getId", "Called function after abandon() was called"));
+            return("");
         }
         return id;
     }
@@ -116,6 +117,7 @@ abstract class Repn {
         }
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, "addError", "Called function after abandon() was called"));
+            return;
         }
         hasErrors = true;
         errors.add(s);
@@ -132,6 +134,7 @@ abstract class Repn {
     protected boolean hasErrors() {
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, "hasErrors", "Called function after abandon() was called"));
+            return false;
         }
         return hasErrors;
     }
@@ -147,6 +150,7 @@ abstract class Repn {
 
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, "getErrors", "Called function after abandon() was called"));
+            return("");
         }
         sb = new StringBuffer();
         for (i = 0; i < errors.size(); i++) {
@@ -171,6 +175,7 @@ abstract class Repn {
     protected boolean hasWarnings() {
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, "hasWarnings", "Called function after abandon() was called"));
+            return(false);
         }
         return hasWarnings;
     }
@@ -184,6 +189,7 @@ abstract class Repn {
     protected void addWarning(String s) {
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, "addWarning", "Called function after abandon() was called"));
+            return;
         }
         if (s == null || s.equals("") || s.trim().equals(" ")) {
             return;
@@ -206,6 +212,7 @@ abstract class Repn {
 
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, "getWarnings", "Called function after abandon() was called"));
+            return("");
         }
         sb = new StringBuffer();
         for (i = 0; i < warnings.size(); i++) {
@@ -238,6 +245,7 @@ abstract class Repn {
 
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
+            return;
         }
         htmlFile = veoDir.resolve(htmlFileName);
         try {
@@ -281,6 +289,7 @@ abstract class Repn {
         // sanity check
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
+            return;
         }
         if (fw == null || htmlOutput == null) {
             log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
@@ -307,6 +316,7 @@ abstract class Repn {
     final protected BufferedWriter getReportWriter() {
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, "getReportWriter", "Called function after abandon() was called"));
+            return null;
         }
         return htmlOutput;
     }
@@ -323,6 +333,7 @@ abstract class Repn {
         String method = "setReportWriter";
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
+            return;
         }
         if (this.htmlOutput != null || htmlOutput == null) {
             log.log(Level.WARNING, errMesg(classname, method, "Attempting to reset HTML output"));
@@ -361,6 +372,7 @@ abstract class Repn {
         // sanity check...
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
+            return;
         }
         if (htmlOutput == null) {
             log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
@@ -394,6 +406,7 @@ abstract class Repn {
         // sanity check...
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
+            return;
         }
         if (htmlOutput == null) {
             log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
@@ -416,6 +429,7 @@ abstract class Repn {
         // sanity check...
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
+            return;
         }
         if (htmlOutput == null) {
             log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
@@ -452,6 +466,7 @@ abstract class Repn {
         // sanity checks
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
+            return;
         }
         if (htmlOutput == null) {
             log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
@@ -476,6 +491,7 @@ abstract class Repn {
         // sanity check...
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
+            return;
         }
         if (htmlOutput == null) {
             log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
@@ -502,6 +518,7 @@ abstract class Repn {
         // sanity check...
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
+            return;
         }
         if (htmlOutput == null) {
             log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));

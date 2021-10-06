@@ -249,7 +249,7 @@ class CreateSignatureFile extends CreateXMLDoc {
         // output signer
         cert = signer.getX509Certificate();
         if (cert != null) {
-            subject = cert.getSubjectDN();
+            subject = cert.getSubjectX500Principal();
             if (subject != null) {
                 writeValue(subject.toString());
             } else {

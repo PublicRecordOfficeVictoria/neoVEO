@@ -107,6 +107,7 @@ abstract class RepnXML extends Repn implements ErrorHandler {
         // sanity check...
         if (contentsAvailable) {
             LOG.log(Level.WARNING, errMesg(classname, method, "Calling parse() twice"));
+            return false;
         }
 
         // check that the file exists and is an ordinary file
@@ -135,7 +136,7 @@ abstract class RepnXML extends Repn implements ErrorHandler {
         try {
             doc = parser.parse(file.toFile());
         } catch (SAXParseException e) {
-            LOG.log(Level.WARNING, errMesg(classname, "Parse error when parsing file" + e.getSystemId() + " (line " + e.getLineNumber() + " column " + e.getColumnNumber() + ")", e));
+            addError(errMesg(classname, "Parse error when parsing file" + e.getSystemId() + " (line " + e.getLineNumber() + " column " + e.getColumnNumber() + ")", e));
             return false;
         } catch (SAXException e) {
             addError(errMesg(classname, "Problem when parsing file", e));

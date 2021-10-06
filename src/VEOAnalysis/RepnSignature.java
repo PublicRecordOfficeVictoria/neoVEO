@@ -334,17 +334,17 @@ class RepnSignature extends RepnXML {
         // get first certificate (to be verified)
         failed = false;
         if (certificates.size() < 1) {
-            LOG.log(Level.WARNING, errMesg(classname, method, "No vers:Certificates found in signature"));
+            addWarning("No vers:Certificates found in signature");
             return false;
         }
         r1 = certificates.get(0);
         certToVerify = extractCertificate(r1);
         if (certToVerify == null) {
-            LOG.log(Level.WARNING, errMesg(classname, method, "First certificate could not be extracted. Remaining certificates have not been checked."));
+            addWarning("First certificate could not be extracted. Remaining certificates have not been checked.");
             return false;
         }
-        subject = certToVerify.getSubjectDN().getName();
-        issuer = certToVerify.getIssuerDN().getName();
+        subject = certToVerify.getSubjectX500Principal().getName();
+        issuer = certToVerify.getIssuerX500Principal().getName();
 
         // verify chain
         for (i = 1; i < certificates.size(); i++) {
