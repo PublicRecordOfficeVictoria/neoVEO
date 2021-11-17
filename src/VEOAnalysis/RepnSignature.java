@@ -312,7 +312,7 @@ class RepnSignature extends RepnXML {
                 return false;
             }
         } catch (SignatureException se) {
-            addError("signature verification failed: "+se.getMessage());
+            addError("signature verification failed: " + se.getMessage());
             return false;
         }
         return true;
@@ -436,7 +436,7 @@ class RepnSignature extends RepnXML {
             // b = DatatypeConverter.parseBase64Binary(certificate.getValue());
         } catch (IllegalArgumentException e) {
             certificate.addError("Converting Base64 signature failed: " + e.getMessage());
-            b = new byte[]{0};
+            return null;
         }
         try {
             cf = CertificateFactory.getInstance("X.509");
@@ -568,7 +568,7 @@ class RepnSignature extends RepnXML {
      * @param verbose true if additional information is to be generated
      * @param veoDir the directory in which to create the report
      * @param fileName the file the report will be about
-     * @throws VEOError  if a fatal error occurred
+     * @throws VEOError if a fatal error occurred
      */
     public void genReport(boolean verbose, Path veoDir, String fileName) throws VEOError {
         String reportName;
@@ -599,8 +599,10 @@ class RepnSignature extends RepnXML {
             signer.genReport(verbose);
             for (i = 0; i < certificates.size(); i++) {
                 x509c = extractCertificate(certificates.get(i));
-                mesg = x509c.toString();
-                certificates.get(i).genReport(verbose, mesg);
+                if (x509c != null) {
+                    mesg = x509c.toString();
+                    certificates.get(i).genReport(verbose, mesg);
+                }
             }
             if (hasErrors || hasWarnings) {
                 addTag("<ul>\n");
@@ -617,7 +619,7 @@ class RepnSignature extends RepnXML {
     /**
      * Tell all the Representations where to write the HTML
      *
-     * @param bw  buffered writer to write output
+     * @param bw buffered writer to write output
      */
     @Override
     public void setReportWriter(BufferedWriter bw) {

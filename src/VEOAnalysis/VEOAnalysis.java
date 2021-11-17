@@ -117,10 +117,11 @@ public class VEOAnalysis {
      * 20210625 3.6 Added additional valid metadata package schemas
      * 20210709 3.7 Change Base64 handling routines & provided support for PISA
      * 20210927 3.8 Updated standard metadata package syntax ids
+     * 20211117 3.9 Fixed bug in RepnVEO that crashed if couldn't decode a certificate
      * </pre>
      */
     static String version() {
-        return ("3.08");
+        return ("3.9");
     }
 
     /**
