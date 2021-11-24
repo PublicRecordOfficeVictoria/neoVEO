@@ -6,12 +6,14 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.B64;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import VERSCommon.VERSDate;
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -243,9 +245,9 @@ class RepnSignature extends RepnXML {
 
         // extract signature from base64 encoding
         try {
-            sigba = Base64.getDecoder().decode(signature.getValue());
+            sigba = Base64.getMimeDecoder().decode(signature.getValue());
         } catch (IllegalArgumentException e) {
-            signature.addError("Converting Base64 signature failed: " + e.getMessage());
+            signature.addError("Converting Base64 encoded signature failed: " + e.getMessage());
             return false;
         }
 
@@ -432,10 +434,10 @@ class RepnSignature extends RepnXML {
         X509Certificate x509c;
 
         try {
-            b = Base64.getDecoder().decode(certificate.getValue());
+            b = Base64.getMimeDecoder().decode(certificate.getValue());
             // b = DatatypeConverter.parseBase64Binary(certificate.getValue());
         } catch (IllegalArgumentException e) {
-            certificate.addError("Converting Base64 signature failed: " + e.getMessage());
+            certificate.addError("Converting Base64 encoded certificate failed: " + e.getMessage());
             return null;
         }
         try {

@@ -193,9 +193,9 @@ class RepnContentFile extends Repn {
         // extract the stored hash
         storedHash = null;
         try {
-            storedHash = Base64.getDecoder().decode(hashValue.getValue());
+            storedHash = Base64.getMimeDecoder().decode(hashValue.getValue());
         } catch (IllegalArgumentException e) {
-            hashValue.addError("Converting Base64 signature failed: " + e.getMessage());
+            hashValue.addError("Converting Base64 encoded hash failed: " + e.getMessage());
         }
 
         // System.out.println("Hashing "+pathName);
