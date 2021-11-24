@@ -60,7 +60,7 @@ class RepnFile extends Repn {
         // allocate a unique id for this RepnFile
         id = idCnt;
         idCnt++;
-
+        
         this.file = file;
         rcf = null;
         children = new ArrayList<>();

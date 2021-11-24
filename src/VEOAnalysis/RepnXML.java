@@ -9,6 +9,7 @@ package VEOAnalysis;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFatal;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,6 +29,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 import org.xml.sax.ErrorHandler;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.SAXParseException;
 
@@ -134,7 +136,9 @@ abstract class RepnXML extends Repn implements ErrorHandler {
         doc = null;
         parser.setErrorHandler(this);
         try {
-            doc = parser.parse(file.toFile());
+            InputSource is = new InputSource(new FileInputStream(file.toFile()));
+            // is.setEncoding("UTF-8");
+            doc = parser.parse(is);
         } catch (SAXParseException e) {
             addError(errMesg(classname, "Parse error when parsing file" + e.getSystemId() + " (line " + e.getLineNumber() + " column " + e.getColumnNumber() + ")", e));
             return false;

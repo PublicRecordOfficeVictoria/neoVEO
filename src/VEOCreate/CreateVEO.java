@@ -19,6 +19,7 @@ import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystemException;
@@ -1106,7 +1107,7 @@ public class CreateVEO {
             p = veoDir.getParent();
             fos = new FileOutputStream(Paths.get(p.toString(), zipName).toString());
             bos = new BufferedOutputStream(fos);
-            zos = new ZipOutputStream(bos);
+            zos = new ZipOutputStream(bos, StandardCharsets.UTF_8);
 
             // recursively process VEO file
             zip(zos, p, veoDir);

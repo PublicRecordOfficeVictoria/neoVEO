@@ -15,6 +15,8 @@ import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryIteratorException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileSystemException;
@@ -380,9 +382,9 @@ class RepnVEO extends Repn {
             if (i != -1) {
                 veoName = veoName.substring(0, i);
             }
-
+            
             // open the zip file and get the entries in it
-            zipFile = new ZipFile(zipFilePath.toFile());
+            zipFile = new ZipFile(zipFilePath.toFile(), StandardCharsets.UTF_8);
 
             // be paranoid, just check that the supposed length of the
             // ZIP entry against the length of the ZIP file itself
