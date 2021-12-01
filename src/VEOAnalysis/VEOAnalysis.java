@@ -118,10 +118,11 @@ public class VEOAnalysis {
      * 20210709 3.7 Change Base64 handling routines & provided support for PISA
      * 20210927 3.8 Updated standard metadata package syntax ids
      * 20211117 3.9 Fixed bug in RepnVEO that crashed if couldn't decode a certificate
+     * 20211201 3.10 Adjusted some AGLS namespace prefixes to conform with standard
      * </pre>
      */
     static String version() {
-        return ("3.9");
+        return ("3.10");
     }
 
     /**

@@ -51,9 +51,9 @@ class RepnMetadataPackage extends Repn {
 
     // AGLS RDF properties
     static final String DC_TERMS = "http://purl.org/dc/terms/";
-    static final String AGLS = "http://www.agls.gov.au/agls/terms/";
+    static final String AGLS_TERMS = "http://www.agls.gov.au/agls/terms/";
     static final String ANZS5478 = "http://www.prov.vic.gov.au/ANSZ5478/terms/";
-    static final String VERS = "http://www.prov.vic.gov.au/vers/terms/";
+    static final String VERS_TERMS = "http://www.prov.vic.gov.au/vers/terms/";
 
     // AGRkMS RDF properties
     /**
@@ -211,8 +211,8 @@ class RepnMetadataPackage extends Repn {
                 return false;
             }
             rdfModel.setNsPrefix("dcterms", DC_TERMS);
-            rdfModel.setNsPrefix("aglsterms", AGLS);
-            rdfModel.setNsPrefix("versterms", VERS);
+            rdfModel.setNsPrefix("aglsterms", AGLS_TERMS);
+            rdfModel.setNsPrefix("versterms", VERS_TERMS);
             checkAGLSProperties(noRec);
             return true;
         }
@@ -597,22 +597,22 @@ class RepnMetadataPackage extends Repn {
     static final Property AGLS_AVAILABLE = ResourceFactory.createProperty(DC_TERMS, "available");
     static final Property AGLS_CREATED = ResourceFactory.createProperty(DC_TERMS, "created");
     static final Property AGLS_DATECOPYRIGHTED = ResourceFactory.createProperty(DC_TERMS, "dateCopyrighted");
-    static final Property AGLS_DATELICENSED = ResourceFactory.createProperty(DC_TERMS, "dateLicensed");
+    static final Property AGLS_DATELICENSED = ResourceFactory.createProperty(AGLS_TERMS, "dateLicensed");
     static final Property AGLS_ISSUED = ResourceFactory.createProperty(DC_TERMS, "issued");
     static final Property AGLS_MODIFIED = ResourceFactory.createProperty(DC_TERMS, "modified");
     static final Property AGLS_VALID = ResourceFactory.createProperty(DC_TERMS, "valid");
     static final Property AGLS_DESCRIPTION = ResourceFactory.createProperty(DC_TERMS, "description");
-    static final Property AGLS_FUNCTION = ResourceFactory.createProperty(AGLS, "function");
+    static final Property AGLS_FUNCTION = ResourceFactory.createProperty(AGLS_TERMS, "function");
     static final Property AGLS_SUBJECT = ResourceFactory.createProperty(DC_TERMS, "subject");
     static final Property AGLS_TYPE = ResourceFactory.createProperty(DC_TERMS, "type");
-    static final Property AGLS_AGGREGATIONLEVEL = ResourceFactory.createProperty(DC_TERMS, "aggregationLevel");
-    static final Property AGLS_CATEGORY = ResourceFactory.createProperty(DC_TERMS, "category");
-    static final Property AGLS_DOCUMENTTYPE = ResourceFactory.createProperty(DC_TERMS, "documentType");
-    static final Property AGLS_SERVICETYPE = ResourceFactory.createProperty(DC_TERMS, "serviceType");
-    static final Property AGLS_DISPOSALREVIEWDATE = ResourceFactory.createProperty(VERS, "disposalReviewDate");
-    static final Property AGLS_DISPOSALACTION = ResourceFactory.createProperty(VERS, "disposalAction");
-    static final Property AGLS_DISPOSALCONDITION = ResourceFactory.createProperty(VERS, "disposalCondition");
-    static final Property AGLS_DISPOSALREFERENCE = ResourceFactory.createProperty(VERS, "disposalReference");
+    static final Property AGLS_AGGREGATIONLEVEL = ResourceFactory.createProperty(AGLS_TERMS, "aggregationLevel");
+    static final Property AGLS_CATEGORY = ResourceFactory.createProperty(AGLS_TERMS, "category");
+    static final Property AGLS_DOCUMENTTYPE = ResourceFactory.createProperty(AGLS_TERMS, "documentType");
+    static final Property AGLS_SERVICETYPE = ResourceFactory.createProperty(AGLS_TERMS, "serviceType");
+    static final Property AGLS_DISPOSALREVIEWDATE = ResourceFactory.createProperty(VERS_TERMS, "disposalReviewDate");
+    static final Property AGLS_DISPOSALACTION = ResourceFactory.createProperty(VERS_TERMS, "disposalAction");
+    static final Property AGLS_DISPOSALCONDITION = ResourceFactory.createProperty(VERS_TERMS, "disposalCondition");
+    static final Property AGLS_DISPOSALREFERENCE = ResourceFactory.createProperty(VERS_TERMS, "disposalReference");
 
     private void checkAGLSProperties(boolean noRec) {
 
