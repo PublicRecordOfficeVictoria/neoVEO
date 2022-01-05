@@ -9,25 +9,28 @@ package VEOAnalysis;
 
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
-import com.hp.hpl.jena.rdf.model.Model;
-import com.hp.hpl.jena.rdf.model.ModelFactory;
-import com.hp.hpl.jena.rdf.model.Property;
-import com.hp.hpl.jena.rdf.model.ResIterator;
-import com.hp.hpl.jena.rdf.model.Resource;
-import com.hp.hpl.jena.rdf.model.ResourceFactory;
-import com.hp.hpl.jena.rdf.model.ResourceRequiredException;
-import com.hp.hpl.jena.rdf.model.Statement;
-import com.hp.hpl.jena.rdfxml.xmlinput.DOM2Model;
-import com.hp.hpl.jena.shared.BadURIException;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.ResIterator;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.rdf.model.ResourceRequiredException;
+import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.rdfxml.xmlinput.DOM2Model;
+import org.apache.jena.shared.BadURIException;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
-import org.apache.log4j.WriterAppender;
+import org.apache.logging.log4j.core.layout.PatternLayout;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.Filter;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.appender.WriterAppender;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
@@ -35,7 +38,7 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXParseException;
 
 /**
- * This class encapsulates an Information Object in a VEO Content file.
+ * This class encapsulates a Metadata Package in a Information Object.
  *
  * @author Andrew Waugh
  */
@@ -93,6 +96,18 @@ class RepnMetadataPackage extends Repn {
 
     /**
      * Validate the data in the Metadata Package.
+     * 
+     * This uses Apache Jena to parse, validate, and extract RDF metadata. Jena
+     * in turn uses Log4j and slf4j for its logging. This is the only place that
+     * Log4j is used; the rest of VEOAnalysis uses the standard Java logging
+     * library. Consequently, this class constructs a simple WriteAppender, and
+     * Jena logging is captured into it and then added as Errors or Warnings.
+     * If it is necessary to update Jena (or Log4j!), get the Jena distribution.
+     * This should contain the necessary Log4j and slf4j files - there is no
+     * need to download them separately. Note that most of the jar files
+     * included in the Jena distribution are not necessary. Currently the only
+     * ones required are jena-core, jena-base, jena-iri, jena-shaded-guava,
+     * log4j-api, log4j-core, log4j-slf4j-impl, slf-api, and commons-lang3.
      *
      * @param veoDir the directory containing the contents of the VEO.
      * @param noRec true if not to complain about missing recommended metadata
@@ -103,7 +118,6 @@ class RepnMetadataPackage extends Repn {
         String method = "validate";
         DOM2Model d2m; // translator from DOM nodes to RDF model
         Model m;
-        WriterAppender appender;    // Jena logging construct to capture errors
         StringWriter parseErrs;     // place where parse errors can be captured
         int i;
         Element e;
@@ -139,13 +153,31 @@ class RepnMetadataPackage extends Repn {
 
         // add String Logger to Jena logging facility to capture parse errors
         // Jena uses the 'log4j' logging facility
-        // (http://logging.apache.org/log4j/1.2/manual.html)
+        // This is pure magical incantation taken from https://logging.apache.org/log4j/2.x/manual/customconfig.html
         parseErrs = new StringWriter();
+        final LoggerContext context = LoggerContext.getContext(false);
+        final Configuration config = context.getConfiguration();
+        final PatternLayout layout = PatternLayout.createDefaultLayout(config);
+        final Appender appender = WriterAppender.createAppender(layout, null, parseErrs, "STRING_APPENDER", false, true);
+        appender.start();
+        config.addAppender(appender);
+        final org.apache.logging.log4j.Level level = null;
+        final Filter filter = null;
+        for (final LoggerConfig loggerConfig : config.getLoggers().values()) {
+            loggerConfig.addAppender(appender, level, filter);
+        }
+        config.getRootLogger().addAppender(appender, level, filter);
+        
+        // This is the equivalent for the original Log4j. Code is kept in case
+        // it is needed to be used again. Note that you need to set the
+        // configuration in RepnVEO.java.
+        /*
         appender = new WriterAppender(new PatternLayout("%p - %m%n"), parseErrs);
         appender.setName("STRING_APPENDER");
-        appender.setThreshold(org.apache.log4j.Level.WARN);
+        appender.setThreshold(org.apache.logging.log4j.Level.WARN);
         Logger.getRootLogger().removeAllAppenders();
         Logger.getRootLogger().addAppender(appender);
+        */
 
         for (i = 0; i < metadata.size(); i++) {
             e = metadata.get(i);
@@ -164,7 +196,7 @@ class RepnMetadataPackage extends Repn {
                 try {
                     d2m = DOM2Model.createD2M("http://xyzz/./", m);
                 } catch (SAXParseException spe) {
-                    LOG.log(Level.WARNING, errMesg(classname, method, "Failed to initialise Jena to parse RDF", spe));
+                    LOG.log(java.util.logging.Level.WARNING, errMesg(classname, method, "Failed to initialise Jena to parse RDF", spe));
                     return false;
                 }
                 d2m.load(e);
@@ -184,11 +216,11 @@ class RepnMetadataPackage extends Repn {
         }
 
         // clean up
-        appender.close();
+        appender.stop();
         try {
             parseErrs.close();
         } catch (IOException ioe) {
-            LOG.log(Level.WARNING, errMesg(classname, method, "Failed to close StringWriter used to capture parse errors", ioe));
+            LOG.log(java.util.logging.Level.WARNING, errMesg(classname, method, "Failed to close StringWriter used to capture parse errors", ioe));
         }
 
         // if ANZS5478 check to see if the required properties are present and valid
