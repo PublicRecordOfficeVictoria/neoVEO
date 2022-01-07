@@ -622,6 +622,12 @@ class RepnMetadataPackage extends Repn {
      * properties are flagged as errors. Missing conditional properties are
      * flagged as warnings. The value of a property is not checked for
      * conformance.
+     * 
+     * Five properties (aglsterms:dateLicensed, aglsterms:aggregationLevel,
+     * aglsterms:category, aglsterms:documentType, and aglsterms:serviceType)
+     * originally had the wrong namespace prefix (dcterms) in the specification.
+     * The validation has been altered to *warn* if the incorrect properties
+     * are present, rather than flag an error.
      */
     static final Property AGLS_CREATOR = ResourceFactory.createProperty(DC_TERMS, "creator");
     static final Property AGLS_TITLE = ResourceFactory.createProperty(DC_TERMS, "title");
@@ -630,6 +636,7 @@ class RepnMetadataPackage extends Repn {
     static final Property AGLS_CREATED = ResourceFactory.createProperty(DC_TERMS, "created");
     static final Property AGLS_DATECOPYRIGHTED = ResourceFactory.createProperty(DC_TERMS, "dateCopyrighted");
     static final Property AGLS_DATELICENSED = ResourceFactory.createProperty(AGLS_TERMS, "dateLicensed");
+    static final Property AGLS_INV_DATELICENSED = ResourceFactory.createProperty(DC_TERMS, "dateLicensed");
     static final Property AGLS_ISSUED = ResourceFactory.createProperty(DC_TERMS, "issued");
     static final Property AGLS_MODIFIED = ResourceFactory.createProperty(DC_TERMS, "modified");
     static final Property AGLS_VALID = ResourceFactory.createProperty(DC_TERMS, "valid");
@@ -638,9 +645,13 @@ class RepnMetadataPackage extends Repn {
     static final Property AGLS_SUBJECT = ResourceFactory.createProperty(DC_TERMS, "subject");
     static final Property AGLS_TYPE = ResourceFactory.createProperty(DC_TERMS, "type");
     static final Property AGLS_AGGREGATIONLEVEL = ResourceFactory.createProperty(AGLS_TERMS, "aggregationLevel");
+    static final Property AGLS_INV_AGGREGATIONLEVEL = ResourceFactory.createProperty(DC_TERMS, "aggregationLevel");
     static final Property AGLS_CATEGORY = ResourceFactory.createProperty(AGLS_TERMS, "category");
+    static final Property AGLS_INV_CATEGORY = ResourceFactory.createProperty(DC_TERMS, "category");
     static final Property AGLS_DOCUMENTTYPE = ResourceFactory.createProperty(AGLS_TERMS, "documentType");
+    static final Property AGLS_INV_DOCUMENTTYPE = ResourceFactory.createProperty(DC_TERMS, "documentType");
     static final Property AGLS_SERVICETYPE = ResourceFactory.createProperty(AGLS_TERMS, "serviceType");
+    static final Property AGLS_INV_SERVICETYPE = ResourceFactory.createProperty(DC_TERMS, "serviceType");
     static final Property AGLS_DISPOSALREVIEWDATE = ResourceFactory.createProperty(VERS_TERMS, "disposalReviewDate");
     static final Property AGLS_DISPOSALACTION = ResourceFactory.createProperty(VERS_TERMS, "disposalAction");
     static final Property AGLS_DISPOSALCONDITION = ResourceFactory.createProperty(VERS_TERMS, "disposalCondition");
@@ -658,10 +669,15 @@ class RepnMetadataPackage extends Repn {
                 && !rdfModel.contains(null, AGLS_CREATED)
                 && !rdfModel.contains(null, AGLS_DATECOPYRIGHTED)
                 && !rdfModel.contains(null, AGLS_DATELICENSED)
+                && !rdfModel.contains(null, AGLS_INV_DATELICENSED) // error in VERSV3 spec, see below
                 && !rdfModel.contains(null, AGLS_ISSUED)
                 && !rdfModel.contains(null, AGLS_MODIFIED)
                 && !rdfModel.contains(null, AGLS_VALID)) {
             addError("AGLS metadata package does not contain the mandatory date element or its subelements (available, created, dateCopyrighted, dateLicensed, issued, modified, or valid)");
+        }
+        // This was an error in the VERSV3 spec, DateLicensed has the wrong namespace. Warn about it, but not mark it as an error
+        if (rdfModel.contains(null, AGLS_INV_DATELICENSED)) {
+            addWarning("AGLS metadata package contains 'dcterms:dateLicensed' not 'aglsterms:dateLicensed'. This was an error in the specification. The VEO should be fixed.");
         }
         // DC_TERMS:title m
         if (!rdfModel.contains(null, AGLS_TITLE)) {
@@ -684,10 +700,27 @@ class RepnMetadataPackage extends Repn {
         // DC_TERMS:type r (aggregationLevel, category, documentType, serviceType)
         if (!noRec && !rdfModel.contains(null, AGLS_TYPE)
                 && !rdfModel.contains(null, AGLS_AGGREGATIONLEVEL)
+                && !rdfModel.contains(null, AGLS_INV_AGGREGATIONLEVEL)
                 && !rdfModel.contains(null, AGLS_CATEGORY)
+                && !rdfModel.contains(null, AGLS_INV_CATEGORY)
                 && !rdfModel.contains(null, AGLS_DOCUMENTTYPE)
-                && !rdfModel.contains(null, AGLS_SERVICETYPE)) {
-            addWarning("AGLS metadata package does not contain the recommended type property (dcterms:type) or one of the subproperties (aggregationLevel, category, documentType, or serviceType)");
+                && !rdfModel.contains(null, AGLS_INV_DOCUMENTTYPE)
+                && !rdfModel.contains(null, AGLS_SERVICETYPE)
+                && !rdfModel.contains(null, AGLS_INV_SERVICETYPE)) {
+            addWarning("AGLS metadata package does not contain the recommended type property (dcterms:type) or one of the subproperties (aglsterms:aggregationLevel, aglsterms:category, aglsterms:documentType, or aglsterms:serviceType)");
+        }
+        // This was an error in the VERSV3 spec, the subtypes have the wrong namespace. Warn about it, but not mark it as an error
+        if (rdfModel.contains(null, AGLS_INV_AGGREGATIONLEVEL)) {
+            addWarning("AGLS metadata package contains 'dcterms:aggregationLevel' not 'aglsterms:aggregationLevel'. This was an error in the specification. The VEO should be fixed.");
+        }
+        if (rdfModel.contains(null, AGLS_INV_CATEGORY)) {
+            addWarning("AGLS metadata package contains 'dcterms:category' not 'aglsterms:category'. This was an error in the specification. The VEO should be fixed.");
+        }
+        if (rdfModel.contains(null, AGLS_INV_DOCUMENTTYPE)) {
+            addWarning("AGLS metadata package contains 'dcterms:documentType' not 'aglsterms:documentType'. This was an error in the specification. The VEO should be fixed.");
+        }
+        if (rdfModel.contains(null, AGLS_INV_SERVICETYPE)) {
+            addWarning("AGLS metadata package contains 'dcterms:serviceType' not 'aglsterms:serviceType'. This was an error in the specification. The VEO should be fixed.");
         }
         // warn if disposal metadata is not present...
         if (!noRec && !rdfModel.contains(null, AGLS_DISPOSALREVIEWDATE) && !rdfModel.contains(null, AGLS_DISPOSALCONDITION)) {
