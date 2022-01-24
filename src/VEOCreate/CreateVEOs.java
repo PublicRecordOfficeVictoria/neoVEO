@@ -208,10 +208,11 @@ public class CreateVEOs {
      * 20210409 2.4 Uses new PFXUser function to report on file name
      * 20210709 2.5 Change Base64 handling routines & provided support for PISA
      * 20210716 2.6 Changes to fix Lint warning
+     * 20220124 2.7 Changed to using Apache ZIP to be consistant with VEOAnalysis
      * </pre>
      */
     static String version() {
-        return ("2.6");
+        return ("2.7");
     }
 
     /**

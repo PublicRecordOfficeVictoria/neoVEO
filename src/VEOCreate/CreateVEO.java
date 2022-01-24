@@ -15,11 +15,8 @@ import VERSCommon.VEOError;
 import VERSCommon.VEOFatal;
 import java.nio.file.Path;
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystemException;
@@ -30,8 +27,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 
 /**
  * This class creates a single VEO. These methods can be called directly as an
@@ -1073,9 +1070,9 @@ public class CreateVEO {
      */
     public void finalise(boolean keepVEODir) throws VEOError {
         String method = "finalise";
-        FileOutputStream fos = null;
-        BufferedOutputStream bos = null;
-        ZipOutputStream zos = null;
+        // FileOutputStream fos = null;
+        // BufferedOutputStream bos = null;
+        ZipArchiveOutputStream zos = null;
         String zipName;
         Path p;
 
@@ -1105,9 +1102,14 @@ public class CreateVEO {
 
             // create Zip Output Stream
             p = veoDir.getParent();
-            fos = new FileOutputStream(Paths.get(p.toString(), zipName).toString());
-            bos = new BufferedOutputStream(fos);
-            zos = new ZipOutputStream(bos, StandardCharsets.UTF_8);
+            // changed to use the Apache ZIP implementation rather than the native Java one
+            // fos = new FileOutputStream(Paths.get(p.toString(), zipName).toString());
+            // bos = new BufferedOutputStream(fos);
+            // zos = new ZipOutputStream(bos, StandardCharsets.UTF_8);
+            zos = new ZipArchiveOutputStream(Paths.get(p.toString(), zipName).toFile());
+            zos.setFallbackToUTF8(true);
+            zos.setUseLanguageEncodingFlag(true);
+            zos.setCreateUnicodeExtraFields(ZipArchiveOutputStream.UnicodeExtraFieldPolicy.ALWAYS);
 
             // recursively process VEO file
             zip(zos, p, veoDir);
@@ -1122,12 +1124,14 @@ public class CreateVEO {
                 if (zos != null) {
                     zos.close();
                 }
+                /*
                 if (bos != null) {
                     bos.close();
                 }
                 if (fos != null) {
                     fos.close();
                 }
+                */
             } catch (IOException e) {
                 /* ignore */ }
         }
@@ -1146,7 +1150,7 @@ public class CreateVEO {
      * @param dir the directory to ZIP
      * @throws IOException
      */
-    private void zip(ZipOutputStream zos, Path veoDir, Path dir) throws IOException {
+    private void zip(ZipArchiveOutputStream zos, Path veoDir, Path dir) throws IOException {
         String method = "zip";
         FileInputStream fis;
         BufferedInputStream bis;
@@ -1154,7 +1158,7 @@ public class CreateVEO {
         DirectoryStream<Path> ds = null;
         int l;
         Path relPath;
-        ZipEntry zs;
+        ZipArchiveEntry zs;
 
         try {
             // get a list of files in the VEO directory
@@ -1170,9 +1174,9 @@ public class CreateVEO {
                 // copy a regular file into the ZIP file
                 if (relPath.getNameCount() != 0 && Files.isRegularFile(p)) {
                     // System.err.println("Adding '" + s + "'");
-                    zs = new ZipEntry(relPath.toString());
+                    zs = new ZipArchiveEntry(relPath.toString());
                     zs.setTime(Files.getLastModifiedTime(p).toMillis());
-                    zos.putNextEntry(zs);
+                    zos.putArchiveEntry(zs);
 
                     // copy the content
                     fis = new FileInputStream(p.toString());
@@ -1184,7 +1188,7 @@ public class CreateVEO {
                     fis.close();
 
                     // close this ZIP entry
-                    zos.closeEntry();
+                    zos.closeArchiveEntry();
                 }
 
                 // recursively process directories
@@ -1208,7 +1212,7 @@ public class CreateVEO {
      * @param veoDir the root directory of the ZIP
      * @throws IOException
      */
-    private void zipContentFiles(ZipOutputStream zos, Path veoDir) throws IOException {
+    private void zipContentFiles(ZipArchiveOutputStream zos, Path veoDir) throws IOException {
         String method = "zipContentFiles";
         FileInputStream fis;
         BufferedInputStream bis;
@@ -1216,7 +1220,7 @@ public class CreateVEO {
         FileToInclude fi;
         int i, l;
         Path relPath;
-        ZipEntry zs;
+        ZipArchiveEntry zs;
         HashMap<String, Path> seen;
 
         // if resigning, the content files will already be in the VEO
@@ -1243,9 +1247,9 @@ public class CreateVEO {
 
             // copy a regular file into the ZIP file
             if (relPath.getNameCount() != 0 && Files.isRegularFile(fi.source)) {
-                zs = new ZipEntry(relPath.toString());
+                zs = new ZipArchiveEntry(relPath.toString());
                 zs.setTime(Files.getLastModifiedTime(fi.source).toMillis());
-                zos.putNextEntry(zs);
+                zos.putArchiveEntry(zs);
 
                 // copy the content
                 fis = new FileInputStream(fi.source.toString());
@@ -1257,7 +1261,7 @@ public class CreateVEO {
                 fis.close();
 
                 // close this ZIP entry
-                zos.closeEntry();
+                zos.closeArchiveEntry();
             }
         }
         seen.clear();

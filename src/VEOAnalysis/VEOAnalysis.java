@@ -121,10 +121,11 @@ public class VEOAnalysis {
      * 20211201 3.10 Adjusted some AGLS namespace prefixes to conform with standard
      * 20220107 3.11 Upgraded Jena & Log4j to deal with Log4j security issue
      * 20220107 3.12 Will now accept, but warn, if the five elements with the incorrect namespace prefixes are present
+     * 20220124 3.13 Moved to using Apache ZIP
      * </pre>
      */
     static String version() {
-        return ("3.12");
+        return ("3.13");
     }
 
     /**

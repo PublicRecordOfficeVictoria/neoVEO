@@ -1,0 +1,17 @@
+http://prov.vic.gov.au/vers/schema/AGLS	http://www.w3.org/1999/02/22-rdf-syntax-ns
+<rdf:RDF xmlns:dcterms="http://purl.org/dc/terms/"
+	 xmlns:aglsterms="http://www.agls.gov.au/agls/terms/"
+	 xmlns:versterms="http://www.prov.vic.gov.au/vers/terms/"
+	 xmlns:dcam="http://purl.org/dcam/">
+<rdf:Description rdf:about="**UNIQUE URL IDENTIFYING THE RECORD eg http://www.example.org/123**">
+ <dcterms:creator>**CREATOR'S NAME**</dcterms:creator>
+ <dcterms:created rdf:datatype="xsd:dateTime">2002-03-17T12:00:00Z</dcterms:created>
+ <dcterms:title>**TITLE WORDS**</dcterms:title>
+ <dcterms:identifier>**EDRMS IDENTIFIER**</dcterms:identifier>
+ <aglsterms:aggregationLevel></aglsterms:aggregationLevel>
+ <versterms:disposalReviewDate>2020</versterms:disposalReviewDate>
+ <versterms:disposalAction>Destroy</versterms:disposalAction>
+ <versterms:disposalCondition>None</versterms:disposalCondition>
+ <versterms:disposalReference>PROS 15/01 clause 10.1</versterms:disposalReference>
+</rdf:Description>
+</rdf:RDF>
