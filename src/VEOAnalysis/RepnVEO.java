@@ -15,7 +15,6 @@ import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryIteratorException;
 import java.nio.file.DirectoryStream;
@@ -30,9 +29,9 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
-import java.util.zip.ZipFile;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipFile;
 
 /**
  * This class encapsulates an Information Object in a VEO Content file.
@@ -133,7 +132,7 @@ class RepnVEO extends Repn {
         StringBuilder sb;
 
         // configure the logging used in the RDF validator
-        System.setProperty("log4j2.configurationFile", schemaDir.resolve("log4j.properties").toAbsolutePath().toString());
+        System.setProperty("log4j2.configurationFile", schemaDir.resolve("log4j2.properties").toAbsolutePath().toString());
         // This is the configuration for the original log4j
         // PropertyConfigurator.configure(schemaDir.resolve("log4j.properties").toAbsolutePath().toString());
 
@@ -356,7 +355,7 @@ class RepnVEO extends Repn {
         String method = "unzip";
         ZipFile zipFile;
         Enumeration entries;
-        ZipEntry entry;
+        ZipArchiveEntry entry;
         Path vze, zipEntryPath, p;
         InputStream is;
         BufferedInputStream bis;
@@ -385,15 +384,15 @@ class RepnVEO extends Repn {
             }
             
             // open the zip file and get the entries in it
-            zipFile = new ZipFile(zipFilePath.toFile(), StandardCharsets.UTF_8);
+            zipFile = new ZipFile(zipFilePath.toFile());
 
             // be paranoid, just check that the supposed length of the
             // ZIP entry against the length of the ZIP file itself
-            entries = zipFile.entries();
+            entries = zipFile.getEntries();
             long zipFileLength = zipFilePath.toFile().length();
             long claimedLength = 0;
             while (entries.hasMoreElements()) {
-                entry = (ZipEntry) entries.nextElement();
+                entry = (ZipArchiveEntry) entries.nextElement();
                 claimedLength += entry.getCompressedSize();
             }
             if (zipFileLength < claimedLength) {
@@ -405,9 +404,9 @@ class RepnVEO extends Repn {
             }
 
             // go through each entry
-            entries = zipFile.entries();
+            entries = zipFile.getEntries();
             while (entries.hasMoreElements()) {
-                entry = (ZipEntry) entries.nextElement();
+                entry = (ZipArchiveEntry) entries.nextElement();
                 LOG.log(Level.FINE, "Extracting: {0}({1}) {2} {3}", new Object[]{entry.getName(), entry.getSize(), entry.getTime(), entry.isDirectory()});
 
                 // get the local path to extract the ZIP entry into
