@@ -85,6 +85,9 @@ class RepnMetadataPackage extends Repn {
         if (rdf && !syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
             throw new VEOError("Error. Metadata Package has xmlns:rdf attribute, but vers:MetadataSyntaxIdentifier is not http://www.w3.org/1999/02/22-rdf-syntax-ns");
         }
+        if (!rdf && syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
+            throw new VEOError("Error. Metadata Package has vers:MetadataSyntaxIdentifier of http://www.w3.org/1999/02/22-rdf-syntax-ns, but metadata package does not have xmlns:rdf attribute");
+        }
         document.gotoNextElement();
 
         // remember the roots of the metadata subtrees
@@ -194,11 +197,12 @@ class RepnMetadataPackage extends Repn {
                 // separately and amalgamate them
                 m = ModelFactory.createDefaultModel();
                 try {
-                    d2m = DOM2Model.createD2M("http://xyzz/./", m);
+                    d2m = DOM2Model.createD2M(null, m);
                 } catch (SAXParseException spe) {
                     LOG.log(java.util.logging.Level.WARNING, errMesg(classname, method, "Failed to initialise Jena to parse RDF", spe));
                     return false;
                 }
+                // d2m.setErrorHandler(errHandler);
                 d2m.load(e);
                 d2m.close();
                 d2m = null;
@@ -206,6 +210,8 @@ class RepnMetadataPackage extends Repn {
                 // merge the newly passed model into the bigger one
                 rdfModel = rdfModel.union(m);
                 m.removeAll();
+                
+                // rdfModel.write(System.out);
 
                 // if errors occurred, remember them
                 if (parseErrs.getBuffer().length() > 0) {

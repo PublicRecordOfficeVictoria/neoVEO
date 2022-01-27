@@ -122,10 +122,11 @@ public class VEOAnalysis {
      * 20220107 3.11 Upgraded Jena & Log4j to deal with Log4j security issue
      * 20220107 3.12 Will now accept, but warn, if the five elements with the incorrect namespace prefixes are present
      * 20220124 3.13 Moved to using Apache ZIP
+     * 20220127 3.14 Now test in RepnMetadataPackage if vers:MetadataPackage includes RDF namespace if syntax is RDF
      * </pre>
      */
     static String version() {
-        return ("3.13");
+        return ("3.14");
     }
 
     /**
