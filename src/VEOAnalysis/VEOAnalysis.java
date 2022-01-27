@@ -64,6 +64,7 @@ import java.util.logging.Logger;
  * <li>'-d': debug output. Include lots more detail - mainly intended to debug
  * problems with the program.</li>
  * <li>'-o directory'. Create the VEO directories in this output directory</li>
+ * <li>'-iocnt'. Report on the number of IOs in the VEO</li>
  * </ul>
  * <h1>API</h1>
  * <P>
@@ -85,6 +86,7 @@ public class VEOAnalysis {
     boolean verbose;    // true if verbose descriptions are to be generated
     boolean norec;      // true if asked to not complain about missing recommended metadata elements
     boolean hasErrors;  // true if VEO had errors
+    boolean reportIOcnt;// true if requested to report on number of IOs in VEO
     boolean help;       // if true, generate a help summary of command line arguements
     ArrayList<String> veos; // The list of VEOS to process
     LTSF ltsfs;         // valid long term preservation formats
@@ -92,7 +94,7 @@ public class VEOAnalysis {
     private ResultSummary results;  // summary of the errors & warnings
 
     private final static String USAGE
-            = "AnalyseVEOs [-help] [-e] [-sr] [-r|-u] [-v] [-d] [-c] [-norec] -s supportDir [-o outputDir] [files*]";
+            = "AnalyseVEOs [-help] [-e] [-sr] [-r|-u] [-v] [-d] [-c] [-iocnt] [-norec] -s supportDir [-o outputDir] [files*]";
 
     /**
      * Report on version...
@@ -123,6 +125,7 @@ public class VEOAnalysis {
      * 20220107 3.12 Will now accept, but warn, if the five elements with the incorrect namespace prefixes are present
      * 20220124 3.13 Moved to using Apache ZIP
      * 20220127 3.14 Now test in RepnMetadataPackage if vers:MetadataPackage includes RDF namespace if syntax is RDF
+     * 20220127 3.15 Now reports on the number of IOs in VEO
      * </pre>
      */
     static String version() {
@@ -197,6 +200,7 @@ public class VEOAnalysis {
         this.ltsfs = ltsfs;
         this.results = results;
         this.help = false;
+        this.reportIOcnt = false;
     }
 
     /**
@@ -248,6 +252,7 @@ public class VEOAnalysis {
             System.out.println("  -u: leave the unpacked VEOs in the file system at the end of the run");
             System.out.println("  -norec: do not warn about missing recommended metadata elements");
             System.out.println("  -o <directory>: the directory in which the VEOs are unpacked");
+            System.out.println("  -iocnt: report on the number of IOs in VEO");
             System.out.println("");
             System.out.println("  -c: chatty mode: report when starting a new VEO when using -r or -u");
             System.out.println("  -v: verbose mode: give more details about processing");
@@ -307,6 +312,9 @@ public class VEOAnalysis {
         } else {
             System.out.println(" Do not unpack or produce a final HTML report for each VEO processed (neither -u or -r set)");
         }
+        if (reportIOcnt) {
+            System.out.println(" Report on number of IOs in VEO (-iocnt set)");
+        }
         if (results != null) {
             System.out.println(" Produce a summary report of errors and warnings at the end (-sr set)");
         } else {
@@ -354,6 +362,7 @@ public class VEOAnalysis {
         ltsfs = null;
         results = null;
         help = false;
+        reportIOcnt = false;
 
         // process command line arguments
         i = 0;
@@ -416,6 +425,12 @@ public class VEOAnalysis {
                     // produce HMTL report for each VEO
                     case "-r":
                         report = true;
+                        i++;
+                        break;
+
+                    // report on number of IOs in VEO
+                    case "-iocnt":
+                        reportIOcnt = true;
                         i++;
                         break;
 
@@ -571,6 +586,16 @@ public class VEOAnalysis {
             if (error) {
                 System.out.println(rv.getStatus());
             }
+
+            // if reporting the number of IOs in this VEO...
+            if (reportIOcnt) {
+                System.out.print("Number of information objects in VEO: ");
+                if (rv.veoContent != null) {
+                    System.out.println(rv.veoContent.ioCnt);
+                } else {
+                    System.out.println("0");
+                }
+            }
         } catch (VEOError e) {
             System.out.println(e.getMessage());
         } finally {
@@ -600,12 +625,14 @@ public class VEOAnalysis {
         public String uniqueID; // unique id of this VEO (i.e. the B64 encoded signature
         public boolean hasErrors; // true if the VEO had errors
         public String result;   // what happened when processing the VEO
+        public int ioCnt;       // number of IOs in VEO
 
-        public TestVEOResult(Path veoDir, String uniqueID, boolean hasErrors, String result) {
+        public TestVEOResult(Path veoDir, String uniqueID, int ioCnt, boolean hasErrors, String result) {
             this.veoDir = veoDir;
             this.uniqueID = uniqueID;
             this.hasErrors = hasErrors;
             this.result = result;
+            this.ioCnt = ioCnt;
         }
 
         public void free() {
@@ -624,12 +651,12 @@ public class VEOAnalysis {
      * @throws VEOError if something went wrong
      */
     public TestVEOResult testVEO(String veo, Path outputDir) throws VEOError {
-        Path p;
         RepnVEO rv;
         TestVEOResult tvr;
         String uniqueId;
         ArrayList<RepnSignature> rs;
         String result;
+        int cnt;
 
         // set this VEO id in the results summary
         if (results != null) {
@@ -670,7 +697,12 @@ public class VEOAnalysis {
                 }
             }
 
-            tvr = new TestVEOResult(rv.getVEODir(), uniqueId, hasErrors, result);
+            if (rv.veoContent != null) {
+                cnt = rv.veoContent.ioCnt;
+            } else {
+                cnt = 0;
+            }
+            tvr = new TestVEOResult(rv.getVEODir(), uniqueId, cnt, hasErrors, result);
 
             // delete the unpacked VEO
             if (!unpack && !report) {
@@ -745,7 +777,7 @@ public class VEOAnalysis {
         VEOAnalysis va;
 
         try {
-            va = new VEOAnalysis(args);
+            va  = new VEOAnalysis(args);
             System.out.println("Starting analysis:");
             va.test();
             System.out.println("Finished");

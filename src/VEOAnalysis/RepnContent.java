@@ -27,6 +27,7 @@ class RepnContent extends RepnXML {
     RepnItem version; // version identifier of this VEOContent.xml file
     RepnItem hashAlgorithm; // identifier of the hash function used
     ArrayList<RepnInformationObject> infoObjs;    // list of events associated with this history
+    public int ioCnt;       // count of number of IOs in VERSContent file
 
     /**
      * Builds an internal representation of the VEOContent.xml file, validating
@@ -42,7 +43,6 @@ class RepnContent extends RepnXML {
 
         RepnInformationObject io;
         Path file, schema;
-        int i;
 
         version = new RepnItem(getId(), "Version", results);
         hashAlgorithm = new RepnItem(getId(), "Hash algorithm", results);
@@ -69,11 +69,11 @@ class RepnContent extends RepnXML {
         }
 
         // step through the information objects
-        i = 0;
+        ioCnt = 0;
         while (!atEnd() && checkElement("vers:InformationObject")) {
             gotoNextElement();
-            i++;
-            io = new RepnInformationObject(this, getId(), i, results);
+            ioCnt++;
+            io = new RepnInformationObject(this, getId(), ioCnt, results);
             infoObjs.add(io);
         }
     }
