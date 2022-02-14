@@ -126,10 +126,11 @@ public class VEOAnalysis {
      * 20220124 3.13 Moved to using Apache ZIP
      * 20220127 3.14 Now test in RepnMetadataPackage if vers:MetadataPackage includes RDF namespace if syntax is RDF
      * 20220127 3.15 Now reports on the number of IOs in VEO
+     * 20220214 3.16 xmlns:rdf namespace can be defined in any of the top level elements
      * </pre>
      */
     static String version() {
-        return ("3.14");
+        return ("3.16");
     }
 
     /**

@@ -43,10 +43,13 @@ class RepnContent extends RepnXML {
 
         RepnInformationObject io;
         Path file, schema;
+        String rdfNameSpace;
+        boolean rdf; // true if we have seen the RDF namespace declaration
 
         version = new RepnItem(getId(), "Version", results);
         hashAlgorithm = new RepnItem(getId(), "Hash algorithm", results);
         infoObjs = new ArrayList<>();
+        rdf = false;
 
         // parse the VEOContent.xml file against the VEOContent scheme
         file = veoDir.resolve("VEOContent.xml");
@@ -58,6 +61,18 @@ class RepnContent extends RepnXML {
         // extract the information from the DOM representation
         gotoRootElement();
         checkElement("vers:VEOContentFile");
+        // check for RDF namespace declaration
+        rdfNameSpace = getAttribute("xmlns:rdf");
+        if (rdfNameSpace != null && !rdfNameSpace.equals("")) {
+            switch (rdfNameSpace) {
+                case "http://www.w3.org/1999/02/22-rdf-syntax-ns#":
+                case "http://www.w3.org/1999/02/22-rdf-syntax-ns":
+                    break;
+                default:
+                    throw new VEOError("Error detected:\n  Error (VEOContent.xml): vers:VEOContentFile element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+            }
+            rdf = true;
+        }
         gotoNextElement();
         if (checkElement("vers:Version")) {
             version.setValue(getTextValue());
@@ -71,9 +86,22 @@ class RepnContent extends RepnXML {
         // step through the information objects
         ioCnt = 0;
         while (!atEnd() && checkElement("vers:InformationObject")) {
+
+            // check for RDF namespace declaration
+            rdfNameSpace = getAttribute("xmlns:rdf");
+            if (rdfNameSpace != null && !rdfNameSpace.equals("")) {
+                switch (rdfNameSpace) {
+                    case "http://www.w3.org/1999/02/22-rdf-syntax-ns#":
+                    case "http://www.w3.org/1999/02/22-rdf-syntax-ns":
+                        break;
+                    default:
+                        throw new VEOError("Error detected:\n  Error (VEOContent.xml): vers:InformationObject element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+                }
+                rdf = true;
+            }
             gotoNextElement();
             ioCnt++;
-            io = new RepnInformationObject(this, getId(), ioCnt, results);
+            io = new RepnInformationObject(this, getId(), ioCnt, rdf, results);
             infoObjs.add(io);
         }
     }
@@ -102,7 +130,8 @@ class RepnContent extends RepnXML {
      * @param veoDir the directory containing the contents of the VEO
      * @param contentFiles the collection of content files in the VEO
      * @param ltsfs List of valid long term sustainable formats
-     * @param noRec true if not to complain about missing recommended metadata elements
+     * @param noRec true if not to complain about missing recommended metadata
+     * elements
      * @throws VEOError if an error occurred that won't preclude processing
      * another VEO
      */
@@ -248,7 +277,8 @@ class RepnContent extends RepnXML {
      *
      * @param veoDir the directory in which to create the report
      * @param verbose true if additional information is to be generated
-     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
+     * @throws VERSCommon.VEOError if prevented from continuing processing this
+     * VEO
      */
     public void genReport(boolean verbose, Path veoDir) throws VEOError {
         int i;
@@ -294,8 +324,9 @@ class RepnContent extends RepnXML {
 
     /**
      * Main program for testing
+     *
      * @param args command line arguments
-    */
+     */
     public static void main(String args[]) {
         RepnContent rc;
         Path veoDir;

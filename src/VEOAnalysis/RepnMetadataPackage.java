@@ -82,11 +82,8 @@ class RepnMetadataPackage extends Repn {
         // VERS:MetadataSyntaxIdentifier
         syntaxId = new RepnItem(getId(), "Metadata syntax id:", results);
         syntaxId.setValue(document.getTextValue());
-        if (rdf && !syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
-            throw new VEOError("Error. Metadata Package has xmlns:rdf attribute, but vers:MetadataSyntaxIdentifier is not http://www.w3.org/1999/02/22-rdf-syntax-ns");
-        }
         if (!rdf && syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
-            throw new VEOError("Error. Metadata Package has vers:MetadataSyntaxIdentifier of http://www.w3.org/1999/02/22-rdf-syntax-ns, but metadata package does not have xmlns:rdf attribute");
+            throw new VEOError("Error. Metadata Package has vers:MetadataSyntaxIdentifier of http://www.w3.org/1999/02/22-rdf-syntax-ns, but xmlns:rdf namespace attribute is not defined");
         }
         document.gotoNextElement();
 

@@ -33,14 +33,14 @@ class RepnInformationObject extends Repn {
      * @param document the representation of the XML document
      * @param parentId the parent object identifier
      * @param seq the sequence number of this IO in the VEOContent file
+     * @param rdf true if we have seen the RDF namespace declaration
      * @throws VEOError if the XML document has not been properly parsed
      */
-    public RepnInformationObject(RepnXML document, String parentId, int seq, ResultSummary results) throws VEOError {
+    public RepnInformationObject(RepnXML document, String parentId, int seq, boolean rdf, ResultSummary results) throws VEOError {
         super(parentId + ":IO-" + seq, results);
 
         int i;
         String rdfNameSpace;
-        boolean rdf;
 
         // remember if this is the first information object in VEO
         firstIO = (seq == 1);
@@ -57,7 +57,6 @@ class RepnInformationObject extends Repn {
         metadata = new ArrayList<>();
         i = 0;
         while (document.checkElement("vers:MetadataPackage")) {
-            rdf = false;
             rdfNameSpace = document.getAttribute("xmlns:rdf");
             if (rdfNameSpace != null && !rdfNameSpace.equals("")) {
                 switch (rdfNameSpace) {
