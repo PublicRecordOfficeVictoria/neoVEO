@@ -685,7 +685,7 @@ public class VEOAnalysis {
                 result = rv.getStatus();
                 // LOG.log(Level.WARNING, rv.getStatus());
             }
-
+            
         } finally {
             hasErrors = rv.hasErrors();
 
