@@ -10,6 +10,7 @@ import VERSCommon.PFXUser;
 import VERSCommon.VEOFatal;
 import VERSCommon.VEOError;
 import java.io.*;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -24,30 +25,22 @@ import java.util.logging.Logger;
 import java.util.regex.PatternSyntaxException;
 
 /**
- * This class creates multiple VEOs from a control file. The control file is a
- * text file containing multiple rows of tab separated commands. Each command
+ * This class creates multiple VEOs from a text control file. The control file
+ * is a text file containing multiple rows of tab separated commands. Each command
  * builds a part of a VEO (or controls how subsequent VEOs are to be built).
- * This class also processes the command line arguments and reads the metadata
- * templates.
+ * (Note that the class CreateVEO is an alternative way to build a VEO,
+ * providing an API to programatically build a VEO.)
  * <h3>Command Line arguments</h3>
  * The following command line arguments must be supplied:
  * <ul>
- * <li><b>-t &lt;directory&gt;</b> the directory in which the metadata templates
- * and the standard VEOReadme.txt file will be found. See the last section for
- * details about the metadata templates.</li>
  * <li><b>-c &lt;file&gt;</b> the control file which controls the production of
- * VEOs (see the next section for details about the control file).
+ * VEOs (see the next section for details about the control file).</li>
+ * <li><b>-sf &lt;directory&gt;</b> the directory in which the neoVEO support
+ * files are found.</li>
  * </ul>
  * <p>
  * The following command line arguments are optional:
  * <ul>
- * <li><b>-v</b> verbose output. By default off.</li>
- * <li><b>-d</b> debug mode. In this mode more logging will be generated, and
- * the VEO directories will not be deleted after the ZIP file is created. By
- * default off.</li>
- * <li><b>-ha &lt;algorithm&gt;</b> The hash algorithm used to protect the
- * content files and create signatures. Valid values are: . The default is
- * 'SHA-1'. The hash algorithm can also be set in the control file.
  * <li><b>-s &lt;PFXfile&gt; &lt;password&gt;</b> a PFX file containing details
  * about the signer (particularly the private key) and the password. The PFX
  * file can also be specified in the control file. If no -s command line
@@ -55,18 +48,21 @@ import java.util.regex.PatternSyntaxException;
  * <li><b>-o &lt;outputDir&gt;</b> the directory in which the VEOs are to be
  * created. If not present, the VEOs will be created in the current
  * directory.</li>
- * <li><b>-copy</b> If present, this argument forces content files to be copied
- * to the VEO directory when creating the VEO. This is the slowest option, but
- * it is the most certain to succeed.</li>
- * <li><b>-move</b> If present, the content files will be moved to the VEO
- * directory. This is faster than -copy, but typically can only be performed on
- * the same file system.</li>
- * <li><b>-link</b> If present, the content files will be linked to the VEO
- * directory. This is the fastest option, but may not work on all computer
- * systems and files. -link is the default</li>
+ * <li><b>-t &lt;directory&gt;</b> the directory in which the metadata templates
+ * will be found. This must be specified if you use the MP or MPC commands to
+ * generate metadata packages. See the last section of this page for details
+ * about the metadata templates.</li>
+ * <li><b>-v</b> verbose output. By default off.</li>
+ * <li><b>-d</b> debug mode. In this mode more logging will be generated, and
+ * the VEO directories will not be deleted after the ZIP file is created. By
+ * default off.</li>
+ * <li><b>-ha &lt;algorithm&gt;</b> The hash algorithm used to protect the
+ * content files and create signatures. Any of the standard Java MessageDigest
+ * algorithm strings may be used. The default is 'SHA-256'. The hash algorithm
+ * can also be set in the control file.
  * <li><b>-e &lt;encoding&gt;</b> If present this specifies the encoding used to
- * convert the control file into characters. The default is 'windows-1252' as
- * PROV runs on Windows boxes. Other useful choices are 'UTF-8' and 'ISO-8859-1"
+ * convert the control file into characters. The default is 'UTF-8'. Any of the
+ * java.nio canonical names may be used.
  * </li>
  * </ul>
  * <p>
@@ -80,33 +76,101 @@ import java.util.regex.PatternSyntaxException;
  * entries on the line are arguments to the command. The commands are:
  * <ul>
  * <li><b>'!'</b> A comment line. The remainder of the line is ignored.</li>
- * <li><b>'HASH' &lt;algorithm&gt;</b> Specifies the hash algorithm to use. If
- * present, this overrides the -ha command line argument. It must appear at the
- * start of the control file, before the first 'BV' command.</li>
+ * <li><b>'HASH' &lt;algorithm&gt;</b> Specifies the hash algorithm to use. Any
+ * of the standard Java MessageDigest algorithm strings may be used. If present,
+ * this overrides the -ha command line argument. It must appear at the start of
+ * the control file, before the first 'BV' command.</li>
  * <li><b>'PFX' &lt;pfxFile&gt; &lt;password&gt;</b> Specifies a PFX file and
  * associated password. Multiple PFX lines may be present, this results in
  * multiple signatures being generated. PFX commands must occur before the first
  * BV command.</li>
  * <li><b>'BV' &lt;veoName&gt;</b> Begin a new VEO. The single argument is the
  * VEO name (i.e. the file name of the VEO to be generated). If a VEO is already
- * being constructed, a BV command will cause the generation of the previous
- * VEO.</li>
+ * being constructed, a new BV command will complete the generation of the
+ * current VEO and start the construction of a new VEO.</li>
  * <li><b>'IO' &lt;type&gt; [&lt;level&gt;]</b> Begin a new Information Object
  * within a VEO. The Information Object will have the specified type (which may
  * be blank) and level. If the level is not present, it will be set to 0. If an
  * Information Object is already being constructed, a new IO command will finish
- * the previous Information Object.</li>
+ * the current Information Object and start a new one.</li>
  * <li><b>'MP' &lt;template&gt; [&lt;subs&gt;...]</b> Begin a new Metadata
  * Package within an Information Object. The first argument is the template
  * name, subsequent arguments are the substitutions. An MP command may be
- * followed by MPC commands to construct a metadata package from several
- * templates. Another MP command will finish this Metadata Package and begin a
- * new one.</li>
+ * followed by MPC commands (to construct a metadata package from several
+ * templates) or ME, SME, &amp; EME commands (to add XML elements one at a time).
+ * The current Metadata Package will be finished when an MP, XML-MP, RDF-MP,
+ * AGLS-MP, ANZS5478-MP, IP, or IO command is encountered. All but the last two
+ * (IP or IO) will start the creation of a new Metadata Package.</li>
+ * <li><b>'XML-MP' &lt;semanticId&gt;</b> Begin a new generic XML Metadata
+ * Package with the given semanticId (a URL). The syntaxId will be set to XML.
+ * The contents of this metadata package can be added using the ME, SME, EME,
+ * and MPC commands. The current Metadata Package will be finished when an MP,
+ * XML-MP, RDF-MP, AGLS-MP, ANZS5478-MP, IP, or IO command is encountered. All
+ * but the last two (IP or IO) will start the creation of a new Metadata
+ * Package.</li>
+ * <li><b>'RDF-MP' &lt;semanticId&gt; &lt;resourceId&gt;
+ * [&lt;namespaces&gt;]</b>
+ * Begin a new generic RDF Metadata Package with the given semanticId (a URL)
+ * (the syntaxId on the metadata package is automatically set to indicate RDF).
+ * The resourceId (a URI) is put in the rdf:about attribute of the
+ * rdf:Description element. The optional namespaces are namespace definitions
+ * (XML attributes) inserted in the start rdf:rdf tag. The contents of this
+ * metadata package can be added using the ME, SME, EME, and MPC commands. The
+ * current Metadata Package will be finished when an MP, XML-MP, RDF-MP,
+ * AGLS-MP, ANZS5478-MP, IP, or IO command is encountered. All but the last two
+ * (IP or IO) will start the creation of a new Metadata Package.</li>
+ * <li><b>'AGLS-MP' &lt;resourceId&gt;</b> Begin a new AGLS Metadata Package
+ * (The syntaxId will be set to RDF and the semanticID to AGLS). The resourceId
+ * (a URI) is put in the rdf:about attribute of the rdf:Description element. The
+ * AGLS contents of this metadata package can be added using the ME, SME, EME,
+ * and MPC commands. The current Metadata Package will be finished when an MP,
+ * XML-MP, RDF-MP, AGLS-MP, ANZS5478-MP, IP, or IO command is encountered. All
+ * but the last two (IP or IO) will start the creation of a new Metadata
+ * Package.</li>
+ * <li><b>'ANZS5478-MP' &lt;resourceId&gt;</b> Begin a new ANZS-5478 Metadata
+ * Package (The syntaxId will be set to RDF and the semanticID to ANZS-5478).
+ * The resourceId (a URI) is put in the rdf:about attribute of the
+ * rdf:Description element. The ANZS-5478 contents of this metadata package can
+ * be added using the ME, SME, EME, and MPC commands. The current Metadata
+ * Package will be finished when an MP, XML-MP, RDF-MP, AGLS-MP, ANZS5478-MP,
+ * IP, or IO command is encountered. All but the last two (IP or IO) will start
+ * the creation of a new Metadata Package.</li>
+ * <li><b>'ME' &lt;tag&gt; [&lt;value&gt;] [&lt;attributes&gt;]</b> Add a simple
+ * XML element to a Metadata Package (started with an 'MP', 'XML-MP', 'RDF-MP',
+ * 'AGLS-MP', or 'ANZS5478-MP' command). A simple XML element is one that does
+ * not contain any subelements, just a string value. The tag is the XML element
+ * name (including namespace, if any). The value is the value of the element (it
+ * may be blank or null, in which case the element is empty). Any XML unsafe
+ * characters in the value (e.g. '&lt;') are encoded. The attributes, if
+ * present, is a string of attribute definitions that are added to the start
+ * element tag. Typically, they are used to define the syntax of the value (e.g.
+ * 'rdf:datatype="xsd:dateTime"'). Logically, the attributes should come between
+ * the tag and the value, but we put the attributes at the end because they are
+ * not always necessary. Any XML unsafe characters in the attribute string are
+ * <b>NOT</b> encoded - this is up to the creator of the control file.</li>
+ * <li><b>'SME' &lt;tag&gt; [&lt;attributes&gt;]</b> Start a complex XML element
+ * to a Metadata Package (started with an 'MP', 'XML-MP', 'RDF-MP', 'AGLS-MP',
+ * or 'ANZS5478-MP' command). A complex XML element is one that does
+ * subelements. The tag is the XML element name (including namespace, if any).
+ * The attributes, if present, is a string of attribute definitions that are
+ * added to the start element tag. Typically, they are used to define the syntax
+ * of the value (e.g. 'rdf:datatype="xsd:dateTime"'). Any XML unsafe characters
+ * in the attribute string are <b>NOT</b> encoded - this is up to the creator of
+ * the control file. The contents of the complex element (i.e. the subelements)
+ * are added by 'ME' and 'SME' commands, and the complex element is finally
+ * completed by a 'EME' command.</li>
+ * <li><b>'EME' &lt;tag&gt;</b> End a complex XML element in a Metadata Package
+ * (started with an 'SME' command). The tag is the XML element name (including
+ * namespace, if any) of the matching SME command. Note that the proper nesting
+ * of the XML is not checked by CreateVEOs; this is up to the creator of the
+ * control file.</li>
  * <li><b>'MPC' &lt;template&gt; [&lt;subs&gt;...]</b> Continue a Metadata
- * Package using another template and substitutions.</li>
+ * Package using another template and substitutions. This may be used after any
+ * of the start MetadataPackage commands (MP, XML-MP, RDF-MP, AGLS-MP, or
+ * ANZS5478-MP), or element commands (ME, SME, EME).</li>
  * <li><b>'IP' [&lt;label&gt;] &lt;file&gt; [&lt;files&gt;...]</b> Add an
  * Information Piece to the Information Object. The first (optional) argument is
- * the label for the information piece, subsequent arguments are the content
+ * the label for the information piece, subsequent arguments are the content ` *
  * files to include in the Information Piece. An IP command must be after all
  * the MP and MPC commands in this Information Object.</li>
  * <li><b> 'E' &lt;date&gt; &lt;event&gt; &lt;initiator&gt;
@@ -124,18 +188,32 @@ import java.util.regex.PatternSyntaxException;
  * hash	SHA-1
  * pfx	signer.pfx	Password
  *
- * !	VEO with two IOs, one with an MP and one IP, the other with an MP and two IPs, two Es)
+ * !	VEO with two IOs, one with just an MP, the other with an MP and an IPs
  * BV	testVEO5
  * AC	S-37-6
  * IO	Record	1
  * MP	agls	laserfish   data    data    etc
- * MP	agls	fishlaser   data    data    etc
  * IP	Data	S-37-6/S-37-6-Nov.docx
  * IO	Data	2
+ * ANZS5478-MP	file://CABF-13-590
+ * ME	anzs5478:EntityType	Record	rdf:datatype="xs:string"
+ * ME	anzs5478:Category	Item	rdf:datatype="xs:string"
+ * SME	anzs5478:Identifier	rdf:parseType="Resource"
+ * ME	anzs5478:IdentifierString	IdValue	rdf:datatype="xs:string"
+ * ME	anzs5478:IdentifierScheme	IdScheme	rdf:datatype="xs:string"
+ * EME	anzs5478:Identifier
+ * SME	anzs5478:Name	rdf:parseType="Resource"
+ * ME	anzs5478:NameWords	NameValue	rdf:datatype="xs:string"
+ * ME	anzs5478:NameScheme	NameScheme	rdf:datatype="xs:string"
+ * EME	anzs5478:Name
  * IP	Content	S-37-6/S-37-6-Nov.docx	S-37-6/S-37-6-Nov.docx
  * E	2014-09-09	Opened	Andrew	Description	$$  Error
  * E	2014-09-10	Closed	Andrew	Description
- * </pre>
+ * ! begin new VEO
+ * BV...
+ * </pre> Note that this shows the two methods of creating Metadata Packages
+ * (using a template, and constructing the package element by element). Both
+ * methods may be used together in constructing a single Metadata Package.
  * <h3>Metadata Templates</h3>
  * The template files are found in the directory specified by the -t command
  * line argument. Templates are used to generate the metadata packages. Each MP
@@ -209,10 +287,11 @@ public class CreateVEOs {
      * 20210709 2.5 Change Base64 handling routines & provided support for PISA
      * 20210716 2.6 Changes to fix Lint warning
      * 20220124 2.7 Changed to using Apache ZIP to be consistant with VEOAnalysis
+     * 20220218 3.0 Added the ability to construct metadata packages element by element. Rewrite of documentation
      * </pre>
      */
     static String version() {
-        return ("2.7");
+        return ("3.0");
     }
 
     /**
@@ -277,14 +356,14 @@ public class CreateVEOs {
             System.out.println("Command line arguments:");
             System.out.println(" Mandatory:");
             System.out.println("  -c <file>: file path to the control file");
-            System.out.println("  -t <directory>: file path to where the templates are located");
             System.out.println("  -sf <directory>: file path to where the support files are located");
             System.out.println("");
             System.out.println(" Optional:");
             System.out.println("  -s <pfxFile> <password>: path to a PFX file and its password for signing a VEO (can be repeated)");
+            System.out.println("  -o <directory>: the directory in which the VEOs are created (default is current working directory)");
+            System.out.println("  -t <directory>: file path to where the templates are located");
             System.out.println("  -ha <hashAlgorithm>: specifies the hash algorithm (default SHA-256)");
             System.out.println("  -e: character encoding for the control file (default UTF-8)");
-            System.out.println("  -o <directory>: the directory in which the VEOs are created (default is current working directory)");
             System.out.println("");
             System.out.println("  -v: verbose mode: give more details about processing");
             System.out.println("  -d: debug mode: give a lot of details about processing");
@@ -292,10 +371,7 @@ public class CreateVEOs {
             System.out.println("");
         }
 
-        // check to see that user specified a template directory, support directory and control file
-        if (templateDir == null) {
-            throw new VEOFatal(classname, 4, "No template directory specified. Usage: " + USAGE);
-        }
+        // check to see that user specified a support directory and control file
         if (supportDir == null) {
             throw new VEOFatal(classname, 4, "No support directory specified. Usage: " + USAGE);
         }
@@ -304,7 +380,11 @@ public class CreateVEOs {
         }
 
         System.out.println("Configuration:");
-        System.out.println(" Template directory: '" + templateDir.toString() + "'");
+        if (templateDir != null) {
+            System.out.println(" Template directory: '" + templateDir.toString() + "'");
+        } else {
+            System.out.println(" Template directory is not set. Cannot use MP or MPC commands in control file");
+        }
         System.out.println(" Support directory: '" + supportDir.toString() + "'");
         System.out.println(" Control file: '" + controlFile.toString() + "'");
         if (outputDir != null) {
@@ -329,7 +409,11 @@ public class CreateVEOs {
         }
 
         // read templates
-        templates = new Templates(templateDir);
+        if (templateDir != null) {
+            templates = new Templates(templateDir);
+        } else {
+            templates = null;
+        }
     }
 
     /**
@@ -561,6 +645,13 @@ public class CreateVEOs {
         int line;           // which line in control file (for errors)
         int i;
         CreateVEO veo;      // current VEO being created
+        String attributes, value;
+        String AGLSNamespaces
+                = "xmlns:dcterms=\"http://purl.org/dc/terms/\"\r\n"
+                + "    xmlns:aglsterms=\"http://www.agls.gov.au/agls/terms/\"\r\n"
+                + "    xmlns:versterms=\"http://www.prov.vic.gov.au/vers/terms\"";
+        String ANZS5478Namespaces
+                = "xmlns:anzs5478=\"http://www.prov.vic.gov.au/vers/ANZS5478\"";
 
         // sanity check (redundant, but just in case)...
         if (controlFile == null) {
@@ -580,6 +671,12 @@ public class CreateVEOs {
                 if (s.equals("") || tokens.length == 0) {
                     continue;
                 }
+
+                // encoding of tab in tokens
+                for (i = 0; i < tokens.length; i++) {
+                    tokens[i] = tokens[i].replaceAll("<tab>", "\t");
+                }
+
                 switch (tokens[0].toLowerCase().trim()) {
 
                     // comment - ignore line
@@ -797,6 +894,10 @@ public class CreateVEOs {
                             veoFailed(line, "MP command before first BV command");
                             break;
                         }
+                        if (templates == null) {
+                            veoFailed(line, "Using an MP command requires a template directory to be specified (-t command line argument)");
+                            break;
+                        }
 
                         // check the right number of arguments
                         if (tokens.length < 2) {
@@ -824,6 +925,151 @@ public class CreateVEOs {
                         // log.log(Level.FINE, "Found template. Schema ''{0}'' Syntax ''{1}''", new Object[]{template.getSchemaId(), template.getSyntaxId()});
                         break;
 
+                    // start a new generic XML metadata package...
+                    case "xml-mp":
+                        // ignore line if VEO failed...
+                        if (state == State.VEO_FAILED) {
+                            break;
+                        }
+                        if (veo == null) {
+                            veoFailed(line, "XML-MP command before first BV command");
+                            break;
+                        }
+
+                        // check the right number of arguments
+                        if (tokens.length < 2) {
+                            veoFailed(line, "Missing semanticId in XML-MP command (format: 'XML-MP' <semanticId>)");
+                            veo.abandon(debug);
+                            veo = null;
+                            break;
+                        }
+
+                        LOG.log(Level.FINE, "Starting new XML Metadata Package ''{1}'' (State: {0})", new Object[]{state, tokens[1]});
+
+                        // start generic XML metadata package
+                        try {
+                            veo.startXMLMetadataPackage(tokens[1]);
+                        } catch (VEOError e) {
+                            veoFailed(line, "XML-MP ('" + tokens[1] + "')command failed", e);
+                            veo.abandon(debug);
+                            veo = null;
+                            if (e instanceof VEOFatal) {
+                                return;
+                            }
+                            break;
+                        }
+                        break;
+
+                    // start a new generic RDF metadata package...
+                    case "rdf-mp":
+                        // ignore line if VEO failed...
+                        if (state == State.VEO_FAILED) {
+                            break;
+                        }
+                        if (veo == null) {
+                            veoFailed(line, "RDF-MP command before first BV command");
+                            break;
+                        }
+
+                        // check the right number of arguments
+                        if (tokens.length < 3) {
+                            veoFailed(line, "Missing semanticId or resourceId in RDF-MP command (format: 'RDF-MP' <semanticId> <resourceId> [<namespaceDefns>])");
+                            veo.abandon(debug);
+                            veo = null;
+                            break;
+                        }
+                        if (tokens.length > 3) {
+                            attributes = tokens[3];
+                        } else {
+                            attributes = null;
+                        }
+
+                        LOG.log(Level.FINE, "Starting new RDF Metadata Package semanticId: ''{1}'' objectId: ''{2}'' (State: {0})", new Object[]{state, tokens[1], tokens[2]});
+
+                        // start generic RDF metadata package
+                        try {
+                            veo.startRDFMetadataPackage(tokens[1], attributes, new URL(tokens[2]));
+                        } catch (VEOError e) {
+                            veoFailed(line, "RDF-MP ('" + tokens[1] + "', '" + tokens[2] + "')command failed", e);
+                            veo.abandon(debug);
+                            veo = null;
+                            if (e instanceof VEOFatal) {
+                                return;
+                            }
+                            break;
+                        }
+                        break;
+
+                    // start an AGLS metadata package...
+                    case "agls-mp":
+                        // ignore line if VEO failed...
+                        if (state == State.VEO_FAILED) {
+                            break;
+                        }
+                        if (veo == null) {
+                            veoFailed(line, "AGLS-MP command before first BV command");
+                            break;
+                        }
+
+                        // check the right number of arguments
+                        if (tokens.length < 2) {
+                            veoFailed(line, "Missing resourceId in AGLS-MP command (format: 'AGLS-MP' <resourceId>)");
+                            veo.abandon(debug);
+                            veo = null;
+                            break;
+                        }
+
+                        LOG.log(Level.FINE, "Starting new AGLS Metadata Package resourceId: ''{1}'' (State: {0})", new Object[]{state, tokens[1]});
+
+                        // start AGLS (RDF) metadata package
+                        try {
+                            veo.startRDFMetadataPackage("http://prov.vic.gov.au/vers/schema/AGLS", AGLSNamespaces, new URL(tokens[1]));
+                        } catch (VEOError e) {
+                            veoFailed(line, "AGLS-MP ('" + tokens[1] + "')command failed", e);
+                            veo.abandon(debug);
+                            veo = null;
+                            if (e instanceof VEOFatal) {
+                                return;
+                            }
+                            break;
+                        }
+                        break;
+
+                    // start an ANZS-5478 metadata package...
+                    case "anzs5478-mp":
+                        // ignore line if VEO failed...
+                        if (state == State.VEO_FAILED) {
+                            break;
+                        }
+                        if (veo == null) {
+                            veoFailed(line, "ANZS5478-MP command before first BV command");
+                            break;
+                        }
+
+                        // check the right number of arguments
+                        if (tokens.length < 2) {
+                            veoFailed(line, "Missing resourceId in ANZS5478-MP command (format: 'ANZS5478-MP' <resourceId>)");
+                            veo.abandon(debug);
+                            veo = null;
+                            break;
+                        }
+
+                        LOG.log(Level.FINE, "Starting new ANZS5478 Metadata Package resourceId: ''{1}'' (State: {0})", new Object[]{state, tokens[1]});
+
+                        // start AGLS (RDF) metadata package
+                        try {
+                            veo.startRDFMetadataPackage("http://www.prov.vic.gov.au/VERS-as5478", ANZS5478Namespaces, new URL(tokens[1]));
+                        } catch (VEOError e) {
+                            veoFailed(line, "ANZS5478-MP ('" + tokens[1] + "')command failed", e);
+                            veo.abandon(debug);
+                            veo = null;
+                            if (e instanceof VEOFatal) {
+                                return;
+                            }
+                            break;
+                        }
+                        break;
+
                     // continue an existing metadata package...
                     case "mpc":
                         // ignore line if VEO failed...
@@ -832,6 +1078,10 @@ public class CreateVEOs {
                         }
                         if (veo == null) {
                             veoFailed(line, "MPC command before first BV command");
+                            break;
+                        }
+                        if (templates == null) {
+                            veoFailed(line, "Using an MPC command requires a template directory to be specified (-t command line argument)");
                             break;
                         }
 
@@ -849,6 +1099,124 @@ public class CreateVEOs {
                             veo.continueMetadataPackage(templates.findTemplate(tokens[1]), tokens);
                         } catch (VEOError e) {
                             veoFailed(line, "Applying template in MPC command failed", e);
+                            veo.abandon(debug);
+                            veo = null;
+                            if (e instanceof VEOFatal) {
+                                return;
+                            }
+                            break;
+                        }
+                        break;
+
+                    // add a simple metadata element to a metadata package
+                    case "me":
+                        // ignore line if VEO failed...
+                        if (state == State.VEO_FAILED) {
+                            break;
+                        }
+                        if (veo == null) {
+                            veoFailed(line, "ME command before first BV command");
+                            break;
+                        }
+
+                        // check the right number of arguments
+                        if (tokens.length < 2) {
+                            veoFailed(line, "Missing XML element tag in ME command (format: 'ME' <tagName> [value] [attribute])");
+                            veo.abandon(debug);
+                            veo = null;
+                            break;
+                        }
+                        if (tokens.length > 2) {
+                            value = tokens[2];
+                        } else {
+                            value = null;
+                        }
+                        if (tokens.length > 3) {
+                            attributes = tokens[3];
+                        } else {
+                            attributes = null;
+                        }
+
+                        LOG.log(Level.FINE, "Adding simple metadata element to metadata package: ''{1}'' ''{2}'' ''{3}''(State: {0})", new Object[]{state, tokens[1], attributes == null ? " " : attributes, value == null ? "[No value]" : value});
+
+                        // add element
+                        try {
+                            veo.addSimpleMetadataElementToMP(tokens[1], attributes, value);
+                        } catch (VEOError e) {
+                            veoFailed(line, "ME ('" + tokens[1] + "')command failed", e);
+                            veo.abandon(debug);
+                            veo = null;
+                            if (e instanceof VEOFatal) {
+                                return;
+                            }
+                            break;
+                        }
+                        break;
+
+                    // start a complex metadata element in a metadata package
+                    case "sme":
+                        // ignore line if VEO failed...
+                        if (state == State.VEO_FAILED) {
+                            break;
+                        }
+                        if (veo == null) {
+                            veoFailed(line, "SME command before first BV command");
+                            break;
+                        }
+
+                        // check the right number of arguments
+                        if (tokens.length < 2) {
+                            veoFailed(line, "Missing XML element tag in SME command (format: 'SME' <tagName> [attribute])");
+                            veo.abandon(debug);
+                            veo = null;
+                            break;
+                        }
+                        if (tokens.length > 2) {
+                            attributes = tokens[2];
+                        } else {
+                            attributes = null;
+                        }
+
+                        LOG.log(Level.FINE, "Adding simple metadata element to metadata package: ''{1}'' ''{2}'' ''{3}''(State: {0})", new Object[]{state, tokens[1], attributes == null ? " " : attributes});
+
+                        // add element
+                        try {
+                            veo.startComplexMetadataElementInMP(tokens[1], attributes);
+                        } catch (VEOError e) {
+                            veoFailed(line, "SME ('" + tokens[1] + "')command failed", e);
+                            veo.abandon(debug);
+                            veo = null;
+                            if (e instanceof VEOFatal) {
+                                return;
+                            }
+                            break;
+                        }
+                        break;
+
+                    // end a complex metadata element in a metadata package
+                    case "eme":
+                        // ignore line if VEO failed...
+                        if (state == State.VEO_FAILED) {
+                            break;
+                        }
+                        if (veo == null) {
+                            veoFailed(line, "EME command before first BV command");
+                            break;
+                        }
+                        if (tokens.length < 2) {
+                            veoFailed(line, "Missing XML element tag in EME command (format: 'SME' <tagName>)");
+                            veo.abandon(debug);
+                            veo = null;
+                            break;
+                        }
+
+                        LOG.log(Level.FINE, "Ending metadata element in metadata package: ''{1}'' (State: {0})", new Object[]{state, tokens[1]});
+
+                        // add element
+                        try {
+                            veo.endComplexMetadataElementInMP(tokens[1]);
+                        } catch (VEOError e) {
+                            veoFailed(line, "EME ('" + tokens[1] + "')command failed", e);
                             veo.abandon(debug);
                             veo = null;
                             if (e instanceof VEOFatal) {
@@ -1006,6 +1374,10 @@ public class CreateVEOs {
                         }
 
                         // check command arguments
+                        if (templates == null) {
+                            veoFailed(line, "Using an VEO command requires a template directory to be specified (-t command line argument)");
+                            break;
+                        }
                         if (tokens.length < 2) {
                             veoFailed(line, "Missing VEO name in VEO command (format: 'VEO' <veoName> <label> <template> [<data>...] '$$' [<files>...]))");
                             if (veo != null) {

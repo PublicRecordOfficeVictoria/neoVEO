@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystemException;
@@ -31,8 +32,8 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 
 /**
- * This class creates a single VEO. These methods can be called directly as an
- * API to create a single VEO, or indirectly from the
+ * This class creates a single VEO using API calls. These methods can be called
+ * directly as an API to create a single VEO, or indirectly from the
  * {@link VEOCreate.CreateVEOs} class to create multiple VEOs.
  * <p>
  * Two types of errors are thrown by the methods in this class:
@@ -72,7 +73,7 @@ public class CreateVEO {
 
     /**
      * Main constructor. This sets up the environment in which a VEO is
-     * constructed. A VEO directory named veoName is created in the specified
+     * constructed. A VEO directory named veoName is created in the working
      * directory. The specified hash algorithm is used to generate fixity
      * information for the content files and to generate the digital signatures.
      * <p>
@@ -83,30 +84,30 @@ public class CreateVEO {
      * Note that this CreateVEO instance can only create ONE VEO. A new instance
      * must be created for each VEO.
      *
-     * @param directory directory in which to create the VEO directory
+     * @param workingDir directory in which to create the VEO directory
      * @param veoName name of the VEO to be created
      * @param hashAlg the name of the hash algorithm to be used to protect
      * content files
      * @param debug true if operating in debug mode
      * @throws VERSCommon.VEOError if the instance could not be constructed
      */
-    public CreateVEO(Path directory, String veoName, String hashAlg, boolean debug) throws VEOError {
+    public CreateVEO(Path workingDir, String veoName, String hashAlg, boolean debug) throws VEOError {
         String name;    // string representation of a file name
 
         this.debug = debug;
 
         // check that the directory exists & is writable
-        if (directory == null) {
+        if (workingDir == null) {
             throw new VEOError(classname, 1, "directory is null");
         }
-        name = directory.toString();
-        if (Files.notExists(directory)) {
+        name = workingDir.toString();
+        if (Files.notExists(workingDir)) {
             throw new VEOError(classname, 2, "directory '" + name + "' does not exist");
         }
-        if (!Files.isDirectory(directory)) {
+        if (!Files.isDirectory(workingDir)) {
             throw new VEOError(classname, 3, "directory '" + name + "' is not a directory");
         }
-        if (!Files.isWritable(directory)) {
+        if (!Files.isWritable(workingDir)) {
             throw new VEOError(classname, 4, "directory '" + name + "' is not writable");
         }
 
@@ -117,7 +118,7 @@ public class CreateVEO {
         if (!veoName.endsWith(".veo")) {
             veoName = veoName + ".veo";
         }
-        veoDir = Paths.get(directory.toString(), veoName).toAbsolutePath().normalize();
+        veoDir = Paths.get(workingDir.toString(), veoName).toAbsolutePath().normalize();
         if (Files.exists(veoDir)) {
             try {
                 deleteFile(veoDir);
@@ -301,9 +302,9 @@ public class CreateVEO {
     }
 
     /**
-     * Add a new Metadata Package using the specified template and data. The
-     * template is expressed as a Fragment, but use the Templates class to
-     * obtain the desired Fragment.
+     * Add a new Metadata Package using a template which is populated with data.
+     * The template is expressed as a {@link VEOCreate.Fragment}, but use the
+     * {@link VEOCreate.Templates} class to obtain the desired Fragment.
      * <p>
      * Read the description for the Templates class to understand Fragments and
      * their use.
@@ -317,12 +318,16 @@ public class CreateVEO {
      * <p>
      * If required, the Metadata Package can be created using multiple API
      * calls. Once a Metadata Package has been started, use the
-     * continueMetadataPackage() methods to add more content to this Metadata
-     * Package. Metadata Packages are automatically finalised when a new
-     * Metadata Package is started, or an Information Piece is added.
+     * continueMetadataPackage(), addSimpleElementToMP(), or
+     * startComplexMetadataElementInMP() methods to add more content to this
+     * Metadata Package.
      * <p>
-     * All of the Metadata Packages associated with the Information Object must
-     * be added to the Information Object before any Information Piece is added.
+     * Metadata Packages are automatically finalised when a new
+     * Metadata Package, is started, an Information Piece is added, or a
+     * new InformationObject is started.
+     * <p>
+     * All of the Metadata Packages associated with this Information Object must
+     * be added to the Information Object before an Information Piece is added.
      *
      * @param template the template to use
      * @param data an array of data to populate the template
@@ -338,25 +343,7 @@ public class CreateVEO {
         if (data == null) {
             throw new VEOError(classname, method, 2, "data parameter is null");
         }
-
-        // finish off any previous metadata package being added...
-        switch (state) {
-            case VEO_STARTED:
-                throw new VEOError(classname, method, 3, "A Metadata Package cannot be added until an Information Object has been started");
-            case IO_STARTED:
-                break;
-            case ADDING_MP:
-                cvc.finishMetadataPackage();
-                break;
-            case ADDING_IP:
-                throw new VEOError(classname, method, 4, "A Metadata Package cannot be added after an Information Piece has been added to an Information Object");
-            case FINISHED_FILES:
-                throw new VEOError(classname, method, 5, "A Metadata Package cannot be added after finishFiles() has been called");
-            case SIGNED:
-                throw new VEOError(classname, method, 6, "A Metadata Package cannot be added after sign() has been called");
-            case FINISHED:
-                throw new VEOError(classname, method, 7, "A Metadata Package cannot be added after finalise() has been called");
-        }
+        startMetadataPackage(method);
 
         // start metadata package and apply parameters to first template
         cvc.startMetadataPackage(template.getSchemaId(), template.getSyntaxId());
@@ -367,19 +354,22 @@ public class CreateVEO {
     }
 
     /**
-     * Add a new Metadata Package using a piece of XML text. This method creates
-     * a Metadata Package consisting of an arbitrary piece of XML. The schemaId
-     * and syntaxId are URIs and are defined in the VERS V3 specifications. None
-     * of the arguments can be null.
+     * Add a new Metadata Package containing an arbitrary piece of XML text.
+     * The schemaId and syntaxId are URIs and are defined in the VERS V3
+     * specifications. None of the arguments can be null.
      * <p>
      * If required, the Metadata Package can be created using multiple API
      * calls. Once a Metadata Package has been started, use the
-     * continueMetadataPackage() methods to add more content to this Metadata
-     * Package. Metadata Packages are automatically finalised when a new
-     * Metadata Package is started, or an Information Piece is added.
+     * continueMetadataPackage(), addSimpleElementToMP(), or
+     * startComplexMetadataElementInMP() methods to add more content to this
+     * Metadata Package.
      * <p>
-     * All of the Metadata Packages associated with the Information Object must
-     * be added to the Information Object before any Information Piece is added.
+     * Metadata Packages are automatically finalised when a new
+     * Metadata Package, is started, an Information Piece is added, or a
+     * new InformationObject is started.
+     * <p>
+     * All of the Metadata Packages associated with this Information Object must
+     * be added to the Information Object before an Information Piece is added.
      *
      * @param schemaId a string containing the URI identifying the schema of the
      * Metadata Package being commenced.
@@ -393,12 +383,105 @@ public class CreateVEO {
 
         // sanity checks
         if (schemaId == null) {
-            throw new VEOError(classname, method, 2, "schema identifier parameter is null");
+            throw new VEOError(classname, method, 1, "schema identifier parameter is null");
         }
         if (syntaxId == null) {
             throw new VEOError(classname, method, 2, "syntax identifier parameter is null");
         }
+        startMetadataPackage(method);
 
+        // start metadata package and apply parameters to first template
+        cvc.startMetadataPackage(schemaId, syntaxId);
+        if (text != null) {
+            cvc.addPrebuiltMP(text);
+        }
+
+        // now ready to add further metadata packages
+        state = VEOState.ADDING_MP;
+    }
+    
+    /**
+     * Start an RDF metadata package. This is effectively a wrapper around one
+     * of the addMetadataPackage() methods; it automatically creates an RDF
+     * metadata package including the rdf:RDF and rdf:Description elements.
+     * <p>
+     * Any namespace definitions to be added as attributes to the rdf:RDF
+     * element can be passed (this may be null if there are none). The URI
+     * identifying the resource being described can be passed.
+     * <p>
+     * The content of the metadata package can be added after this call using
+     * the continueMetadataPackage(), addSimpleElementToMP(), or
+     * startComplexMetadataElementInMP() methods.
+     * <p>
+     * Metadata Packages are automatically finalised when a new
+     * Metadata Package, is started, an Information Piece is added, or a
+     * new InformationObject is started.
+     * When this package is finalised, the rdf:RDF and rdf:Description elements
+     * are automatically closed.
+     * 
+     * @param schemaId the URI identifying the schema of the Metadata Package
+     * being commenced.
+     * @param namespaceDefns any XML namespace definitions to include in the 
+     * rdf:RDF element
+     * @param resourceId a URI identifying the object being described by the RDF.
+     * @throws VEOError if a failure occurred
+     */
+    public void startRDFMetadataPackage(String schemaId, String namespaceDefns, URL resourceId) throws VEOError {
+        String method = "startRDFMetadataPackage";
+
+        // sanity checks
+        if (schemaId == null) {
+            throw new VEOError(classname, method, 2, "schema identifier parameter is null");
+        }
+        startMetadataPackage(method);
+
+        // start metadata package and apply parameters to first template
+        cvc.startRDFMetadataPackage(schemaId, namespaceDefns, resourceId);
+
+        // now ready to add further metadata packages
+        state = VEOState.ADDING_MP;
+    }
+    
+    /**
+     * Start an XML metadata package. This is effectively a wrapper around one
+     * of the addMetadataPackage() methods; it automatically creates a generic
+     * XML metadata package.
+     * <p>
+     * The content of the metadata package can be added after this call using
+     * the continueMetadataPackage(), addSimpleElementToMP(), or
+     * startComplexMetadataElementInMP() methods.
+     * <p>
+     * Metadata Packages are automatically finalised when a new
+     * Metadata Package, is started, an Information Piece is added, or a
+     * new InformationObject is started.
+     * 
+     * @param schemaId the URI identifying the schema of the Metadata Package
+     * being commenced.
+     * @throws VEOError if a failure occurred
+     */
+    public void startXMLMetadataPackage(String schemaId) throws VEOError {
+        String method = "startXMLMetadataPackage";
+
+        // sanity checks
+        if (schemaId == null) {
+            throw new VEOError(classname, method, 2, "schema identifier parameter is null");
+        }
+        startMetadataPackage(method);
+
+        // start metadata package and apply parameters to first template
+        cvc.startXMLMetadataPackage(schemaId);
+
+        // now ready to add further metadata packages
+        state = VEOState.ADDING_MP;
+    }
+    
+    /**
+     * Utility method to handle common code for starting a metadata package
+     * @param method
+     * @throws VEOError 
+     */
+    private void startMetadataPackage(String method) throws VEOError {
+        
         // finish off any previous metadata package being added...
         switch (state) {
             case VEO_STARTED:
@@ -417,27 +500,21 @@ public class CreateVEO {
             case FINISHED:
                 throw new VEOError(classname, method, 7, "A Metadata Package cannot be added after finalise() has been called");
         }
-
-        // start metadata package and apply parameters to first template
-        cvc.startMetadataPackage(schemaId, syntaxId);
-        if (text != null) {
-            cvc.addPrebuiltMP(text);
-        }
-
-        // now ready to add further metadata packages
-        state = VEOState.ADDING_MP;
     }
 
     /**
      * Continue a metadata package, applying new data into a new template. This
-     * method can be called after an addMetadataPackage() call, or a previous
-     * continueMetadataPackage() call.
+     * method can be called after a call to addMetadataPackage(),
+     * start*MetadataPackage(), addSimpleMetadataElementToMP(),
+     * startComplexMetadataElementInMP(), startComplexMetadataElementInMP(),
+     * endComplexMetadataElementInMP(), or a previous continueMetadataPackage()
+     * call.
      * <p>
      * Any number of calls to either continueMetadataPackage() method can be
-     * made. The Metadata Package is automatically finalised when a new Metadata
-     * Package is added, or an Information Piece is added.
+     * made.
      * <p>
-     * The Syntax and Semantic Identifiers in the template are ignored.
+     * Note that the Syntax and Semantic Identifiers specified on the first line
+     * of the template are ignored.
      * <p>
      * Neither argument may be null.
      *
@@ -468,9 +545,7 @@ public class CreateVEO {
     /**
      * Continue a metadata package by adding text. This method uses additional
      * text to extend a previously commenced Metadata Package. Any number of
-     * calls to either continueMetadataPackage() method can be made. The
-     * Metadata Package is automatically finalised when a new Metadata Package
-     * is added, or an Information Piece is added.
+     * calls to either continueMetadataPackage() method can be made.
      * <p>
      * Neither argument may be null.
      *
@@ -497,9 +572,7 @@ public class CreateVEO {
     /**
      * Continue a metadata package by adding text. This method uses additional
      * text to extend a previously commenced Metadata Package. Any number of
-     * calls to either continueMetadataPackage() method can be made. The
-     * Metadata Package is automatically finalised when a new Metadata Package
-     * is added, or an Information Piece is added.
+     * calls to either continueMetadataPackage() method can be made.
      * <p>
      * The data argument can not be null.
      *
@@ -508,6 +581,119 @@ public class CreateVEO {
      */
     public void continueMetadataPackage(StringBuilder text) throws VEOError {
         continueMetadataPackage(text.toString());
+    }
+    
+    /**
+     * Add a simple metadata element to a metadata package. A simple element
+     * is one whose value is simply a text string (i.e. doesn't contain
+     * subelements).
+     * <p>
+     * The element tag is represented as a string (e.g. "vers:title"). A string
+     * containing one or more attributes can be specified. The value may be
+     * null, in which case an empty element is added to the metadata package.
+     * <p>
+     * IMPORTANT - no checking is done that the tag or the attributes are
+     * valid according to the XML specification. It is the caller's
+     * responsibility to ensure this. In particular, any &amp; and &lt;
+     * characters in the attribute values are not encoded into XML entities.
+     * However, the characters &amp;, &gt;, &lt; ', and &quot; are encoded
+     * when encountered in the value. This is because attribute values are
+     * usually hard coded in the calling code, while values are usually
+     * extracted from data in the calling code.
+     * 
+     * @param tag the element tag (including namespace, if used)
+     * @param attributes any attributes to be included (null if none)
+     * @param value the value of the element (null if the element is empty
+     * @throws VEOError if a failure occurred
+     */
+    public void addSimpleMetadataElementToMP(String tag, String attributes, String value) throws VEOError {
+                String method = "addSimpleMetadataElementToMP";
+
+        // sanity checks
+        if (tag == null || tag.equals("") || tag.trim().equals(" ")) {
+            throw new VEOError(classname, method, 2, "Tag name is null, or blank");
+        }
+        if (attributes != null && (attributes.equals("") || attributes.trim().equals(" "))) {
+            attributes = null;
+        }
+        if (value != null && (value.equals("") || value.trim().equals(" "))) {
+            value = null;
+        }
+
+        // we must be already creating a Metadata Package
+        if (state != VEOState.ADDING_MP) {
+            throw new VEOError(classname, method, 3, "Can only continue a Metadata Package immediately after adding a Metadata Package or continuing a Metadata Package");
+        }
+        
+        // output the simple element
+        cvc.addSimpleElement(tag, attributes, value);
+    }
+    
+    /**
+     * Start a complex metadata elements in a metadata package. A complex element
+     * is one whose value contains sub-elements. A call to this method should
+     * be followed by calls to add the sub-elements by using the
+     * addMetadataElement() and startComplexMetadataElement() methods
+     * <p>
+     * The element tag is represented as a string (e.g. "vers:title"). A string
+     * containing one or more attributes can be specified.
+     * <p>
+     * IMPORTANT - no checking is done that the tag or the attributes are
+     * valid according to the XML specification. It is the caller's
+     * responsibility to ensure this. In particular, any &amp; and &lt;
+     * characters in the attribute values are not encoded into XML entities.
+     * 
+     * @param tag the element tag (including namespace, if used)
+     * @param attributes any attributes to be included (null if none)
+     * @throws VEOError if a failure occurred
+     */
+    public void startComplexMetadataElementInMP(String tag, String attributes) throws VEOError {
+        String method = "startComplexMetadataElementInMP";
+
+        // sanity checks
+        if (tag == null || tag.equals("") || tag.trim().equals(" ")) {
+            throw new VEOError(classname, method, 2, "Tag name is null, or blank");
+        }
+        if (attributes != null && (attributes.equals("") || attributes.trim().equals(" "))) {
+            attributes = null;
+        }
+
+        // we must be already creating a Metadata Package
+        if (state != VEOState.ADDING_MP) {
+            throw new VEOError(classname, method, 3, "Can only continue a Metadata Package immediately after adding a Metadata Package or continuing a Metadata Package");
+        }
+        
+        // output the simple element
+        cvc.startComplexElement(tag, attributes);
+    }
+    
+    /**
+     * End a complex metadata elements in a metadata package. A complex element
+     * is one whose value contains sub-elements. The method does not check
+     * whether endComplexMetadataElementInMP() calls match up with
+     * startMetadataElementInMP() calls; it is quite possible to generate
+     * invalid XML.
+     * <p>
+     * The element tag is represented as a string (e.g. "vers:title").
+     * 
+     * @param tag the element tag (including namespace, if used)
+     * @throws VEOError if a failure occurred
+     */
+    public void endComplexMetadataElementInMP(String tag) throws VEOError {
+        String method = "endComplexMetadataElement";
+
+        // sanity checks
+        if (tag == null || tag.equals("") || tag.trim().equals(" ")) {
+            throw new VEOError(classname, method, 2, "Tag name is null, or blank");
+        }
+
+        // we must be already creating a Metadata Package
+        if (state != VEOState.ADDING_MP) {
+            throw new VEOError(classname, method, 3, "Can only continue a Metadata Package immediately after adding a Metadata Package or continuing a Metadata Package");
+        }
+        
+        // output the simple element
+        cvc.endComplexElement(tag);
     }
 
     /**
@@ -549,53 +735,14 @@ public class CreateVEO {
 
         state = VEOState.ADDING_IP;
     }
-    
-    /**
-     * Add a Content File to an Information Piece. A
-     * Content File is a reference to a real physical computer file.
-     * <p>
-     * In this call, the files are referenced by a single file name that is
-     * interpreted relative to the current working directory. In the other
-     * addContentFile() calls, the file path is interpreted relative to a
-     * Content Directory. In this call, the current working directory is
-     * equivalent to the Content Directory.
-     * <p>
-     * The purpose of this division is that the relative part (c/d/e.txt in this
-     * case) explicitly appears as a directory structure in the VEO when it is
-     * generated.
-     * <p>
-     * The actual file is not physically included in the VEO until it is ZIPped,
-     * and so it must exist until the finalise() method is called.
-     * <p>
-     * All the Content Files contained within an Information Piece must be added
-     * to the Information Piece before a new Information Piece or Information
-     * Object is added.
-     * <p>
-     * The file argument must not be null, and the actual referenced file must
-     * exist.
-     *
-     * @param file the relative portion of the Content File being added
-     * @throws VERSCommon.VEOError if an error occurred
-     */
-    public void addAbsContentFile(String file) throws VEOError {
-        String method = "addContentFile";
-
-        // sanity checks
-        if (file == null) {
-            throw new VEOError(classname, method, 1, "file parameter is null");
-        }
-        
-        // interpret file relative to the current working directory
-        addContentFile(file, Paths.get("", file));
-    }
 
     /**
      * Add a Content File to an Information Piece. A Content File is a reference
-     *  to a real physical computer file.
-     *  <p>
-     *  In order to understand this method, it is important to know that the
-     *  Content Files are represented in the VEO in an arbitrary directory
-     *  structure. The arguments to this method are the veoReference (the
+     * to a real physical computer file.
+     * <p>
+     * In order to understand this method, it is important to know that the
+     * Content Files are represented in the VEO in an arbitrary directory
+     * structure. The arguments to this method are the veoReference (the
      * directory structure in the VEO) and the source (the actual location of
      * the Content File in the file system). For example, if the veoReference is
      * 'c/d/e.txt', and the source 'm:/a/b/c/f.txt', this would incorporate the
@@ -613,7 +760,7 @@ public class CreateVEO {
      * to the Information Piece before a new Information Piece or Information
      * Object is added.
      * <p>
-     * The neither argument is allowed to be null.
+     * Neither argument is allowed to be null.
      *
      * @param veoReference path name of content file in the VEO
      * @param source actual real veoReference in the veoReference system
@@ -661,31 +808,20 @@ public class CreateVEO {
         // if ZIPping files, remember it...
         cvc.addContentFile(veoReference, source);
     }
-
+    
     /**
-     * Add a Content File to an Information Piece. A Content File is a reference
-     * to a real physical computer file.
+     * Add a Content File to an Information Piece. A
+     * Content File is a reference to a real physical computer file.
      * <p>
-     * <b>
-     * This method is retained for backwards compatability. Users should use the
-     * simpler and more easily understood addContentFile(String, Path) method.
-     * </b>
-     * <p>
-     * The files are referenced by a two part scheme, the parts are the path to
-     * a Content Directory and a file reference relative to the Content
-     * Directory. For example, to include the file m:/a/b/c/d/e.txt, you might
-     * divide this up into a Content Directory m:a/b/c and a relative reference
-     * c/d/e.txt. Note that the directory c appears in both parts.
+     * In this call, the files are referenced by a single file name that is
+     * interpreted relative to the current working directory. In the other
+     * addContentFile() calls, the file path is interpreted relative to a
+     * Content Directory. In this call, the current working directory is
+     * equivalent to the Content Directory.
      * <p>
      * The purpose of this division is that the relative part (c/d/e.txt in this
      * case) explicitly appears as a directory structure in the VEO when it is
      * generated.
-     * <p>
-     * The Content Directories (m:a/b/c in this example) are registered using
-     * the registerContentDirectories() method. The portion relative to the
-     * Content Directory (c/d/e.txt in this example) is passed as an argument to
-     * the addContentFile() method. Note that the directory 'c' is used to link
-     * the two portions together.
      * <p>
      * The actual file is not physically included in the VEO until it is ZIPped,
      * and so it must exist until the finalise() method is called.
@@ -700,49 +836,30 @@ public class CreateVEO {
      * @param file the relative portion of the Content File being added
      * @throws VERSCommon.VEOError if an error occurred
      */
-    public void addContentFile(String file) throws VEOError {
+    public void addAbsContentFile(String file) throws VEOError {
         String method = "addContentFile";
 
         // sanity checks
         if (file == null) {
             throw new VEOError(classname, method, 1, "file parameter is null");
         }
-
-        // can only add Content Files when adding an Information Piece
-        if (state != VEOState.ADDING_IP) {
-            throw new VEOError(classname, method, 2, "Can only add a Content File when adding an Information Piece");
-        }
-
-        // interpret file relative to a content directory
-        addContentFile(file, getActualSourcePath(file));
+        
+        // interpret file relative to the current working directory
+        addContentFile(file, Paths.get("", file));
     }
-
+    
     /**
-     * Get the path to the real source file. This method can only be used if you
-     * are using the addContentFile(String) and
-     * registerContentDirectories(Path...) methods. It converts the short hand
-     * form 'c/d/e.txt' into a fully qualified name. If no directory 'c' has
-     * been loaded by a registerContentDirectories() call, a VEOError is thrown.
+     * A synonym for registerContentDirectories(), retained for backwards
+     * compatibility.
      *
-     * @param file the path name to be used in the VEO
-     * @return the real file
+     * @param directories a list of directories to be registered
      * @throws VERSCommon.VEOError if an error occurred
      */
-    public Path getActualSourcePath(String file) throws VEOError {
-        String method = "getSourcePath";
-        Path rootPath, source, destination;
-        String rootName;
-
-        destination = Paths.get(file);
-        rootName = destination.getName(0).toString();
-        rootPath = contentPrefixes.get(rootName);
-        if (rootPath == null) {
-            throw new VEOError(classname, method, 1, "cannot match veoFile '" + file + "' to a content directory");
-        }
-        source = rootPath.resolve(destination.subpath(1, destination.getNameCount()));
-        return source;
+    @Deprecated
+    public void addContent(Path... directories) throws VEOError {
+        registerContentDirectories(directories);
     }
-
+    
     /**
      * Register content directories where content files will be found. This has
      * two purposes. First, it allows shorthand references to content files.
@@ -750,9 +867,9 @@ public class CreateVEO {
      * final ZIP file.
      * <p>
      * <b>
-     * This method is only used with the addContentFile(String) method. Users
-     * should use the simpler and more easily understood addContentFile(String,
-     * Path) method instead.
+     * This method deprecated and is only used with the addContentFile(String)
+     * method. Users should use the simpler and more easily understood
+     * addContentFile(String, Path) method instead.
      * </b>
      * <p>
      * For example, if the content files are m:/a/b/c/d/e.txt and
@@ -777,6 +894,7 @@ public class CreateVEO {
      * @param directories a list of directories to be registered
      * @throws VERSCommon.VEOError if an error occurred
      */
+    @Deprecated
     public void registerContentDirectories(Path... directories) throws VEOError {
         String method = "addContent";
         int i;
@@ -827,77 +945,88 @@ public class CreateVEO {
     }
 
     /**
-     * A synonym for registerContentDirectories(), retained for backwards
-     * compatability.
+     * Add a Content File to an Information Piece. A Content File is a reference
+     * to a real physical computer file.
+     * <p>
+     * <b>
+     * This method is deprecated and retained for backwards compatability. Users
+     * should use the simpler and more easily understood
+     * addContentFile(String, Path) method.
+     * </b>
+     * <p>
+     * The files are referenced by a two part scheme, the parts are the path to
+     * a Content Directory and a file reference relative to the Content
+     * Directory. For example, to include the file m:/a/b/c/d/e.txt, you might
+     * divide this up into a Content Directory m:a/b/c and a relative reference
+     * c/d/e.txt. Note that the directory c appears in both parts.
+     * <p>
+     * The purpose of this division is that the relative part (c/d/e.txt in this
+     * case) explicitly appears as a directory structure in the VEO when it is
+     * generated.
+     * <p>
+     * The Content Directories (m:a/b/c in this example) are registered using
+     * the registerContentDirectories() method. The portion relative to the
+     * Content Directory (c/d/e.txt in this example) is passed as an argument to
+     * the addContentFile() method. Note that the directory 'c' is used to link
+     * the two portions together.
+     * <p>
+     * The actual file is not physically included in the VEO until it is ZIPped,
+     * and so it must exist until the finalise() method is called.
+     * <p>
+     * All the Content Files contained within an Information Piece must be added
+     * to the Information Piece before a new Information Piece or Information
+     * Object is added.
+     * <p>
+     * The file argument must not be null, and the actual referenced file must
+     * exist.
      *
-     * @param directories a list of directories to be registered
+     * @param file the relative portion of the Content File being added
      * @throws VERSCommon.VEOError if an error occurred
      */
-    public void addContent(Path... directories) throws VEOError {
-        registerContentDirectories(directories);
+    @Deprecated
+    public void addContentFile(String file) throws VEOError {
+        String method = "addContentFile";
+
+        // sanity checks
+        if (file == null) {
+            throw new VEOError(classname, method, 1, "file parameter is null");
+        }
+
+        // can only add Content Files when adding an Information Piece
+        if (state != VEOState.ADDING_IP) {
+            throw new VEOError(classname, method, 2, "Can only add a Content File when adding an Information Piece");
+        }
+
+        // interpret file relative to a content directory
+        addContentFile(file, getActualSourcePath(file));
     }
 
     /**
-     * Add individual content file to the default directory in the VEO being
-     * created. Content files can be copied, moved, or linked into the VEO
-     * directory. Linking the files is the fastest, but is not supported across
-     * file systems
+     * Get the path to the real source file. This method can only be used if you
+     * are using the addContentFile(String) and
+     * registerContentDirectories(Path...) methods. It converts the short hand
+     * form 'c/d/e.txt' into a fully qualified name. If no directory 'c' has
+     * been loaded by a registerContentDirectories() call, a VEOError is thrown.
      *
-     * @param files a list of directories to be added
-     * @throws VEOError if the error affects this VEO only
-     * @throws VEOFatal if the error means no VEOs can be generated
+     * @param file the path name to be used in the VEO
+     * @return the real file
+     * @throws VERSCommon.VEOError if an error occurred
      */
-    /*
-    public void addIndividualContentFiles(Path... files) throws VEOError {
-        String method = "addIndividualContentFiles";
-        int i;
-        boolean nofiles;
-        String s;
+    @Deprecated
+    public Path getActualSourcePath(String file) throws VEOError {
+        String method = "getSourcePath";
+        Path rootPath, source, destination;
+        String rootName;
 
-        // check there is at least one directory to add...
-        nofiles = true;
-
-        // can only add content until the VEO has been signed
-        switch (state) {
-            case VEO_STARTED:
-            case IO_STARTED:
-            case ADDING_MP:
-            case ADDING_IP:
-                break;
-            case FINISHED_FILES:
-                throw new VEOError(classname, method, 2, "Content cannot be added after finishFiles() has been called");
-            case SIGNED:
-                throw new VEOError(classname, method, 3, "Content cannot be added after sign() has been called");
-            case FINISHED:
-                throw new VEOError(classname, method, 4, "Content cannot be added after finalise() has been called");
+        destination = Paths.get(file);
+        rootName = destination.getName(0).toString();
+        rootPath = contentPrefixes.get(rootName);
+        if (rootPath == null) {
+            throw new VEOError(classname, method, 1, "cannot match veoFile '" + file + "' to a content directory");
         }
-        // add directories...
-        for (i = 0; i < files.length; i++) {
-
-            // check that the source content file exists
-            if (files[i] == null) {
-                throw new VEOError(classname, method, 5, "a content file is null");
-            }
-            if (files[i].toString().equals("") || files[i].toString().trim().equals(" ")) {
-                continue;
-            }
-            nofiles = false;
-            if (!Files.exists(files[i])) {
-                throw new VEOError(classname, method, 6, "content file '" + files[i].toString() + "' does not exist");
-            }
-
-            // log.log(Level.WARNING, "veoDir:''{0}''{1}''{2}", new Object[]{veoDir, directories[i], toDir});
-            // link the content directory into the VEO directory
-            s = veoDir.resolve(Paths.get("DefaultContent")).resolve(files[i].getFileName()).toString();
-            filesToInclude.add(new FileToInclude(files[i], s));
-        }
-
-        // check that at least one file has been added...
-        if (nofiles) {
-            throw new VEOError(classname, method, 1, "must be passed at least one (non blank) file");
-        }
+        source = rootPath.resolve(destination.subpath(1, destination.getNameCount()));
+        return source;
     }
-     */
     
     /**
      * Add an event to the VEOHistory.xml file. An event has five parameters:

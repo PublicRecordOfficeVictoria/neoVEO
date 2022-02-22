@@ -10,6 +10,7 @@ package VEOCreate;
 
 import VERSCommon.VEOError;
 import java.io.*;
+import java.net.URL;
 import java.nio.file.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -25,7 +26,6 @@ class CreateVEOContent extends CreateXMLDoc {
     String version; // version to use (default is "3.0")
 
     private enum State {
-
         NOT_STARTED, // First Information Object has not been started
         FIRST_STG_INFO_OBJ, // Information Object has been started, but an Information Piece has not been added
         GEN_META_PACK, // Metadata Package is being generated
@@ -35,6 +35,7 @@ class CreateVEOContent extends CreateXMLDoc {
         FINISHED_INFO_OBJ     // Ready to start new Information Object
     }
     State state;      // the state of creation of the content file
+    boolean rdfMetadataPackage; // true if creating an RDF MetadataPackage
 
     String hashAlgorithm; // hash algorithm to use on content files
 
@@ -75,6 +76,7 @@ class CreateVEOContent extends CreateXMLDoc {
             throw new VEOError(classname, 1, "version is blank");
         }
         this.version = version;
+        rdfMetadataPackage = false;
 
         // check hash algorithm specification
         if (hashAlgorithm == null) {
@@ -185,6 +187,53 @@ class CreateVEOContent extends CreateXMLDoc {
             = "</vers:MetadataSyntaxIdentifier>\r\n";
     static String contentsMP5
             = "  </vers:MetadataPackage>\r\n";
+    static String contentsRDFMP1
+            = "   <rdf:RDF";
+    static String contentsRDFMP2
+            = ">\r\n    <rdf:Description rdf:about=\"";
+    static String contentsRDFMP3
+            = "\">\r\n";
+    static String contentsRDFMP4
+            = "    </rdf:Description>\r\n"
+            + "   </rdf:RDF>\r\n";
+
+    /**
+     * Start an RDF metadata package (a specific type of metadata package).
+     * The namespaceDefns may be NULL, but the resourceId must be present.
+     *
+     * @param semanticId the string to use to identify the meaning of metadata
+     * @param namespaceDefns any namespace definitions to include in rdf:RDF
+     * @param entityId a URL identifying the resource the RDF is describing
+     * @throws VEOError
+     */
+    public void startRDFMetadataPackage(String semanticId, String namespaceDefns, URL resourceId) throws VEOError {
+        String method = "startRDFMetadataPackage";
+
+        startMetadataPackage(semanticId, "http://www.w3.org/1999/02/22-rdf-syntax-ns");
+        write(contentsRDFMP1);
+        if (namespaceDefns != null) {
+            write(" ");
+            write(namespaceDefns);
+        }
+        write(contentsRDFMP2);
+        write(resourceId.toExternalForm());
+        write(contentsRDFMP3);
+        rdfMetadataPackage = true;
+        indentDepth = 6;
+    }
+
+    /**
+     * Start an an XML metadata package (a specific type of metadata package).
+     *
+     * @param semanticId the string to use to identify the meaning of metadata
+     * @throws VEOError
+     */
+    public void startXMLMetadataPackage(String semanticId) throws VEOError {
+        String method = "startRDFMetadataPackage";
+
+        startMetadataPackage(semanticId, "https://www.w3.org/TR/2008/REC-xml-20081126/");
+        indentDepth = 3;
+    }
 
     /**
      * Start a Metadata Package in an Information Object
@@ -213,6 +262,7 @@ class CreateVEOContent extends CreateXMLDoc {
         write(contentsMP3);
         writeValue(syntaxId);
         write(contentsMP4);
+        indentDepth = 0;
     }
 
     /**
@@ -284,6 +334,12 @@ class CreateVEOContent extends CreateXMLDoc {
             throw new VEOError(classname, method, 1, "Cannot finish a metadata package before starting it");
         }
         state = State.FIRST_STG_INFO_OBJ;
+
+        // if generating an RDF metadata package, finish it
+        if (rdfMetadataPackage) {
+            write(contentsRDFMP4);
+        }
+        rdfMetadataPackage = false;
 
         // finish the metadata package
         write(contentsMP5);
