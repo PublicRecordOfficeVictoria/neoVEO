@@ -127,10 +127,11 @@ public class VEOAnalysis {
      * 20220127 3.14 Now test in RepnMetadataPackage if vers:MetadataPackage includes RDF namespace if syntax is RDF
      * 20220127 3.15 Now reports on the number of IOs in VEO
      * 20220214 3.16 xmlns:rdf namespace can be defined in any of the top level elements
+     * 20220310 3.17 Don't assume metadata package is RDF if xmlns:rdf is defined
      * </pre>
      */
     static String version() {
-        return ("3.16");
+        return ("3.17");
     }
 
     /**
@@ -151,7 +152,7 @@ public class VEOAnalysis {
      * @param chatty true if report when starting a new VEO
      * @param debug true if debugging information is to be generated
      * @param verbose true if verbose descriptions are to be generated
-     * @param results if not null, create a summary of the errors & warnings
+     * @param results if not null, create a summary of the errors &amp; warnings
      * @throws VEOError if something goes wrong
      */
     public VEOAnalysis(Path supportDir, LTSF ltsfs, Path outputDir,

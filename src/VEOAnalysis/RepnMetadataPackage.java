@@ -82,8 +82,12 @@ class RepnMetadataPackage extends Repn {
         // VERS:MetadataSyntaxIdentifier
         syntaxId = new RepnItem(getId(), "Metadata syntax id:", results);
         syntaxId.setValue(document.getTextValue());
-        if (!rdf && syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
-            throw new VEOError("Error. Metadata Package has vers:MetadataSyntaxIdentifier of http://www.w3.org/1999/02/22-rdf-syntax-ns, but xmlns:rdf namespace attribute is not defined");
+        if (syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
+            if (!rdf) {
+                throw new VEOError("Error. Metadata Package has vers:MetadataSyntaxIdentifier of http://www.w3.org/1999/02/22-rdf-syntax-ns, but xmlns:rdf namespace attribute is not defined");
+            }
+        } else {
+            this.rdf = false; // force rdf false, even if we have seen RDF attributes defined
         }
         document.gotoNextElement();
 
@@ -96,13 +100,13 @@ class RepnMetadataPackage extends Repn {
 
     /**
      * Validate the data in the Metadata Package.
-     * 
+     *
      * This uses Apache Jena to parse, validate, and extract RDF metadata. Jena
      * in turn uses Log4j and slf4j for its logging. This is the only place that
      * Log4j is used; the rest of VEOAnalysis uses the standard Java logging
      * library. Consequently, this class constructs a simple WriteAppender, and
-     * Jena logging is captured into it and then added as Errors or Warnings.
-     * If it is necessary to update Jena (or Log4j!), get the Jena distribution.
+     * Jena logging is captured into it and then added as Errors or Warnings. If
+     * it is necessary to update Jena (or Log4j!), get the Jena distribution.
      * This should contain the necessary Log4j and slf4j files - there is no
      * need to download them separately. Note that most of the jar files
      * included in the Jena distribution are not necessary. Currently the only
@@ -121,7 +125,7 @@ class RepnMetadataPackage extends Repn {
         StringWriter parseErrs;     // place where parse errors can be captured
         int i;
         Element e;
-        
+
         // confirm that there is a non empty vers:MetadataSchemaIdentifier element
         if (schemaId.getValue() == null) {
             addError("vers:MetadataSchemaIdentifier element is missing or has a null value");
@@ -141,7 +145,7 @@ class RepnMetadataPackage extends Repn {
             addError("vers:MetadataSyntaxIdentifier element is empty");
             return false;
         }
-        
+
         // can only validate metadata if RDF, with further validation possible
         // if AGLS or AS5478
         if (!rdf) {
@@ -167,7 +171,7 @@ class RepnMetadataPackage extends Repn {
             loggerConfig.addAppender(appender, level, filter);
         }
         config.getRootLogger().addAppender(appender, level, filter);
-        
+
         // This is the equivalent for the original Log4j. Code is kept in case
         // it is needed to be used again. Note that you need to set the
         // configuration in RepnVEO.java.
@@ -177,8 +181,7 @@ class RepnMetadataPackage extends Repn {
         appender.setThreshold(org.apache.logging.log4j.Level.WARN);
         Logger.getRootLogger().removeAllAppenders();
         Logger.getRootLogger().addAppender(appender);
-        */
-
+         */
         for (i = 0; i < metadata.size(); i++) {
             e = metadata.get(i);
 
@@ -207,9 +210,8 @@ class RepnMetadataPackage extends Repn {
                 // merge the newly passed model into the bigger one
                 rdfModel = rdfModel.union(m);
                 m.removeAll();
-                
-                // rdfModel.write(System.out);
 
+                // rdfModel.write(System.out);
                 // if errors occurred, remember them
                 if (parseErrs.getBuffer().length() > 0) {
                     addError(parseErrs.toString().trim());
@@ -227,8 +229,8 @@ class RepnMetadataPackage extends Repn {
         }
 
         // if ANZS5478 check to see if the required properties are present and valid
-        if (schemaId.getValue().endsWith("ANZS5478") ||
-            schemaId.getValue().equals("http://www.prov.vic.gov.au/VERS-as5478")) {
+        if (schemaId.getValue().endsWith("ANZS5478")
+                || schemaId.getValue().equals("http://www.prov.vic.gov.au/VERS-as5478")) {
             if (!syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
                 addError("ANZS-5478 metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'");
                 return false;
@@ -239,8 +241,8 @@ class RepnMetadataPackage extends Repn {
         }
 
         // if AGLS check to see if the required properties are present and valid
-        if (schemaId.getValue().endsWith("AGLS") ||
-            schemaId.getValue().equals("http://www.vic.gov.au/blog/wp-content/uploads/2013/11/AGLS-Victoria-2011-V4-Final-2011.pdf")) {
+        if (schemaId.getValue().endsWith("AGLS")
+                || schemaId.getValue().equals("http://www.vic.gov.au/blog/wp-content/uploads/2013/11/AGLS-Victoria-2011-V4-Final-2011.pdf")) {
             if (!syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
                 addError("AGLS metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'");
                 return false;
@@ -625,12 +627,12 @@ class RepnMetadataPackage extends Repn {
      * properties are flagged as errors. Missing conditional properties are
      * flagged as warnings. The value of a property is not checked for
      * conformance.
-     * 
+     *
      * Five properties (aglsterms:dateLicensed, aglsterms:aggregationLevel,
      * aglsterms:category, aglsterms:documentType, and aglsterms:serviceType)
      * originally had the wrong namespace prefix (dcterms) in the specification.
-     * The validation has been altered to *warn* if the incorrect properties
-     * are present, rather than flag an error.
+     * The validation has been altered to *warn* if the incorrect properties are
+     * present, rather than flag an error.
      */
     static final Property AGLS_CREATOR = ResourceFactory.createProperty(DC_TERMS, "creator");
     static final Property AGLS_TITLE = ResourceFactory.createProperty(DC_TERMS, "title");
@@ -850,7 +852,8 @@ class RepnMetadataPackage extends Repn {
      * Generate a HTML representation of the metadata package.
      *
      * @param verbose true if additional information is to be generated
-     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
+     * @throws VERSCommon.VEOError if prevented from continuing processing this
+     * VEO
      */
     public void genReport(boolean verbose) throws VEOError {
         Node n;
@@ -974,6 +977,7 @@ class RepnMetadataPackage extends Repn {
     /**
      * Generate a HTML representation of RDF. Actually, we just generate a
      * RDF/XML representation of the RDF and output that.
+     *
      * @throws VERSCommon.VEOError if a problem occurred
      */
     public void addRDF() throws VEOError {
@@ -984,7 +988,7 @@ class RepnMetadataPackage extends Repn {
         try {
             rdfModel.write(sw, syntax);
         } catch (BadURIException bue) {
-            throw new VEOError("RDF failure: "+bue.getMessage()+" RepnMetadataPackage.addRDF()");
+            throw new VEOError("RDF failure: " + bue.getMessage() + " RepnMetadataPackage.addRDF()");
         }
         addTag("<pre>");
         addString(sw.toString());
