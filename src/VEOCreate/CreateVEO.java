@@ -845,7 +845,7 @@ public class CreateVEO {
         }
         
         // interpret file relative to the current working directory
-        addContentFile(file, Paths.get("", file));
+        addContentFile(file, Paths.get(".", file));
     }
     
     /**

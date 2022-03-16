@@ -288,10 +288,11 @@ public class CreateVEOs {
      * 20210716 2.6 Changes to fix Lint warning
      * 20220124 2.7 Changed to using Apache ZIP to be consistant with VEOAnalysis
      * 20220218 3.0 Added the ability to construct metadata packages element by element. Rewrite of documentation
+     * 20220316 3.1 Fixed bug in addAbsContentFile() - not current directory
      * </pre>
      */
     static String version() {
-        return ("3.0");
+        return ("3.1");
     }
 
     /**
