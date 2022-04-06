@@ -57,6 +57,7 @@ abstract class RepnXML extends Repn implements ErrorHandler {
      * the document.
      *
      * @param id the identifier to use in describing this
+     * @param results the results summary to build
      * @throws VERSCommon.VEOFatal if prevented from continuing processing at all
      */
     protected RepnXML(String id, ResultSummary results) throws VEOFatal {

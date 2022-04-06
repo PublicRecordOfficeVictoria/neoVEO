@@ -59,6 +59,7 @@ class RepnVEO extends Repn {
      * @param veo the zip file containing the VEO
      * @param debug true if more detail is to be generated
      * @param output the directory in which to extract the VEO
+     * @param results the results summary to build
      * @throws VEOError if the XML document has not been properly parsed
      */
     public RepnVEO(String veo, boolean debug, Path output, ResultSummary results) throws VEOError {
@@ -719,15 +720,17 @@ class RepnVEO extends Repn {
      * validate().
      *
      * @param verbose true if additional information is to be generated
+     * @param pVersion The version of VEOAnalysis
+     * @param copyright The copyright string
      * @throws VERSCommon.VEOError if prevented from continuing processing this
      * VEO
      */
-    public void genReport(boolean verbose) throws VEOError {
+    public void genReport(boolean verbose, String pVersion, String copyright) throws VEOError {
         String method = "genReport";
         int i;
         String r;
         Path cssSource, cssDest;
-
+        
         // copy in CSS file from schema directory
         cssSource = schemaDir.resolve("ReportStyle.css");
         cssDest = veoDir.resolve("ReportStyle.css");
@@ -742,7 +745,7 @@ class RepnVEO extends Repn {
         }
 
         // create index file
-        createReport(veoDir, "index.html", "Report for " + veoDir.getFileName());
+        createReport(veoDir, "index.html", "Report for " + veoDir.getFileName(), pVersion, copyright);
 
         // check for errors and warnings
         hasErrors();
@@ -758,7 +761,7 @@ class RepnVEO extends Repn {
         }
 
         if (veoContent != null) {
-            veoContent.genReport(verbose, veoDir);
+            veoContent.genReport(verbose, veoDir, pVersion, copyright);
             startDiv(veoContent, "VEOContent", null);
             addString("Report for ");
             addTag("<a href=\"./Report-VEOContent.html\">");
@@ -768,7 +771,7 @@ class RepnVEO extends Repn {
         }
 
         if (veoHistory != null) {
-            veoHistory.genReport(verbose, veoDir);
+            veoHistory.genReport(verbose, veoDir, pVersion, copyright);
             startDiv(veoHistory, "VEOHistory", null);
             addString("Report for ");
             addTag("<a href=\"./Report-VEOHistory.html\">");
@@ -779,7 +782,7 @@ class RepnVEO extends Repn {
 
         for (i = 0; i < veoContentSignatures.size(); i++) {
             r = "VEOContentSignature" + Integer.toString(i + 1);
-            veoContentSignatures.get(i).genReport(verbose, veoDir, r + ".xml");
+            veoContentSignatures.get(i).genReport(verbose, veoDir, r + ".xml", pVersion, copyright);
             startDiv(veoContentSignatures.get(i), "VEOContentSig", null);
             addString("Report for ");
             addTag("<a href=\"./Report-" + r + ".html\">");
@@ -790,7 +793,7 @@ class RepnVEO extends Repn {
 
         for (i = 0; i < veoHistorySignatures.size(); i++) {
             r = "VEOHistorySignature" + Integer.toString(i + 1);
-            veoHistorySignatures.get(i).genReport(verbose, veoDir, r + ".xml");
+            veoHistorySignatures.get(i).genReport(verbose, veoDir, r + ".xml", pVersion, copyright);
             startDiv(veoHistorySignatures.get(i), "VEOHistorySig", null);
             addString("Report for ");
             addTag("<a href=\"./Report-" + r + ".html\">");
@@ -801,7 +804,7 @@ class RepnVEO extends Repn {
 
         for (i = 0; i < contentDirs.size(); i++) {
             r = contentDirs.get(i).getFileName();
-            contentDirs.get(i).genReport(verbose, veoDir, r);
+            contentDirs.get(i).genReport(verbose, veoDir, r, pVersion, copyright);
             startDiv(contentDirs.get(i), "ContentDir", null);
             addString("Report for ");
             addTag("<a href=\"./Report-" + r + ".html\">");
@@ -819,7 +822,6 @@ class RepnVEO extends Repn {
             addString(" file\n");
             if (readme.hasErrors || readme.hasWarnings) {
                 addTag("<ul>\n");
-                readme.setReportWriter(getReportWriter());
                 readme.listIssues();
                 addTag("</ul>\n");
             }

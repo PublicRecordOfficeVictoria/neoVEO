@@ -9,7 +9,7 @@ package VEOAnalysis;
 import VERSCommon.LTSF;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
-import java.io.BufferedWriter;
+import java.io.Writer;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,6 +30,7 @@ class RepnInformationPiece extends Repn {
      * @param document the representation of the XML document
      * @param parentId the parent object identifier
      * @param seq the sequence number of this IP within the Information Object
+     * @param results the results summary to build
      * @throws VEOError if the XML document has not been properly parsed
      */
     public RepnInformationPiece(RepnXML document, String parentId, int seq, ResultSummary results) throws VEOError {
@@ -200,11 +201,13 @@ class RepnInformationPiece extends Repn {
      * Generate an XML representation of the information piece
      *
      * @param verbose true if additional information is to be generated
+     * @param writer where to write the output
      * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
      */
-    public void genReport(boolean verbose) throws VEOError {
+    public void genReport(boolean verbose, Writer w) throws VEOError {
         int i;
 
+        this.w = w;
         startDiv("InfoPiece", null);
         addLabel("Information Piece");
         if (label != null) {
@@ -219,26 +222,8 @@ class RepnInformationPiece extends Repn {
             addTag("</ul>\n");
         }
         for (i = 0; i < contents.size(); i++) {
-            contents.get(i).genReport(verbose);
+            contents.get(i).genReport(verbose, w);
         }
         endDiv();
-    }
-
-    /**
-     * Tell all the Representations where to write the HTML
-     *
-     * @param bw buffered writer for output
-     */
-    @Override
-    public void setReportWriter(BufferedWriter bw) {
-        int i;
-
-        super.setReportWriter(bw);
-        if (label != null) {
-            label.setReportWriter(bw);
-        }
-        for (i = 0; i < contents.size(); i++) {
-            contents.get(i).setReportWriter(bw);
-        }
     }
 }

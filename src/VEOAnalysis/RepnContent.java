@@ -9,7 +9,6 @@ package VEOAnalysis;
 import VERSCommon.LTSF;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
-import java.io.BufferedWriter;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -36,15 +35,17 @@ class RepnContent extends RepnXML {
      * @param veoDir VEO directory in which the VEOContent.xml file is
      * @param schemaDir schemaDir directory in which the VEOContent.xsd file is
      * @param contentFiles collection of content files in VEO
+     * @param results the results summary to build
      * @throws VEOError if a fatal error occurred
      */
     public RepnContent(Path veoDir, Path schemaDir, HashMap<Path, RepnFile> contentFiles, ResultSummary results) throws VEOError {
         super("VEOContent.xml", results);
 
-        RepnInformationObject io;
+        RepnInformationObject io, parentIO;
         Path file, schema;
         String rdfNameSpace;
         boolean rdf; // true if we have seen the RDF namespace declaration
+        ArrayList<RepnInformationObject> lastIOatDepth = new ArrayList<>();
 
         version = new RepnItem(getId(), "Version", results);
         hashAlgorithm = new RepnItem(getId(), "Hash algorithm", results);
@@ -102,6 +103,30 @@ class RepnContent extends RepnXML {
             gotoNextElement();
             ioCnt++;
             io = new RepnInformationObject(this, getId(), ioCnt, rdf, results);
+
+            // build the tree of IOs
+            if (io.getDepth() > 0) {
+
+                // add this io as a child of the last io we saw at depth-1
+                if (io.getDepth() > 1) {
+                    parentIO = lastIOatDepth.get(io.getDepth() - 2);
+                    if (parentIO != null) {
+                        parentIO.addChild(io);
+                        io.setParent(parentIO);
+                    } else {
+                        throw new VEOError("Error detected:\n  Error (VEOContent.xml): IO has depth of " + io.getDepth() + " but last seen IO at depth-1 is null");
+                    }
+                }
+
+                // record this as the latest io found at this depth
+                if (io.getDepth() - 1 == lastIOatDepth.size()) {
+                    lastIOatDepth.add(io);
+                } else if (io.getDepth() - 1 < lastIOatDepth.size()) {
+                    lastIOatDepth.set(io.getDepth() - 1, io);
+                } else {
+                    throw new VEOError("Error detected:\n  Error (VEOContent.xml): IO has depth of " + io.getDepth() + " which is more than one more than the maximum depth " + lastIOatDepth.size());
+                }
+            }
             infoObjs.add(io);
         }
     }
@@ -277,14 +302,16 @@ class RepnContent extends RepnXML {
      *
      * @param veoDir the directory in which to create the report
      * @param verbose true if additional information is to be generated
+     * @param pVersion the version of VEOAnalysis for reporting
+     * @param copyright the copyright string for reporting
      * @throws VERSCommon.VEOError if prevented from continuing processing this
      * VEO
      */
-    public void genReport(boolean verbose, Path veoDir) throws VEOError {
+    public void genReport(boolean verbose, Path veoDir, String pVersion, String copyright) throws VEOError {
         int i;
+        RepnInformationObject rio;
 
-        createReport(veoDir, "Report-VEOContent.html", "Report for 'VEOContent.xml'");
-        setReportWriter(getReportWriter());
+        createReport(veoDir, "Report-VEOContent.html", "Report for 'VEOContent.xml'", pVersion, copyright);
         startDiv("xml", null);
         addLabel("XML Document");
         if (hasErrors || hasWarnings) {
@@ -293,32 +320,37 @@ class RepnContent extends RepnXML {
             addTag("</ul>\n");
         }
         if (contentsAvailable()) {
-            version.genReport(verbose);
-            hashAlgorithm.genReport(verbose);
-            for (i = 0; i < infoObjs.size(); i++) {
-                infoObjs.get(i).genReport(verbose);
+            version.genReport(verbose, w);
+            hashAlgorithm.genReport(verbose, w);
+            if (infoObjs.size() > 0) {
+                startDiv("InfoObjs", null);
+                addLabel("Information Objects: ");
+                for (i = 0; i < infoObjs.size(); i++) {
+                    rio = infoObjs.get(i);
+                    if (rio.getDepth() < 2) {
+                        startDiv("InfoObj", null);
+                        addLabel("Information Object: ");
+                        addString("Type: '");
+                        addString(rio.getType());
+                        addString("' Depth:");
+                        addString(Integer.toString(rio.getDepth()));
+                        addString(" ");
+                        addTag("<a href=\"./" + rio.genLink() + "\">");
+                        addString(rio.getId());
+                        addTag("</a>");
+                        endDiv();
+                    }
+                }
+                endDiv();
             }
         } else {
             addString(" VEOContent.xml: No valid content available as parse failed\n");
         }
         endDiv();
         finishReport();
-    }
 
-    /**
-     * Tell all the Representations where to write the HTML
-     *
-     * @param bw buffered writer where the report is to be written
-     */
-    @Override
-    public void setReportWriter(BufferedWriter bw) {
-        int i;
-
-        // super.setReportWriter(bw); don't need to do this as it is set in createReport()
-        version.setReportWriter(bw);
-        hashAlgorithm.setReportWriter(bw);
         for (i = 0; i < infoObjs.size(); i++) {
-            infoObjs.get(i).setReportWriter(bw);
+            infoObjs.get(i).genReport(verbose, veoDir, pVersion, copyright);
         }
     }
 
@@ -337,7 +369,7 @@ class RepnContent extends RepnXML {
         try {
             rc = new RepnContent(veoDir, schemaDir, null, null);
             System.out.println(rc.dumpDOM());
-            rc.genReport(false, veoDir);
+            rc.genReport(false, veoDir, "1.0", "Copyright");
             // System.out.println(rc.toString());
         } catch (VEOError e) {
             System.out.println(e.getMessage());

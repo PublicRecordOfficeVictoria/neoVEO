@@ -6,14 +6,11 @@
  */
 package VEOAnalysis;
 
-import VERSCommon.B64;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import VERSCommon.VERSDate;
 import java.io.BufferedInputStream;
-import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -61,6 +58,7 @@ class RepnSignature extends RepnXML {
      * @param veoDir VEO directory that contains the VEOSignature.xml file
      * @param sigFileName The signature file
      * @param schemaDir schemaDir directory that contains vers2-signature.xsd
+     * @param results the results summary to build
      * @throws VEOError if an error occurred processing this VEO
      */
     public RepnSignature(Path veoDir, String sigFileName, Path schemaDir, ResultSummary results) throws VEOError {
@@ -570,9 +568,11 @@ class RepnSignature extends RepnXML {
      * @param verbose true if additional information is to be generated
      * @param veoDir the directory in which to create the report
      * @param fileName the file the report will be about
+     * @param pVersion The version of VEOAnalysis
+     * @param copyright The copyright string
      * @throws VEOError if a fatal error occurred
      */
-    public void genReport(boolean verbose, Path veoDir, String fileName) throws VEOError {
+    public void genReport(boolean verbose, Path veoDir, String fileName, String pVersion, String copyright) throws VEOError {
         String reportName;
         int i;
         X509Certificate x509c;
@@ -584,8 +584,7 @@ class RepnSignature extends RepnXML {
             throw new VEOError(classname, 3, "File name must end in .xml, but is '" + fileName + "'");
         }
         reportName = "Report-" + fileName.substring(0, i) + ".html";
-        createReport(veoDir, reportName, "Signature Report for '" + fileName + "'");
-        setReportWriter(getReportWriter());
+        createReport(veoDir, reportName, "Signature Report for '" + fileName + "'", pVersion, copyright);
         startDiv("xml", null);
         addLabel("XML Document");
         if (hasErrors || hasWarnings) {
@@ -594,16 +593,16 @@ class RepnSignature extends RepnXML {
             addTag("</ul>\n");
         }
         if (contentsAvailable()) {
-            version.genReport(verbose);
-            signature.genReport(verbose);
-            sigAlgorithm.genReport(verbose);
-            sigDateTime.genReport(verbose);
-            signer.genReport(verbose);
+            version.genReport(verbose, w);
+            signature.genReport(verbose, w);
+            sigAlgorithm.genReport(verbose, w);
+            sigDateTime.genReport(verbose, w);
+            signer.genReport(verbose, w);
             for (i = 0; i < certificates.size(); i++) {
                 x509c = extractCertificate(certificates.get(i));
                 if (x509c != null) {
                     mesg = x509c.toString();
-                    certificates.get(i).genReport(verbose, mesg);
+                    certificates.get(i).genReport(verbose, mesg, w);
                 }
             }
             if (hasErrors || hasWarnings) {
@@ -616,26 +615,6 @@ class RepnSignature extends RepnXML {
         }
         endDiv();
         finishReport();
-    }
-
-    /**
-     * Tell all the Representations where to write the HTML
-     *
-     * @param bw buffered writer to write output
-     */
-    @Override
-    public void setReportWriter(BufferedWriter bw) {
-        int i;
-
-        // super.setReportWriter(bw); don't need to do this as set in createReport()
-        version.setReportWriter(bw);
-        signature.setReportWriter(bw);
-        sigAlgorithm.setReportWriter(bw);
-        sigDateTime.setReportWriter(bw);
-        signer.setReportWriter(bw);
-        for (i = 0; i < certificates.size(); i++) {
-            certificates.get(i).setReportWriter(bw);
-        }
     }
 
     public static void main(String args[]) {

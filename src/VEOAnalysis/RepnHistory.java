@@ -8,7 +8,6 @@ package VEOAnalysis;
 
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
-import java.io.BufferedWriter;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -29,7 +28,8 @@ class RepnHistory extends RepnXML {
      *
      * @param veoDir VEO directory containing the VEOHistory.xml file
      * @param schemaDir schemaDir directory containing the VEOHistory.xsd file
-     * @throws VEOError  if a fatal error occurred
+     * @param results the results summary to buil
+     * @throws VEOError if a fatal error occurred
      */
     public RepnHistory(Path veoDir, Path schemaDir, ResultSummary results) throws VEOError {
         super("VEOHistory.xml", results);
@@ -210,13 +210,14 @@ class RepnHistory extends RepnXML {
      *
      * @param verbose true if additional information is to be generated
      * @param veoDir the directory in which to create the report
+     * @param pVersion The version of VEOAnalysis
+     * @param copyright The copyright string
      * @throws VEOError if a fatal error occurred
      */
-    public void genReport(boolean verbose, Path veoDir) throws VEOError {
+    public void genReport(boolean verbose, Path veoDir, String pVersion, String copyright) throws VEOError {
         int i;
 
-        createReport(veoDir, "Report-VEOHistory.html", "Report for 'VEOHistory.xml'");
-        setReportWriter(getReportWriter());
+        createReport(veoDir, "Report-VEOHistory.html", "Report for 'VEOHistory.xml'", pVersion, copyright);
         startDiv("xml", null);
         addLabel("XML Document");
         if (hasErrors || hasWarnings) {
@@ -225,31 +226,15 @@ class RepnHistory extends RepnXML {
             addTag("</ul>\n");
         }
         if (contentsAvailable()) {
-            version.genReport(verbose);
+            version.genReport(verbose, w);
             for (i = 0; i < events.size(); i++) {
-                events.get(i).genReport(verbose);
+                events.get(i).genReport(verbose, w);
             }
         } else {
             addString(" VEOHistory.xml: No valid content available as parse failed\n");
         }
         endDiv();
         finishReport();
-    }
-
-    /**
-     * Tell all the Representations where to write the HTML
-     *
-     * @param bw the buffered Writer
-     */
-    @Override
-    public void setReportWriter(BufferedWriter bw) {
-        int i;
-
-        // super.setReportWriter(bw); don't need to do this as set in createReport()
-        version.setReportWriter(bw);
-        for (i = 0; i < events.size(); i++) {
-            events.get(i).setReportWriter(bw);
-        }
     }
 
     public static void main(String args[]) {

@@ -8,8 +8,8 @@ package VEOAnalysis;
 
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
-import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.Writer;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -50,6 +50,7 @@ class RepnFile extends Repn {
      * @param file the file to represent
      * @param veoDir the VEODirectory (the root)
      * @param contentFiles an index to the content files that have been found
+     * @param results the results summary to build
      * @throws VEOError if a fatal error occurred
      */
     public RepnFile(Path file, Path veoDir, HashMap<Path, RepnFile> contentFiles, ResultSummary results) throws VEOError {
@@ -60,7 +61,7 @@ class RepnFile extends Repn {
         // allocate a unique id for this RepnFile
         id = idCnt;
         idCnt++;
-        
+
         this.file = file;
         rcf = null;
         children = new ArrayList<>();
@@ -276,27 +277,34 @@ class RepnFile extends Repn {
 
     /**
      * Generate an HTML representation of the content file
+     *
      * @param verbose true if additional information is to be generated
      * @param veoDir the directory in which to create the report
      * @param directory the name of the content directory
-     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
+     * @param pVersion The version of VEOAnalysis
+     * @param copyright The copyright string
+     * @throws VERSCommon.VEOError if prevented from continuing processing this
+     * VEO
      */
-    public void genReport(boolean verbose, Path veoDir, String directory) throws VEOError {
-        createReport(veoDir, "Report-" + directory + ".html", "Report for content directory '" + directory + "'");
-        setReportWriter(getReportWriter());
-        genReport(verbose, veoDir);
+    public void genReport(boolean verbose, Path veoDir, String directory, String pVersion, String copyright) throws VEOError {
+        createReport(veoDir, "Report-" + directory + ".html", "Report for content directory '" + directory + "'", pVersion, copyright);
+        genReport(verbose, veoDir, w);
         finishReport();
     }
 
     /**
      * Generate an HTML representation of the content file
+     *
      * @param verbose true if additional information is to be generated
      * @param veoDir the VEO directory
-     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
+     * @param writer where to write the output
+     * @throws VERSCommon.VEOError if prevented from continuing processing this
+     * VEO
      */
-    public void genReport(boolean verbose, Path veoDir) throws VEOError {
+    public void genReport(boolean verbose, Path veoDir, Writer w) throws VEOError {
         int i;
 
+        this.w = w;
         startDiv("File", anchor);
         addLabel(getFileName());
         addString(" (");
@@ -337,25 +345,8 @@ class RepnFile extends Repn {
             addTag("</ul>\n");
         }
         for (i = 0; i < children.size(); i++) {
-            children.get(i).genReport(verbose, veoDir);
+            children.get(i).genReport(verbose, veoDir, w);
         }
         endDiv();
-    }
-
-    /**
-     * Tell all the Representations where to write the HTML
-     *
-     * @param bw buffered writer for output
-     */
-    @Override
-    public void setReportWriter(BufferedWriter bw) {
-        int i;
-
-        if (getReportWriter() == null) {
-            super.setReportWriter(bw);
-        }
-        for (i = 0; i < children.size(); i++) {
-            children.get(i).setReportWriter(bw);
-        }
     }
 }

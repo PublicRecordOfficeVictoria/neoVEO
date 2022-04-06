@@ -87,6 +87,7 @@ public class VEOAnalysis {
     boolean norec;      // true if asked to not complain about missing recommended metadata elements
     boolean hasErrors;  // true if VEO had errors
     boolean reportIOcnt;// true if requested to report on number of IOs in VEO
+    int totalIOs;       // total IOs counted in VEO
     boolean help;       // if true, generate a help summary of command line arguements
     ArrayList<String> veos; // The list of VEOS to process
     LTSF ltsfs;         // valid long term preservation formats
@@ -128,11 +129,15 @@ public class VEOAnalysis {
      * 20220127 3.15 Now reports on the number of IOs in VEO
      * 20220214 3.16 xmlns:rdf namespace can be defined in any of the top level elements
      * 20220310 3.17 Don't assume metadata package is RDF if xmlns:rdf is defined
+     * 20220314 3.18 Rejigged reports for IOs so that they are a linked structure rather than one document
+     * 20220315 3.19 Added total count of IOs generated in run
      * </pre>
      */
     static String version() {
-        return ("3.17");
+        return ("3.19");
     }
+    
+    static String copyright = "Copyright 2015, 2022 Public Record Office Victoria";
 
     /**
      * Instantiate an VEOAnalysis instance to be used as an API. In this mode,
@@ -203,6 +208,7 @@ public class VEOAnalysis {
         this.results = results;
         this.help = false;
         this.reportIOcnt = false;
+        this.totalIOs = 0;
     }
 
     /**
@@ -229,7 +235,7 @@ public class VEOAnalysis {
         System.out.println("*                 V E O ( V 3 )   A N A L Y S I S   T O O L                  *");
         System.out.println("*                                                                            *");
         System.out.println("*                                Version " + version() + "                                *");
-        System.out.println("*               Copyright 2015 Public Record Office Victoria                 *");
+        System.out.println("*               "+copyright+"                 *");
         System.out.println("*                                                                            *");
         System.out.println("******************************************************************************");
         System.out.println("");
@@ -365,6 +371,7 @@ public class VEOAnalysis {
         results = null;
         help = false;
         reportIOcnt = false;
+        totalIOs = 0;
 
         // process command line arguments
         i = 0;
@@ -536,6 +543,11 @@ public class VEOAnalysis {
                 testVEOint(veo, outputDir);
             }
         }
+        
+        // report total IOs generated in run
+        if (reportIOcnt) {
+            System.out.println("Total IOs encountered in run: "+totalIOs);
+        }
     }
 
     /**
@@ -581,7 +593,7 @@ public class VEOAnalysis {
 
             // if generating HTML report, do so...
             if (report) {
-                rv.genReport(verbose);
+                rv.genReport(verbose, version(), copyright);
             }
 
             // if in error mode, print the results for this VEO
@@ -594,6 +606,7 @@ public class VEOAnalysis {
                 System.out.print("Number of information objects in VEO: ");
                 if (rv.veoContent != null) {
                     System.out.println(rv.veoContent.ioCnt);
+                    totalIOs += rv.veoContent.ioCnt;
                 } else {
                     System.out.println("0");
                 }
@@ -678,7 +691,7 @@ public class VEOAnalysis {
 
             // if generating HTML report, do so...
             if (report) {
-                rv.genReport(verbose);
+                rv.genReport(verbose, version(), copyright);
             }
 
             // if in error mode, print the results for this VEO

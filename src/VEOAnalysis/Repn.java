@@ -12,6 +12,7 @@ import VERSCommon.VEOError;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Writer;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -30,27 +31,28 @@ import java.util.logging.Logger;
  */
 abstract class Repn {
 
-    String classname = "Repn";  // for logging
-    private final String id;          // identifier of this object for messages
-    protected boolean hasErrors; // true if this object (or its children) have errors
+    String classname = "Repn";      // for logging
+    private final String id;        // identifier of this object for messages
+    protected boolean hasErrors;    // true if this object (or its children) have errors
     protected ArrayList<String> errors;   // list of errors that occurred
-    protected boolean hasWarnings; // true if this object (or its children) have warnings
+    protected boolean hasWarnings;  // true if this object (or its children) have warnings
     protected ArrayList<String> warnings; // list of warnings that occurred
     private FileWriter fw;
-    private BufferedWriter htmlOutput; // if not null, generate a HTML version of this representation
-    private boolean infoAvailable; // true if information can be retrieved from this object
+    protected Writer w;             // if not null, generate a HTML version of this representation
+    private boolean infoAvailable;  // true if information can be retrieved from this object
     private final static Logger log = Logger.getLogger("VEOAnalysis.Repn");
-    protected ResultSummary results;  // summary of results
+    protected ResultSummary results;// summary of results
 
     /**
      * Construct a representation with default reporting parameters.
      *
      * @param id the identifier used to identify this object and not debugging
+     * @param results the results summary to build
      * information.
      */
     public Repn(String id, ResultSummary results) {
         fw = null;
-        htmlOutput = null;
+        w = null;
         errors = new ArrayList<>();
         hasErrors = false;
         warnings = new ArrayList<>();
@@ -70,10 +72,10 @@ abstract class Repn {
         warnings.clear();
         warnings = null;
         try {
-            if (htmlOutput != null) {
-                htmlOutput.close();
+            if (w != null) {
+                w.close();
             }
-            htmlOutput = null;
+            w = null;
             if (fw != null) {
                 fw.close();
             }
@@ -235,9 +237,11 @@ abstract class Repn {
      * @param veoDir The VEO directory in which to create the XML file
      * @param htmlFileName The XML file to create
      * @param title The title of the XML file
+     * @param pVersion The version of VEOAnalysis
+     * @param copyright The copyright string
      * @throws VEOError if something happened (e.g. it couldn't be created)
      */
-    final protected void createReport(Path veoDir, String htmlFileName, String title) throws VEOError {
+    final protected void createReport(Path veoDir, String htmlFileName, String title, String pVersion, String copyright) throws VEOError {
         String method = "createReport";
         Path htmlFile;
         TimeZone tz;
@@ -250,29 +254,30 @@ abstract class Repn {
         htmlFile = veoDir.resolve(htmlFileName);
         try {
             fw = new FileWriter(htmlFile.toFile());
-            htmlOutput = new BufferedWriter(fw);
+            w = new BufferedWriter(fw);
         } catch (IOException e) {
             throw new VEOError(errMesg(classname, method, "IOException when attempting to open HTML output file '" + htmlFile.toString() + "'. Error was", e));
         }
         try {
-            htmlOutput.write("<!DOCTYPE html>\n<html>\n<head>\n");
-            htmlOutput.write("<link rel=\"stylesheet\" href=\"ReportStyle.css\">");
-            htmlOutput.write("</head>\n</body>\n");
-            htmlOutput.write("  <h1>");
-            htmlOutput.write(title);
-            htmlOutput.write("</h1>\n");
-            htmlOutput.write("  <p class=\"preamble\">");
-            htmlOutput.write("VEO Analysis v1.0");
-            htmlOutput.write("<br>\n");
-            htmlOutput.write("Copyright Public Record Office Victoria 2015");
-            htmlOutput.write("<br>\n");
-            htmlOutput.write("VEO analysed: '" + veoDir.toAbsolutePath().normalize().toString() + "' at ");
+            w.write("<!DOCTYPE html>\n<html>\n<head>\n");
+            w.write("<link rel=\"stylesheet\" href=\"ReportStyle.css\">");
+            w.write("</head>\n</body>\n");
+            w.write("  <h1>");
+            w.write(title);
+            w.write("</h1>\n");
+            w.write("  <p class=\"preamble\">");
+            w.write("VEO Analysis ");
+            w.write(pVersion);
+            w.write("<br>\n");
+            w.write(copyright);
+            w.write("<br>\n");
+            w.write("VEO analysed: '" + veoDir.toAbsolutePath().normalize().toString() + "' at ");
             tz = TimeZone.getTimeZone("GMT+10:00");
             sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss+10:00");
             sdf.setTimeZone(tz);
-            htmlOutput.write(sdf.format(new Date()));
-            htmlOutput.write("<br>\n");
-            htmlOutput.write("</p>\n");
+            w.write(sdf.format(new Date()));
+            w.write("<br>\n");
+            w.write("</p>\n");
         } catch (IOException e) {
             log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
         }
@@ -291,55 +296,21 @@ abstract class Repn {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
             return;
         }
-        if (fw == null || htmlOutput == null) {
+        if (fw == null || w == null) {
             log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
             return;
         }
 
         // finish and close HTML report
         try {
-            htmlOutput.write("</body>\n");
-            htmlOutput.close();
-            htmlOutput = null;
+            w.write("</body>\n");
+            w.close();
+            w = null;
             fw.close();
             fw = null;
         } catch (IOException e) {
             log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
         }
-    }
-
-    /**
-     * Get the writer on which the report is being generated
-     *
-     * @return the Writer
-     */
-    final protected BufferedWriter getReportWriter() {
-        if (!infoAvailable) {
-            log.log(Level.WARNING, errMesg(classname, "getReportWriter", "Called function after abandon() was called"));
-            return null;
-        }
-        return htmlOutput;
-    }
-
-    /**
-     * Set the Writer to capture HTML output. It is only necessary to call this
-     * function if the output is to go into a XML file opened by another
-     * Representation. This function has no effect an XML output file has
-     * already been set, or if the passed Writer is null.
-     *
-     * @param htmlOutput a Writer on which to write the output.
-     */
-    protected void setReportWriter(BufferedWriter htmlOutput) {
-        String method = "setReportWriter";
-        if (!infoAvailable) {
-            log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
-            return;
-        }
-        if (this.htmlOutput != null || htmlOutput == null) {
-            log.log(Level.WARNING, errMesg(classname, method, "Attempting to reset HTML output"));
-            return;
-        }
-        this.htmlOutput = htmlOutput;
     }
 
     /**
@@ -374,24 +345,24 @@ abstract class Repn {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
             return;
         }
-        if (htmlOutput == null) {
+        if (w == null) {
             log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
             return;
         }
 
         try {
-            htmlOutput.write("<div");
+            w.write("<div");
             if (r.hasErrors) {
-                htmlOutput.write(" class=\"box error " + type + "\"");
+                w.write(" class=\"box error " + type + "\"");
             } else if (r.hasWarnings) {
-                htmlOutput.write(" class=\"box warning " + type + "\"");
+                w.write(" class=\"box warning " + type + "\"");
             } else {
-                htmlOutput.write(" class=\"box correct " + type + "\"");
+                w.write(" class=\"box correct " + type + "\"");
             }
             if (anchor != null) {
-                htmlOutput.write(" id=\"" + anchor + "\"");
+                w.write(" id=\"" + anchor + "\"");
             }
-            htmlOutput.write(">\n");
+            w.write(">\n");
         } catch (IOException e) {
             log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
         }
@@ -408,12 +379,12 @@ abstract class Repn {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
             return;
         }
-        if (htmlOutput == null) {
+        if (w == null) {
             log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
             return;
         }
         try {
-            htmlOutput.write("</div>\n");
+            w.write("</div>\n");
         } catch (IOException e) {
             log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
         }
@@ -431,23 +402,23 @@ abstract class Repn {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
             return;
         }
-        if (htmlOutput == null) {
+        if (w == null) {
             log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
             return;
         }
 
         try {
             for (i = 0; i < errors.size(); i++) {
-                htmlOutput.write(" <li class=\"error\">");
-                htmlOutput.write("Error: ");
-                htmlOutput.write(safeXML(errors.get(i)));
-                htmlOutput.write("</li>\n");
+                w.write(" <li class=\"error\">");
+                w.write("Error: ");
+                w.write(safeXML(errors.get(i)));
+                w.write("</li>\n");
             }
             for (i = 0; i < warnings.size(); i++) {
-                htmlOutput.write(" <li class=\"warning\">");
-                htmlOutput.write("Warning: ");
-                htmlOutput.write(safeXML(warnings.get(i)));
-                htmlOutput.write("</li>\n");
+                w.write(" <li class=\"warning\">");
+                w.write("Warning: ");
+                w.write(safeXML(warnings.get(i)));
+                w.write("</li>\n");
             }
         } catch (IOException e) {
             log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
@@ -468,12 +439,12 @@ abstract class Repn {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
             return;
         }
-        if (htmlOutput == null) {
+        if (w == null) {
             log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
             return;
         }
         try {
-            htmlOutput.write(s);
+            w.write(s);
         } catch (IOException e) {
             log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
         }
@@ -493,14 +464,14 @@ abstract class Repn {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
             return;
         }
-        if (htmlOutput == null) {
+        if (w == null) {
             log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
             return;
         }
         try {
-            htmlOutput.write("<strong>");
-            htmlOutput.write(safeXML(s));
-            htmlOutput.write("</strong>");
+            w.write("<strong>");
+            w.write(safeXML(s));
+            w.write("</strong>");
         } catch (IOException e) {
             log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
         }
@@ -520,12 +491,12 @@ abstract class Repn {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
             return;
         }
-        if (htmlOutput == null) {
+        if (w == null) {
             log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
             return;
         }
         try {
-            htmlOutput.write(safeXML(s));
+            w.write(safeXML(s));
         } catch (IOException e) {
             log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
         }

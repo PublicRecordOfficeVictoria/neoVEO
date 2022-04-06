@@ -19,9 +19,9 @@ import org.apache.jena.rdf.model.ResourceRequiredException;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.rdfxml.xmlinput.DOM2Model;
 import org.apache.jena.shared.BadURIException;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.io.Writer;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import org.apache.logging.log4j.core.layout.PatternLayout;
@@ -66,6 +66,7 @@ class RepnMetadataPackage extends Repn {
      * @param parentId the parent object identifier
      * @param seq the sequence number of this MP in the Information Object
      * @param rdf true if metadata is expressed in RDF
+     * @param results the results summary to build
      * @throws VEOError if the XML document has not been properly parsed
      */
     public RepnMetadataPackage(RepnXML document, String parentId, int seq, boolean rdf, ResultSummary results) throws VEOError {
@@ -852,18 +853,20 @@ class RepnMetadataPackage extends Repn {
      * Generate a HTML representation of the metadata package.
      *
      * @param verbose true if additional information is to be generated
+     * @param writer where to write the output
      * @throws VERSCommon.VEOError if prevented from continuing processing this
      * VEO
      */
-    public void genReport(boolean verbose) throws VEOError {
+    public void genReport(boolean verbose, Writer w) throws VEOError {
         Node n;
         int i;
 
+        this.w = w;
         startDiv("MetaPackage", null);
         addLabel("Metadata Package");
-        addString(" (Schema: '" + schemaId.getValue() + "'");
+        addString(" (Schema: '" + schemaId.getValue() + "',");
         addString(" Syntax: '" + syntaxId.getValue() + "')");
-        addString("'\n");
+        addString("\n");
         if (hasErrors || hasWarnings) {
             addTag("<ul>\n");
             listIssues();
@@ -873,22 +876,23 @@ class RepnMetadataPackage extends Repn {
         }
 
         // if metadata was RDF...
+        addTag("<br>");
         if (rdf) {
-            startDiv("RDF", null);
+            //startDiv("RDF", null);
             addRDF();
-            endDiv();
+            //endDiv();
 
             // otherwise treat it as normal XML
         } else {
+            //startDiv("XML", null);
             for (i = 0; i < metadata.size(); i++) {
-                startDiv("XML", null);
                 n = metadata.get(i);
                 n.normalize(); // make sure adjacent text nodes are coallesced.
                 addTag("<ul>\n");
                 addXML(n, 2);
                 addTag("</ul>\n");
-                endDiv();
             }
+            //endDiv();
         }
         endDiv();
     }
@@ -951,6 +955,8 @@ class RepnMetadataPackage extends Repn {
                     if (hasSubElements) {
                         addTag("</ul>\n");
                     }
+                } else {
+                    addString(" (Empty element)");
                 }
                 addTag("</li>\n");
                 break;
@@ -993,20 +999,5 @@ class RepnMetadataPackage extends Repn {
         addTag("<pre>");
         addString(sw.toString());
         addTag("</pre>");
-    }
-
-    /**
-     * Tell all the Representations where to write the HTML
-     *
-     * @param bw buffered writer to write output
-     */
-    @Override
-    public void setReportWriter(BufferedWriter bw
-    ) {
-        int i;
-
-        super.setReportWriter(bw);
-        schemaId.setReportWriter(bw);
-        syntaxId.setReportWriter(bw);
     }
 }

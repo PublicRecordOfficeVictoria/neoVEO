@@ -10,10 +10,10 @@ import VERSCommon.LTSF;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import java.io.BufferedInputStream;
-import java.io.BufferedWriter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -47,6 +47,7 @@ class RepnContentFile extends Repn {
      * @param document the representation of the XML document
      * @param parentId the parent object identifier
      * @param seq the sequence number of this Content File within the IP
+     * @param results the results summary to build
      * @throws VEOError if the XML document has not been properly parsed
      */
     public RepnContentFile(RepnXML document, String parentId, int seq, ResultSummary results) throws VEOError {
@@ -303,12 +304,15 @@ class RepnContentFile extends Repn {
      * Generate a HTML representation of the content file
      *
      * @param verbose true if additional information is to be generated
+     * @param writer where to write the output
+     * @param version the version of the VEOAnalysis for reporting
      * @throws VEOError if a fatal error occurred
      */
-    public void genReport(boolean verbose) throws VEOError {
+    public void genReport(boolean verbose, Writer w) throws VEOError {
+        this.w = w;
         startDiv("ContentFile", getAnchor());
         addLabel("Content file");
-        addTag("<a href=\"./" + pathName.getValue() + "\">");
+        addTag(" <a href=\"./" + pathName.getValue() + "\">");
         addString(pathName.getValue());
         addTag("</a> ");
         if (rf != null) {
@@ -326,17 +330,4 @@ class RepnContentFile extends Repn {
         }
         endDiv();
     }
-
-    /**
-     * Tell all the Representations where to write the HTML
-     *
-     * @param bw buffered writer where to write the HTML
-     */
-    @Override
-    public void setReportWriter(BufferedWriter bw) {
-        super.setReportWriter(bw);
-        pathName.setReportWriter(bw);
-        hashValue.setReportWriter(bw);
-    }
-
 }

@@ -8,6 +8,7 @@ package VEOAnalysis;
 
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
+import java.io.Writer;
 
 /**
  * The object represents a unit of data (typically a string)
@@ -21,6 +22,7 @@ final class RepnItem extends Repn {
      *
      * @param id item identifier
      * @param label label to use to describe this item
+     * @param results the results summary to build
      */
     public RepnItem(String id, String label, ResultSummary results) {
         super(id, results);
@@ -89,10 +91,11 @@ final class RepnItem extends Repn {
      * Generate a HTML representation of the item
      *
      * @param verbose true if additional information is to be generated
+     * @param writer where to write the output
      * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
      */
-    public void genReport(boolean verbose) throws VEOError {
-        genReport(verbose, null);
+    public void genReport(boolean verbose, Writer w) throws VEOError {
+        genReport(verbose, null, w);
     }
 
     /**
@@ -100,9 +103,11 @@ final class RepnItem extends Repn {
      *
      * @param verbose true if additional information is to be generated
      * @param mesg a String message to add to report
+     * @param writer where to write the output
      * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
      */
-    public void genReport(boolean verbose, String mesg) throws VEOError {
+    public void genReport(boolean verbose, String mesg, Writer w) throws VEOError {
+        this.w = w;
         startDiv("Item", null);
         addLabel(label);
         addString(": " + value);

@@ -9,7 +9,7 @@ package VEOAnalysis;
 import VERSCommon.ResultSummary;
 import VERSCommon.VERSDate;
 import VERSCommon.VEOError;
-import java.io.BufferedWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 
 /**
@@ -32,6 +32,7 @@ class RepnEvent extends Repn {
      * @param document the representation of the XML document
      * @param parentId the parent object identifier
      * @param seq sequence no of event in history file
+     * @param results the results summary to build
      * @throws VEOError if the XML document has not been properly parsed
      */
     public RepnEvent(RepnXML document, String parentId, int seq, ResultSummary results) throws VEOError {
@@ -229,11 +230,13 @@ class RepnEvent extends Repn {
     /**
      * Generate a HTML representation of the Event
      * @param verbose true if additional information is to be generated
+     * @param writer where to write the output
      * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
      */
-    public void genReport(boolean verbose) throws VEOError {
+    public void genReport(boolean verbose, Writer w) throws VEOError {
         int i;
 
+        this.w = w;
         startDiv("Event", null);
         addLabel(eventType.getValue()+"Event");
         if (hasErrors || hasWarnings) {
@@ -241,35 +244,14 @@ class RepnEvent extends Repn {
             listIssues();
             addTag("</ul>\n");
         }
-        dateTime.genReport(verbose);
-        initiator.genReport(verbose);
+        dateTime.genReport(verbose, w);
+        initiator.genReport(verbose, w);
         for (i = 0; i < descriptions.size(); i++) {
-            descriptions.get(i).genReport(verbose);
+            descriptions.get(i).genReport(verbose, w);
         }
         for (i = 0; i < errorDescs.size(); i++) {
-            errorDescs.get(i).genReport(verbose);
+            errorDescs.get(i).genReport(verbose, w);
         }
         endDiv();
-    }
-
-    /**
-     * Tell all the Representations where to write the HTML
-     *
-     * @param bw buffered writer for output
-     */
-    @Override
-    public void setReportWriter(BufferedWriter bw) {
-        int i;
-
-        super.setReportWriter(bw);
-        dateTime.setReportWriter(bw);
-        eventType.setReportWriter(bw);
-        initiator.setReportWriter(bw);
-        for (i = 0; i < descriptions.size(); i++) {
-            descriptions.get(i).setReportWriter(bw);
-        }
-        for (i = 0; i < errorDescs.size(); i++) {
-            errorDescs.get(i).setReportWriter(bw);
-        }
     }
 }
