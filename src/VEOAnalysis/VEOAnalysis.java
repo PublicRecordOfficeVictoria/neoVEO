@@ -131,10 +131,11 @@ public class VEOAnalysis {
      * 20220310 3.17 Don't assume metadata package is RDF if xmlns:rdf is defined
      * 20220314 3.18 Rejigged reports for IOs so that they are a linked structure rather than one document
      * 20220315 3.19 Added total count of IOs generated in run
+     * 20200408 3.20 Forced reading of XML files to be UTF-8 & output of HTML files to be UTF-8
      * </pre>
      */
     static String version() {
-        return ("3.19");
+        return ("3.20");
     }
     
     static String copyright = "Copyright 2015, 2022 Public Record Office Victoria";

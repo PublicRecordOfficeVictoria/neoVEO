@@ -13,6 +13,7 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -253,7 +254,7 @@ abstract class Repn {
         }
         htmlFile = veoDir.resolve(htmlFileName);
         try {
-            fw = new FileWriter(htmlFile.toFile());
+            fw = new FileWriter(htmlFile.toFile(), Charset.forName("UTF-8"));
             w = new BufferedWriter(fw);
         } catch (IOException e) {
             throw new VEOError(errMesg(classname, method, "IOException when attempting to open HTML output file '" + htmlFile.toString() + "'. Error was", e));

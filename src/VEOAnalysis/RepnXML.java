@@ -138,7 +138,7 @@ abstract class RepnXML extends Repn implements ErrorHandler {
         parser.setErrorHandler(this);
         try {
             InputSource is = new InputSource(new FileInputStream(file.toFile()));
-            // is.setEncoding("UTF-8");
+            is.setEncoding("UTF-8");
             doc = parser.parse(is);
         } catch (SAXParseException e) {
             addError(errMesg(classname, "Parse error when parsing file" + e.getSystemId() + " (line " + e.getLineNumber() + " column " + e.getColumnNumber() + ")", e));
