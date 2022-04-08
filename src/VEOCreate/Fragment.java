@@ -9,14 +9,15 @@ package VEOCreate;
 import VERSCommon.VEOFatal;
 import VERSCommon.VEOError;
 import java.io.*;
+import java.nio.charset.Charset;
 
 /**
  * This class represents a fragment of a VEO. Warning: Do not directly call this
  * class. Use the Templates class.
  * <p>
- * A fragment might be a piece of static
- * text that is identical for all constructed VEOs, or it might be a piece of
- * dynamic content that will change, such as the current date and time.
+ * A fragment might be a piece of static text that is identical for all
+ * constructed VEOs, or it might be a piece of dynamic content that will change,
+ * such as the current date and time.
  * <p>
  * A sequence of such fragments is called a template. Templates represent
  * metadata packages.
@@ -93,7 +94,8 @@ abstract public class Fragment {
      *
      */
     static public Fragment parseTemplate(File template) throws VEOFatal {
-        FileReader fr;
+        FileInputStream fis;
+        InputStreamReader isr;
         LineNumberReader lnr;
         Fragment fs, fe, fn;
         int c, j;
@@ -117,7 +119,8 @@ abstract public class Fragment {
         }
         // open file & instantiate a line number reader with it
         try {
-            fr = new FileReader(template);
+            fis = new FileInputStream(template);
+            isr = new InputStreamReader(fis, Charset.forName("UTF-8"));
         } catch (FileNotFoundException fnfe) {
             try {
                 s = template.getCanonicalPath();
@@ -129,7 +132,7 @@ abstract public class Fragment {
             throw new VEOFatal(classname, method, 1,
                     "Template file '" + s + "' does not exist");
         }
-        lnr = new LineNumberReader(fr);
+        lnr = new LineNumberReader(isr);
         filename = template.getName();
 
         // read template
@@ -223,8 +226,13 @@ abstract public class Fragment {
 
         // close template
         try {
-            fr.close();
-        } catch (IOException ioe) { /* ignore */ }
+            isr.close();
+        } catch (IOException ioe) {
+            /* ignore */ }
+        try {
+            fis.close();
+        } catch (IOException ioe) {
+            /* ignore */ }
 
         // return list of fragments from template
         return fs;
@@ -352,9 +360,10 @@ abstract public class Fragment {
             next.appendToEnd(f);
         }
     }
-    
+
     /**
      * Get the schemaId for this template
+     *
      * @return schemaId
      */
     public String getSchemaId() {
@@ -363,6 +372,7 @@ abstract public class Fragment {
 
     /**
      * Get the syntaxId for this template
+     *
      * @return syntaxId
      */
     public String getSyntaxId() {
@@ -374,7 +384,7 @@ abstract public class Fragment {
      *
      * @param data the source of data to resolve any dynamic content
      * @param document where to put the result of processing the template
-     * @throws VEOError  if a fatal error occurred
+     * @throws VEOError if a fatal error occurred
      */
     abstract public void finalise(String[] data, CreateXMLDoc document) throws VEOError;
 

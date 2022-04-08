@@ -13,6 +13,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.charset.Charset;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -791,13 +792,20 @@ public class VEOAnalysis {
      */
     public static void main(String args[]) {
         VEOAnalysis va;
+        OutputStreamWriter osw;
 
         try {
             va  = new VEOAnalysis(args);
             System.out.println("Starting analysis:");
             va.test();
             System.out.println("Finished");
-            va.resultSummary(new OutputStreamWriter(System.out));
+            osw = new OutputStreamWriter(System.out, Charset.forName("UTF-8"));
+            va.resultSummary(osw);
+            try {
+                osw.close();
+            } catch (IOException ioe) {
+                /* ignore */
+            }
         } catch (VEOFatal e) {
             LOG.log(Level.SEVERE, e.getMessage());
         } catch (VEOError e) {

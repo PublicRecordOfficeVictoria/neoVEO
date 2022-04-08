@@ -10,6 +10,7 @@ import VERSCommon.PFXUser;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFatal;
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.file.DirectoryIteratorException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -376,7 +377,8 @@ public class SignVEOs {
      */
     public void processControlFile() throws VEOFatal {
         String method = "processControlFile";
-        FileReader fr;      // source of control file to build VEOs
+        FileInputStream fis;// source of control file to build VEOs
+        InputStreamReader isr;
         BufferedReader br;  //
         String s;           // current line read from control file
         String[] tokens;    // tokens extracted from line
@@ -389,11 +391,12 @@ public class SignVEOs {
 
         // open control file for reading
         try {
-            fr = new FileReader(controlFile.toString());
-            br = new BufferedReader(fr);
+            fis = new FileInputStream(controlFile.toString());
         } catch (FileNotFoundException e) {
             throw new VEOFatal(classname, method, 2, "Failed to open control file '" + controlFile.toString() + "'" + e.toString());
         }
+        isr = new InputStreamReader(fis, Charset.forName("UTF-8"));
+        br = new BufferedReader(isr);
 
         // go through command file line by line
         line = 0;
@@ -510,6 +513,19 @@ public class SignVEOs {
         } catch (PatternSyntaxException | IOException ex) {
             throw new VEOFatal(classname, method, 1, "unexpected error: " + ex.toString());
         }
+
+        try {
+            br.close();
+        } catch (IOException ioe){
+            /* ignore */ }
+        try {
+            isr.close();
+        } catch (IOException ioe){
+            /* ignore */ }
+        try {
+            fis.close();
+        } catch (IOException ioe){
+            /* ignore */ }
     }
 
     /**
