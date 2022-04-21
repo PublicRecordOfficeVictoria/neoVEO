@@ -31,6 +31,8 @@ import java.util.logging.Logger;
 import java.util.zip.ZipException;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipFile;
+import org.apache.log4j.PropertyConfigurator;
+// import org.apache.log4j.PropertyConfigurator;
 
 /**
  * This class encapsulates an Information Object in a VEO Content file.
@@ -131,10 +133,15 @@ class RepnVEO extends Repn {
         int i;
         StringBuilder sb;
 
-        // configure the logging used in the RDF validator
-        System.setProperty("log4j2.configurationFile", schemaDir.resolve("log4j2.properties").toAbsolutePath().toString());
-        // This is the configuration for the original log4j
-        // PropertyConfigurator.configure(schemaDir.resolve("log4j.properties").toAbsolutePath().toString());
+        // Configure the logging used in the RDF validator. See the discussion
+        // RepnMetadataPackage for which version you should use. Uncomment the
+        // line for the version of log4j that you wish to use
+        
+        // This is for log4j2 used with Jena 4
+        // System.setProperty("log4j2.configurationFile", schemaDir.resolve("log4j2.properties").toAbsolutePath().toString());
+        
+        // This is for log4j used with Jena 2
+        PropertyConfigurator.configure(schemaDir.resolve("log4j.properties").toAbsolutePath().toString());
 
         // check that the VEO directory has the correct files (and no others)
         // System.out.println("validating " + veoDir.toString());

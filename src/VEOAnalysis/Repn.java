@@ -10,8 +10,9 @@ import VERSCommon.ResultSummary;
 import VERSCommon.ResultSummary.Type;
 import VERSCommon.VEOError;
 import java.io.BufferedWriter;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
@@ -38,7 +39,8 @@ abstract class Repn {
     protected ArrayList<String> errors;   // list of errors that occurred
     protected boolean hasWarnings;  // true if this object (or its children) have warnings
     protected ArrayList<String> warnings; // list of warnings that occurred
-    private FileWriter fw;
+    private FileOutputStream fos;
+    private OutputStreamWriter osw;
     protected Writer w;             // if not null, generate a HTML version of this representation
     private boolean infoAvailable;  // true if information can be retrieved from this object
     private final static Logger log = Logger.getLogger("VEOAnalysis.Repn");
@@ -52,7 +54,8 @@ abstract class Repn {
      * information.
      */
     public Repn(String id, ResultSummary results) {
-        fw = null;
+        fos = null;
+        osw = null;
         w = null;
         errors = new ArrayList<>();
         hasErrors = false;
@@ -77,10 +80,14 @@ abstract class Repn {
                 w.close();
             }
             w = null;
-            if (fw != null) {
-                fw.close();
+            if (osw != null) {
+                osw.close();
             }
-            fw = null;
+            osw = null;
+            if (fos != null) {
+                fos.close();
+            }
+            fos = null;
         } catch (IOException e) {
             log.log(Level.WARNING, errMesg(classname, "abandon", "Failed to close HTML output file", e));
         }
@@ -254,8 +261,9 @@ abstract class Repn {
         }
         htmlFile = veoDir.resolve(htmlFileName);
         try {
-            fw = new FileWriter(htmlFile.toFile(), Charset.forName("UTF-8"));
-            w = new BufferedWriter(fw);
+            fos = new FileOutputStream(htmlFile.toFile());
+            osw = new OutputStreamWriter(fos, Charset.forName("UTF-8"));
+            w = new BufferedWriter(osw);
         } catch (IOException e) {
             throw new VEOError(errMesg(classname, method, "IOException when attempting to open HTML output file '" + htmlFile.toString() + "'. Error was", e));
         }
@@ -297,7 +305,7 @@ abstract class Repn {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
             return;
         }
-        if (fw == null || w == null) {
+        if (fos == null || osw == null || w == null) {
             log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
             return;
         }
@@ -307,8 +315,14 @@ abstract class Repn {
             w.write("</body>\n");
             w.close();
             w = null;
-            fw.close();
-            fw = null;
+            if (osw != null) {
+                osw.close();
+            }
+            osw = null;
+            if (fos != null) {
+                fos.close();
+            }
+            fos = null;
         } catch (IOException e) {
             log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
         }

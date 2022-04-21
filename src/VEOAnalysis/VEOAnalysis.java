@@ -123,7 +123,7 @@ public class VEOAnalysis {
      * 20210927 3.8 Updated standard metadata package syntax ids
      * 20211117 3.9 Fixed bug in RepnVEO that crashed if couldn't decode a certificate
      * 20211201 3.10 Adjusted some AGLS namespace prefixes to conform with standard
-     * 20220107 3.11 Upgraded Jena & Log4j to deal with Log4j security issue
+     * 20220107 3.11 Upgraded Jena4 & Log4j to deal with Log4j security issue
      * 20220107 3.12 Will now accept, but warn, if the five elements with the incorrect namespace prefixes are present
      * 20220124 3.13 Moved to using Apache ZIP
      * 20220127 3.14 Now test in RepnMetadataPackage if vers:MetadataPackage includes RDF namespace if syntax is RDF
@@ -132,11 +132,12 @@ public class VEOAnalysis {
      * 20220310 3.17 Don't assume metadata package is RDF if xmlns:rdf is defined
      * 20220314 3.18 Rejigged reports for IOs so that they are a linked structure rather than one document
      * 20220315 3.19 Added total count of IOs generated in run
-     * 20200408 3.20 Forced reading of XML files to be UTF-8 & output of HTML files to be UTF-8
+     * 20220408 3.20 Forced reading of XML files to be UTF-8 & output of HTML files to be UTF-8
+     * 20220422 3.21 Provided option to use JDK8/Jena2/Log4j or JDK11/Jena4/Log4j2
      * </pre>
      */
     static String version() {
-        return ("3.20");
+        return ("3.21");
     }
     
     static String copyright = "Copyright 2015, 2022 Public Record Office Victoria";

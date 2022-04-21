@@ -2,13 +2,24 @@
  * Copyright Public Record Office Victoria 2015
  * Licensed under the CC-BY license http://creativecommons.org/licenses/by/3.0/au/
  * Author Andrew Waugh
- * Version 1.0 February 2015
- * 20150915 v1.0.1 Adjusted error message when aglsterms:function or subject is not found
  */
 package VEOAnalysis;
 
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXParseException;
+
+// Use the org.apache.jena imports if using Jena 4
+/*
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Property;
@@ -19,11 +30,6 @@ import org.apache.jena.rdf.model.ResourceRequiredException;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.rdfxml.xmlinput.DOM2Model;
 import org.apache.jena.shared.BadURIException;
-import java.io.IOException;
-import java.io.StringWriter;
-import java.io.Writer;
-import java.nio.file.Path;
-import java.util.ArrayList;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.Filter;
@@ -31,11 +37,23 @@ import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.WriterAppender;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXParseException;
+ */
+// end Jena 4 imports
+// Use the com.hp.hpl.jena imports if using Jena 2
+import com.hp.hpl.jena.rdf.model.Model;
+import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.Property;
+import com.hp.hpl.jena.rdf.model.ResIterator;
+import com.hp.hpl.jena.rdf.model.Resource;
+import com.hp.hpl.jena.rdf.model.ResourceFactory;
+import com.hp.hpl.jena.rdf.model.ResourceRequiredException;
+import com.hp.hpl.jena.rdf.model.Statement;
+import com.hp.hpl.jena.rdfxml.xmlinput.DOM2Model;
+import com.hp.hpl.jena.shared.BadURIException;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
+import org.apache.log4j.WriterAppender;
+// end Jena 2 imports
 
 /**
  * This class encapsulates a Metadata Package in a Information Object.
@@ -102,18 +120,6 @@ class RepnMetadataPackage extends Repn {
     /**
      * Validate the data in the Metadata Package.
      *
-     * This uses Apache Jena to parse, validate, and extract RDF metadata. Jena
-     * in turn uses Log4j and slf4j for its logging. This is the only place that
-     * Log4j is used; the rest of VEOAnalysis uses the standard Java logging
-     * library. Consequently, this class constructs a simple WriteAppender, and
-     * Jena logging is captured into it and then added as Errors or Warnings. If
-     * it is necessary to update Jena (or Log4j!), get the Jena distribution.
-     * This should contain the necessary Log4j and slf4j files - there is no
-     * need to download them separately. Note that most of the jar files
-     * included in the Jena distribution are not necessary. Currently the only
-     * ones required are jena-core, jena-base, jena-iri, jena-shaded-guava,
-     * log4j-api, log4j-core, log4j-slf4j-impl, slf-api, and commons-lang3.
-     *
      * @param veoDir the directory containing the contents of the VEO.
      * @param noRec true if not to complain about missing recommended metadata
      * elements
@@ -121,11 +127,6 @@ class RepnMetadataPackage extends Repn {
      */
     public boolean validate(Path veoDir, boolean noRec) {
         String method = "validate";
-        DOM2Model d2m; // translator from DOM nodes to RDF model
-        Model m;
-        StringWriter parseErrs;     // place where parse errors can be captured
-        int i;
-        Element e;
 
         // confirm that there is a non empty vers:MetadataSchemaIdentifier element
         if (schemaId.getValue() == null) {
@@ -149,17 +150,93 @@ class RepnMetadataPackage extends Repn {
 
         // can only validate metadata if RDF, with further validation possible
         // if AGLS or AS5478
-        if (!rdf) {
-            return true;
+        if (rdf) {
+            if (!parseRDF()) {
+                return false;
+            };
+
+            // if ANZS5478 check to see if the required properties are present and valid
+            if (schemaId.getValue().endsWith("ANZS5478")
+                    || schemaId.getValue().equals("http://www.prov.vic.gov.au/VERS-as5478")) {
+                if (!syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
+                    addError("ANZS-5478 metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'");
+                    return false;
+                }
+                rdfModel.setNsPrefix("anzs5478", ANZS5478);
+                checkANZSProperties(noRec);
+                return true;
+            }
+
+            // if AGLS check to see if the required properties are present and valid
+            if (schemaId.getValue().endsWith("AGLS")
+                    || schemaId.getValue().equals("http://www.vic.gov.au/blog/wp-content/uploads/2013/11/AGLS-Victoria-2011-V4-Final-2011.pdf")) {
+                if (!syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
+                    addError("AGLS metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'");
+                    return false;
+                }
+                rdfModel.setNsPrefix("dcterms", DC_TERMS);
+                rdfModel.setNsPrefix("aglsterms", AGLS_TERMS);
+                rdfModel.setNsPrefix("versterms", VERS_TERMS);
+                checkAGLSProperties(noRec);
+                return true;
+            }
         }
+        return true;
+    }
+
+    /**
+     * Validate metadata expressed in RDF as XML. The first step is to parse the
+     * RDF into a Model that can be subsequently queried for properties.
+     *
+     * Apache Jena is used to parse, validate, and extract RDF metadata. The
+     * version of Jena used depends on the JDK available. If JDK8 is required
+     * to be used, Jena 2 is used and this requires Log4j. If JDK11 (or better)
+     * is available, Jena 4 may be used and this requires Log4j2.
+     * 
+     * This class is the only place that Log4j/Log4j2 is used; the rest of
+     * VEOAnalysis uses the standard Java logging library. Consequently, this
+     * class constructs a simple WriteAppender, and Jena logging is captured
+     * into it and then added as Errors or Warnings.
+     * 
+     * Code is provided for both Jena 2/Log4j and Jena4/Log4j2. The code
+     * required should be uncommented, and that not required commented out.
+     * 1. Include the appropriate Jar files for Jena 2/Log4j and Jena4/Log4j2.
+     *    These are found in the srclib/Jena2 or srclib/Jena4 directory.
+     * 2. Uncomment the required import statements at the start of this class.
+     * 3. Uncomment the required code in this method that attaches the Log4j
+     *    logging to a string capture mechanism. The Log4j code must be used
+     *    with Jena 2, and Log4j2 with Jena 4.
+     * 4. Select the appropriate appender.close (Log4j) or appender.stop
+     *    (Log4j2) call at the end of this method.
+     * 5. In RepnVEO, read the appropriate configuration file for Log4j or
+     *    Log4j2.
+     * 
+     * If it is necessary to update Jena (or Log4j2!), get the Jena distribution.
+     * This should contain the necessary Log4j2 and slf4j files - there is no
+     * need to download them separately. Note that most of the jar files
+     * included in the Jena distribution are not necessary. Currently the only
+     * ones required are jena-core, jena-base, jena-iri, jena-shaded-guava,
+     * log4j-api, log4j-core, log4j-slf4j-impl, slf-api, and commons-lang3.
+     *
+     * @return false if the validation failed.
+     */
+    private boolean parseRDF() {
+        String method = "validateRDF";
+        DOM2Model d2m; // translator from DOM nodes to RDF model
+        Model m;
+        StringWriter parseErrs;     // place where parse errors can be captured
+        int i;
+        Element e;
 
         // create a place to put the RDF metadata (if any)
         rdfModel = ModelFactory.createDefaultModel();
 
         // add String Logger to Jena logging facility to capture parse errors
-        // Jena uses the 'log4j' logging facility
-        // This is pure magical incantation taken from https://logging.apache.org/log4j/2.x/manual/customconfig.html
         parseErrs = new StringWriter();
+
+        // This code is used with Jena 4 and Log4j2
+        // This is pure magical incantation taken from https://logging.apache.org/log4j/2.x/manual/customconfig.html
+        /* Uncomment out this section if you wish to use Jena 4/Log4j2
         final LoggerContext context = LoggerContext.getContext(false);
         final Configuration config = context.getConfiguration();
         final PatternLayout layout = PatternLayout.createDefaultLayout(config);
@@ -172,17 +249,18 @@ class RepnMetadataPackage extends Repn {
             loggerConfig.addAppender(appender, level, filter);
         }
         config.getRootLogger().addAppender(appender, level, filter);
+         */
+        // end code for Jena 4/Log4j2
 
-        // This is the equivalent for the original Log4j. Code is kept in case
-        // it is needed to be used again. Note that you need to set the
-        // configuration in RepnVEO.java.
-        /*
-        appender = new WriterAppender(new PatternLayout("%p - %m%n"), parseErrs);
+        // This code is used with Jena 2 and Log4j. The code is taken from
+        // http://logging.apache.org/log4j/1.2/manual.html
+        WriterAppender appender = new WriterAppender(new PatternLayout("%p - %m%n"), parseErrs);
         appender.setName("STRING_APPENDER");
-        appender.setThreshold(org.apache.logging.log4j.Level.WARN);
+        appender.setThreshold(org.apache.log4j.Level.WARN);
         Logger.getRootLogger().removeAllAppenders();
         Logger.getRootLogger().addAppender(appender);
-         */
+        // end code for Jena 2/Log4j
+
         for (i = 0; i < metadata.size(); i++) {
             e = metadata.get(i);
 
@@ -222,39 +300,14 @@ class RepnMetadataPackage extends Repn {
         }
 
         // clean up
-        appender.stop();
+        // appender.stop(); // use for Jena4/Log4j2
+        appender.close(); // use for Jena2/Log4j
         try {
             parseErrs.close();
         } catch (IOException ioe) {
             LOG.log(java.util.logging.Level.WARNING, errMesg(classname, method, "Failed to close StringWriter used to capture parse errors", ioe));
         }
-
-        // if ANZS5478 check to see if the required properties are present and valid
-        if (schemaId.getValue().endsWith("ANZS5478")
-                || schemaId.getValue().equals("http://www.prov.vic.gov.au/VERS-as5478")) {
-            if (!syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
-                addError("ANZS-5478 metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'");
-                return false;
-            }
-            rdfModel.setNsPrefix("anzs5478", ANZS5478);
-            checkANZSProperties(noRec);
-            return true;
-        }
-
-        // if AGLS check to see if the required properties are present and valid
-        if (schemaId.getValue().endsWith("AGLS")
-                || schemaId.getValue().equals("http://www.vic.gov.au/blog/wp-content/uploads/2013/11/AGLS-Victoria-2011-V4-Final-2011.pdf")) {
-            if (!syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
-                addError("AGLS metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'");
-                return false;
-            }
-            rdfModel.setNsPrefix("dcterms", DC_TERMS);
-            rdfModel.setNsPrefix("aglsterms", AGLS_TERMS);
-            rdfModel.setNsPrefix("versterms", VERS_TERMS);
-            checkAGLSProperties(noRec);
-            return true;
-        }
-        return false;
+        return true;
     }
 
     /**
@@ -270,7 +323,6 @@ class RepnMetadataPackage extends Repn {
      * or conditional properties that are present</li>
      * <li>The presence of properties that are not defined in the standard
      * </ul>
-     * .
      */
     static final Property ANZS_ENTITYTYPE = ResourceFactory.createProperty(ANZS5478, "EntityType");
 
