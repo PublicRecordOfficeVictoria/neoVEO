@@ -133,7 +133,7 @@ public class VEOAnalysis {
      * 20220314 3.18 Rejigged reports for IOs so that they are a linked structure rather than one document
      * 20220315 3.19 Added total count of IOs generated in run
      * 20220408 3.20 Forced reading of XML files to be UTF-8 & output of HTML files to be UTF-8
-     * 20220422 3.21 Provided option to use JDK8/Jena2/Log4j or JDK11/Jena4/Log4j2
+     * 20220422 3.21 Provided option to use JDK8/Jena2/Log4j or JDK11/Jena4/Log4j2. Updated to the last version of Jena2.
      * </pre>
      */
     static String version() {

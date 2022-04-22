@@ -39,6 +39,7 @@ import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
  */
 // end Jena 4 imports
+
 // Use the com.hp.hpl.jena imports if using Jena 2
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
@@ -188,10 +189,15 @@ class RepnMetadataPackage extends Repn {
      * Validate metadata expressed in RDF as XML. The first step is to parse the
      * RDF into a Model that can be subsequently queried for properties.
      *
-     * Apache Jena is used to parse, validate, and extract RDF metadata. The
-     * version of Jena used depends on the JDK available. If JDK8 is required
-     * to be used, Jena 2 is used and this requires Log4j. If JDK11 (or better)
-     * is available, Jena 4 may be used and this requires Log4j2.
+     * Apache Jena is used to parse, validate, and extract RDF metadata.
+     * 
+     * The version of Jena used depends on the JDK available. Jena uses Log4j;
+     * Jena 3 and Jena 4 use Log4j2 which had serious security bugs until early
+     * 2022. Using the patched (latest) version of Log4j2 required JDK11.
+     * 
+     * If you can use JDK 11 or better, use the included libraries for Jena 4.
+     * If you prefer to use JDK 8, use the included libraries for Jena 2. This
+     * uses Log4j (version 1) which does not have the reported security bugs.
      * 
      * This class is the only place that Log4j/Log4j2 is used; the rest of
      * VEOAnalysis uses the standard Java logging library. Consequently, this
@@ -201,17 +207,18 @@ class RepnMetadataPackage extends Repn {
      * Code is provided for both Jena 2/Log4j and Jena4/Log4j2. The code
      * required should be uncommented, and that not required commented out.
      * 1. Include the appropriate Jar files for Jena 2/Log4j and Jena4/Log4j2.
-     *    These are found in the srclib/Jena2 or srclib/Jena4 directory.
-     * 2. Uncomment the required import statements at the start of this class.
+     *    These are found in the srclib/Jena2 or srclib/Jena4 directories.
+     * 2. Uncomment the required import statements at the start of this class
+     *    & comment out the unrequired import statements.
      * 3. Uncomment the required code in this method that attaches the Log4j
-     *    logging to a string capture mechanism. The Log4j code must be used
-     *    with Jena 2, and Log4j2 with Jena 4.
+     *    logging to a string capture mechanism & comment out the unrequired
+     *    code. The Log4j code must be used with Jena 2, and Log4j2 with Jena 4.
      * 4. Select the appropriate appender.close (Log4j) or appender.stop
      *    (Log4j2) call at the end of this method.
      * 5. In RepnVEO, read the appropriate configuration file for Log4j or
      *    Log4j2.
      * 
-     * If it is necessary to update Jena (or Log4j2!), get the Jena distribution.
+     * If it is necessary to update Jena 3 (or Log4j2!), get the Jena distribution.
      * This should contain the necessary Log4j2 and slf4j files - there is no
      * need to download them separately. Note that most of the jar files
      * included in the Jena distribution are not necessary. Currently the only
