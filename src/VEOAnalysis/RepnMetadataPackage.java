@@ -929,8 +929,8 @@ class RepnMetadataPackage extends Repn {
         if (hasErrors || hasWarnings) {
             addTag("<ul>\n");
             listIssues();
-            schemaId.listIssues();
-            syntaxId.listIssues();
+            schemaId.genReport(verbose, w);
+            syntaxId.genReport(verbose, w);
             addTag("</ul>\n");
         }
 

@@ -324,8 +324,8 @@ class RepnContentFile extends Repn {
         if (hasErrors || hasWarnings) {
             addTag("<ul>\n");
             listIssues();
-            pathName.listIssues();
-            hashValue.listIssues();
+            pathName.genReport(verbose, w);
+            hashValue.genReport(verbose, w);
             addTag("</ul>\n");
         }
         endDiv();

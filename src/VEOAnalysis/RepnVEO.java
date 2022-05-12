@@ -829,7 +829,7 @@ class RepnVEO extends Repn {
             addString(" file\n");
             if (readme.hasErrors || readme.hasWarnings) {
                 addTag("<ul>\n");
-                readme.listIssues();
+                readme.genReport(verbose, w);;
                 addTag("</ul>\n");
             }
             endDiv();

@@ -364,8 +364,8 @@ class RepnInformationObject extends Repn {
         if (hasErrors || hasWarnings) {
             addTag("<ul>\n");
             listIssues();
-            type.listIssues();
-            depth.listIssues();
+            type.genReport(verbose, w);;
+            depth.genReport(verbose, w);;
             addTag("</ul>\n");
         }
         if (metadata.size() > 0) {
