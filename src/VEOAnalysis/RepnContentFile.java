@@ -15,6 +15,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
@@ -108,7 +109,7 @@ class RepnContentFile extends Repn {
         byte[] storedHash;      // genHash read from file
         int i;
         byte[] b = new byte[1000]; // buffer used to read input file
-        String s, fmt;
+        String s, safe, fmt;
 
         // check to see that vers:PathName element exists and has a non empty value
         if (pathName == null || pathName.getValue() == null) {
@@ -129,15 +130,25 @@ class RepnContentFile extends Repn {
         }
 
         // check that the file exists
-        String safe = pathName.getValue().replaceAll("\\\\", "/");
-        fileToHash = veoDir.resolve(safe);
+        safe = s.replaceAll("\\\\", "/");
+        try {
+            fileToHash = veoDir.resolve(safe);
+        } catch (InvalidPathException ipe) {
+            addError("Referenced file '" + safe + "' is not a valid file name: "+ipe.getMessage());
+            return false;
+        }
         if (Files.notExists(fileToHash)) {
             addError("Referenced file '" + safe + "' does not exist");
             return false;
         }
 
         // get the RepnFile associated with this content file, and mark it off the file in the list of files in VEO
-        p = Paths.get(safe);
+        try {
+            p = Paths.get(safe);
+        } catch (InvalidPathException ipe) {
+            addError("Content file name '"+safe+"' is a valid file name");
+            return false;
+        }
         if (contentFiles.containsKey(p)) {
             rf = contentFiles.get(p);
             rf.setContentFile(this);
@@ -213,6 +224,7 @@ class RepnContentFile extends Repn {
     /**
      * Was this content file a long term preservation file? Note this is only
      * valid *after* a call to validate
+     *
      * @return true if a long term preservation format
      */
     public boolean isLTPF() {

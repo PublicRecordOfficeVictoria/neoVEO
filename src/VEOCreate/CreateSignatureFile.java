@@ -12,6 +12,7 @@ import VERSCommon.VEOError;
 import VERSCommon.VEOFatal;
 import java.io.*;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.*;
@@ -104,7 +105,11 @@ class CreateSignatureFile extends CreateXMLDoc {
         // general
         LOG.entering(classname, method, new Object[]{toSign, signer, algorithmId});
         preamble = null;
-        fileToSign = Paths.get(veoDir.toString(), toSign);
+        try {
+            fileToSign = veoDir.resolve(toSign);
+        } catch (InvalidPathException ipe) {
+            throw new VEOFatal(classname, 1, "File name to sign ("+toSign+") was invalid: "+ipe.getMessage());
+        }
 
         // Check that the algorithm associated with the private key matches the
         // selected algorithm
@@ -173,7 +178,7 @@ class CreateSignatureFile extends CreateXMLDoc {
         i = 0;
         do {
             i++;
-            sigFile = Paths.get(veoDir.toString(), preamble + "Signature" + i + ".xml");
+            sigFile = veoDir.resolve(preamble + "Signature" + i + ".xml");
         } while (Files.exists(sigFile));
 
         // initialise signature calculation

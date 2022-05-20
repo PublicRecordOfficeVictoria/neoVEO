@@ -19,6 +19,7 @@ import java.nio.file.DirectoryIteratorException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -69,7 +70,7 @@ class RepnVEO extends Repn {
 
         int i;
         String s, safe;
-        Path zipFile, p;
+        Path zipFile;
 
         // initialise
         schemaDir = null;
@@ -85,7 +86,11 @@ class RepnVEO extends Repn {
 
         // check if VEO exists
         safe = veo.replaceAll("\\\\", "/");
-        zipFile = Paths.get(safe);
+        try {
+            zipFile = Paths.get(safe);
+        } catch (InvalidPathException ipe) {
+            throw new VEOError(1, errMesg(classname, "VEO file name '" + safe + "' is invalid"));
+        }
         if (!Files.exists(zipFile)) {
             throw new VEOError(1, errMesg(classname, "VEO file name '" + safe + "' does not exist"));
         }
@@ -97,8 +102,11 @@ class RepnVEO extends Repn {
         }
         s = s.substring(0, i);
         safe = s.replaceAll("\\\\", "/");
-        veoDir = output.resolve(safe);
-        veoDir = veoDir.normalize();
+        try {
+            veoDir = output.resolve(safe).normalize();
+        } catch (InvalidPathException ipe) {
+            throw new VEOError(3, errMesg(classname, "VEO directory name '" + safe + "' is invalid: " + ipe.getMessage()));
+        }
 
         // delete the VEO directory (if it exists)
         deleteVEO();
@@ -136,10 +144,8 @@ class RepnVEO extends Repn {
         // Configure the logging used in the RDF validator. See the discussion
         // RepnMetadataPackage for which version you should use. Uncomment the
         // line for the version of log4j that you wish to use
-        
         // This is for log4j2 used with Jena 4
         // System.setProperty("log4j2.configurationFile", schemaDir.resolve("log4j2.properties").toAbsolutePath().toString());
-        
         // This is for log4j used with Jena 2
         PropertyConfigurator.configure(schemaDir.resolve("log4j.properties").toAbsolutePath().toString());
 
@@ -389,7 +395,7 @@ class RepnVEO extends Repn {
             if (i != -1) {
                 veoName = veoName.substring(0, i);
             }
-            
+
             // open the zip file and get the entries in it
             zipFile = new ZipFile(zipFilePath.toFile());
 
@@ -420,7 +426,11 @@ class RepnVEO extends Repn {
                 // this is so horrible because Paths.resolve won't process
                 // windows file separators in a string on Unix boxes
                 String safe = entry.getName().replaceAll("\\\\", "/");
-                zipEntryPath = Paths.get(safe);
+                try {
+                    zipEntryPath = Paths.get(safe);
+                } catch (InvalidPathException ipe) {
+                    throw new VEOError(1, errMesg(classname, "ZIP path entry '" + safe + "' is invalid: "+ipe.getMessage()));
+                }
 
                 // complain (once!) if filename of the VEO is different to the
                 // base of the filenames in the ZIP file (e.g. the VEO file has
@@ -439,11 +449,15 @@ class RepnVEO extends Repn {
                 // doesn't matter what the ZIP file says, force the extract to
                 // be in a directory with the same name as the VEO filename
                 // (even if we have complained about this)
-                if (zipEntryPath.getNameCount() == 1) {
-                    p = veoDir.getParent().resolve(Paths.get(veoName));
-                } else {
-                    zipEntryPath = zipEntryPath.subpath(1, zipEntryPath.getNameCount());
-                    p = veoDir.getParent().resolve(Paths.get(veoName)).resolve(zipEntryPath);
+                try {
+                    if (zipEntryPath.getNameCount() == 1) {
+                        p = veoDir.getParent().resolve(veoName);
+                    } else {
+                        zipEntryPath = zipEntryPath.subpath(1, zipEntryPath.getNameCount());
+                        p = veoDir.getParent().resolve(veoName).resolve(zipEntryPath);
+                    }
+                } catch (InvalidPathException ipe) {
+                    throw new VEOError(1, errMesg(classname, "File name '" + veoName + "' is invalid: "+ipe.getMessage()));
                 }
 
                 // where does the file name in the ZIP entry really point to?
@@ -737,7 +751,7 @@ class RepnVEO extends Repn {
         int i;
         String r;
         Path cssSource, cssDest;
-        
+
         // copy in CSS file from schema directory
         cssSource = schemaDir.resolve("ReportStyle.css");
         cssDest = veoDir.resolve("ReportStyle.css");

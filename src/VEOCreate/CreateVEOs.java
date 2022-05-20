@@ -12,6 +12,7 @@ import VERSCommon.VEOError;
 import java.io.*;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
@@ -26,9 +27,9 @@ import java.util.regex.PatternSyntaxException;
 
 /**
  * This class creates multiple VEOs from a text control file. The control file
- * is a text file containing multiple rows of tab separated commands. Each command
- * builds a part of a VEO (or controls how subsequent VEOs are to be built).
- * (Note that the class CreateVEO is an alternative way to build a VEO,
+ * is a text file containing multiple rows of tab separated commands. Each
+ * command builds a part of a VEO (or controls how subsequent VEOs are to be
+ * built). (Note that the class CreateVEO is an alternative way to build a VEO,
  * providing an API to programatically build a VEO.)
  * <h3>Command Line arguments</h3>
  * The following command line arguments must be supplied:
@@ -97,10 +98,10 @@ import java.util.regex.PatternSyntaxException;
  * Package within an Information Object. The first argument is the template
  * name, subsequent arguments are the substitutions. An MP command may be
  * followed by MPC commands (to construct a metadata package from several
- * templates) or ME, SME, &amp; EME commands (to add XML elements one at a time).
- * The current Metadata Package will be finished when an MP, XML-MP, RDF-MP,
- * AGLS-MP, ANZS5478-MP, IP, or IO command is encountered. All but the last two
- * (IP or IO) will start the creation of a new Metadata Package.</li>
+ * templates) or ME, SME, &amp; EME commands (to add XML elements one at a
+ * time). The current Metadata Package will be finished when an MP, XML-MP,
+ * RDF-MP, AGLS-MP, ANZS5478-MP, IP, or IO command is encountered. All but the
+ * last two (IP or IO) will start the creation of a new Metadata Package.</li>
  * <li><b>'XML-MP' &lt;semanticId&gt;</b> Begin a new generic XML Metadata
  * Package with the given semanticId (a URL). The syntaxId will be set to XML.
  * The contents of this metadata package can be added using the ME, SME, EME,
@@ -289,10 +290,11 @@ public class CreateVEOs {
      * 20220124 2.7 Changed to using Apache ZIP to be consistant with VEOAnalysis
      * 20220218 3.0 Added the ability to construct metadata packages element by element. Rewrite of documentation
      * 20220316 3.1 Fixed bug in addAbsContentFile() - not current directory
+     * 20220520 3.2 Changed to catch invalid file names (e.g. Paths.get() & in resolve())
      * </pre>
      */
     static String version() {
-        return ("3.1");
+        return ("3.2");
     }
 
     /**
@@ -567,7 +569,11 @@ public class CreateVEOs {
     private Path checkFile(String type, String name, boolean isDirectory) throws VEOFatal {
         Path p;
 
-        p = Paths.get(name);
+        try {
+            p = Paths.get(name);
+        } catch (InvalidPathException ipe) {
+            throw new VEOFatal(classname, 9, type + " '" + name + "' is not a valid file name: "+ipe.getMessage());
+        }
 
         if (!Files.exists(p)) {
             throw new VEOFatal(classname, 6, type + " '" + p.toAbsolutePath().toString() + "' does not exist");
@@ -1478,14 +1484,15 @@ public class CreateVEOs {
     private Path getRealFile(String fileRef) throws VEOError {
         Path f;
 
-        f = Paths.get(fileRef);
+        try {
+            f = Paths.get(fileRef);
+        } catch (InvalidPathException ipe) {
+            throw new VEOError("Invalid file reference (" + fileRef + ") in control file:");
+        }
 
-        // if it is relative to current working directory
-        if (f.startsWith(".")) {
-            f = Paths.get("").resolve(f);
-
-            // if it not absolute (relative to the directory containing the control file)
-        } else if (!f.isAbsolute()) {
+        // if fileRef is not relative to current working directory and
+        // not absolute (relative to the directory containing the control file)
+        if (!f.startsWith(".") && !f.isAbsolute()) {
             f = baseDir.resolve(fileRef);
         }
         try {

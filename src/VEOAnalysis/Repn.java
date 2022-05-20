@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -259,13 +260,17 @@ abstract class Repn {
             log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
             return;
         }
-        htmlFile = veoDir.resolve(htmlFileName);
+        try {
+            htmlFile = veoDir.resolve(htmlFileName);
+        } catch (InvalidPathException e) {
+            throw new VEOError(errMesg(classname, method, "Error when attempting to open HTML output file; '" + htmlFileName + "' is not a valid file name: ", e));
+        }
         try {
             fos = new FileOutputStream(htmlFile.toFile());
             osw = new OutputStreamWriter(fos, Charset.forName("UTF-8"));
             w = new BufferedWriter(osw);
         } catch (IOException e) {
-            throw new VEOError(errMesg(classname, method, "IOException when attempting to open HTML output file '" + htmlFile.toString() + "'. Error was", e));
+            throw new VEOError(errMesg(classname, method, "Error when attempting to open HTML output file '" + htmlFile.toString() + "'. Error was", e));
         }
         try {
             w.write("<!DOCTYPE html>\n<html>\n<head>\n");

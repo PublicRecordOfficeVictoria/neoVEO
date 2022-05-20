@@ -14,6 +14,7 @@ import java.nio.channels.*;
 import java.nio.charset.*;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.logging.*;
@@ -85,11 +86,15 @@ class CreateXMLDoc {
         this.rootElement = rootElement;
 
         // open XML document for writing
-        doc = Paths.get(veoDir.toString(), xmlDoc);
+        try {
+            doc = veoDir.resolve(xmlDoc);
+        } catch (InvalidPathException ipe) {
+            throw new VEOError(classname, module, 2, "Output XML document name (" + xmlDoc + ") is not a valid file name: "+ipe.getMessage());
+        }
         try {
             fos = new FileOutputStream(doc.toString());
         } catch (FileNotFoundException fnfe) {
-            throw new VEOError(classname, module, 1, "Output VEO file '" + doc.toString() + "' cannot be opened for writing");
+            throw new VEOError(classname, module, 1, "Output XML file '" + doc.toString() + "' cannot be opened for writing");
         }
         xml = fos.getChannel();
 

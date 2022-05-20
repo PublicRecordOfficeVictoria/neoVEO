@@ -198,8 +198,8 @@ class CreateVEOContent extends CreateXMLDoc {
             + "   </rdf:RDF>\r\n";
 
     /**
-     * Start an RDF metadata package (a specific type of metadata package).
-     * The namespaceDefns may be NULL, but the resourceId must be present.
+     * Start an RDF metadata package (a specific type of metadata package). The
+     * namespaceDefns may be NULL, but the resourceId must be present.
      *
      * @param semanticId the string to use to identify the meaning of metadata
      * @param namespaceDefns any namespace definitions to include in rdf:RDF
@@ -437,7 +437,11 @@ class CreateVEOContent extends CreateXMLDoc {
 
         // check that the file exists
         if (fileToHash == null) {
-            fileToHash = Paths.get(veoDir.toString(), nameInVEO);
+            try {
+                fileToHash = veoDir.resolve(nameInVEO);
+            } catch (InvalidPathException ipe) {
+                throw new VEOError(classname, method, 2, "Destination file name (" + nameInVEO + ") was invalid: " + ipe.getMessage());
+            }
         }
         if (Files.notExists(fileToHash)) {
             throw new VEOError(classname, method, 1, "File to add '" + fileToHash.toString() + "' does not exist");

@@ -134,12 +134,13 @@ public class VEOAnalysis {
      * 20220315 3.19 Added total count of IOs generated in run
      * 20220408 3.20 Forced reading of XML files to be UTF-8 & output of HTML files to be UTF-8
      * 20220422 3.21 Provided option to use JDK8/Jena2/Log4j or JDK11/Jena4/Log4j2. Updated to the last version of Jena2.
+     * 20220520 3.22 Changed to catch invalid file names (e.g. Paths.get() & in resolve())
      * </pre>
      */
     static String version() {
-        return ("3.21");
+        return ("3.22");
     }
-    
+
     static String copyright = "Copyright 2015, 2022 Public Record Office Victoria";
 
     /**
@@ -238,7 +239,7 @@ public class VEOAnalysis {
         System.out.println("*                 V E O ( V 3 )   A N A L Y S I S   T O O L                  *");
         System.out.println("*                                                                            *");
         System.out.println("*                                Version " + version() + "                                *");
-        System.out.println("*               "+copyright+"                 *");
+        System.out.println("*               " + copyright + "                 *");
         System.out.println("*                                                                            *");
         System.out.println("******************************************************************************");
         System.out.println("");
@@ -488,7 +489,11 @@ public class VEOAnalysis {
         Path p;
 
         String safe = name.replaceAll("\\\\", "/");
-        p = Paths.get(safe);
+        try {
+            p = Paths.get(safe);
+        } catch (InvalidPathException ipe) {
+            throw new VEOFatal(classname, 9, type + " '" + safe + "' is not a valid file name." + ipe.getMessage());
+        }
 
         if (!Files.exists(p)) {
             throw new VEOFatal(classname, 6, type + " '" + p.toAbsolutePath().toString() + "' does not exist");
@@ -546,10 +551,10 @@ public class VEOAnalysis {
                 testVEOint(veo, outputDir);
             }
         }
-        
+
         // report total IOs generated in run
         if (reportIOcnt) {
-            System.out.println("Total IOs encountered in run: "+totalIOs);
+            System.out.println("Total IOs encountered in run: " + totalIOs);
         }
     }
 
@@ -702,7 +707,7 @@ public class VEOAnalysis {
                 result = rv.getStatus();
                 // LOG.log(Level.WARNING, rv.getStatus());
             }
-            
+
         } finally {
             hasErrors = rv.hasErrors();
 

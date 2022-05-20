@@ -14,6 +14,7 @@ import java.nio.charset.Charset;
 import java.nio.file.DirectoryIteratorException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
@@ -354,8 +355,11 @@ public class SignVEOs {
     private Path checkFile(String type, String name, boolean isDirectory) throws VEOFatal {
         Path p;
 
-        p = Paths.get(name).normalize();
-
+        try {
+            p = Paths.get(name).normalize();
+        } catch (InvalidPathException ipe) {
+            throw new VEOFatal(classname, 9, type + " '" + name + "' is not a valid file name: "+ipe.getMessage());
+        }
         if (!Files.exists(p)) {
             throw new VEOFatal(classname, 6, type + " '" + p.toAbsolutePath().toString() + "' does not exist");
         }

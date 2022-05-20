@@ -15,6 +15,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.InvalidKeyException;
@@ -78,7 +79,11 @@ class RepnSignature extends RepnXML {
         certificates = new ArrayList<>();
 
         // get the files involved
-        file = veoDir.resolve(sigFileName);
+        try {
+            file = veoDir.resolve(sigFileName);
+        } catch (InvalidPathException ipe) {
+            throw new VEOError(errMesg(classname, "Signature file name (" + sigFileName + ") is not valid: "+ipe.getMessage()));
+        }
         schema = schemaDir.resolve("vers3-signature.xsd");
 
         // work out whether we are validating the content file or the history file
