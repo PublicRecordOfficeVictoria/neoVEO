@@ -135,10 +135,11 @@ public class VEOAnalysis {
      * 20220408 3.20 Forced reading of XML files to be UTF-8 & output of HTML files to be UTF-8
      * 20220422 3.21 Provided option to use JDK8/Jena2/Log4j or JDK11/Jena4/Log4j2. Updated to the last version of Jena2.
      * 20220520 3.22 Changed to catch invalid file names (e.g. Paths.get() & in resolve())
+     * 20220615 3.23 Added 4746 & 5062 to the valid VEOReadme.txt file sizes
      * </pre>
      */
     static String version() {
-        return ("3.22");
+        return ("3.23");
     }
 
     static String copyright = "Copyright 2015, 2022 Public Record Office Victoria";

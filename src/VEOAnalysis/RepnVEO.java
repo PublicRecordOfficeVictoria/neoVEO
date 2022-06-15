@@ -132,7 +132,7 @@ class RepnVEO extends Repn {
      * @throws VEOError If an error occurred in processing this VEO
      */
     // this array contains the valid lengths of the VEOReadMe.txt over time
-    static int expVEOSize[] = {4840, 5061};
+    static int expVEOSize[] = {4746, 4840, 5061, 5062};
 
     public void constructRepn(Path schemaDir) throws VEOError {
         String fileName;
