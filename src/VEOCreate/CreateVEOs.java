@@ -291,10 +291,11 @@ public class CreateVEOs {
      * 20220218 3.0 Added the ability to construct metadata packages element by element. Rewrite of documentation
      * 20220316 3.1 Fixed bug in addAbsContentFile() - not current directory
      * 20220520 3.2 Changed to catch invalid file names (e.g. Paths.get() & in resolve())
+     * 20220718 3.3 Now handles IP labels that are valid filesystem names
      * </pre>
      */
     static String version() {
-        return ("3.2");
+        return ("3.3");
     }
 
     /**

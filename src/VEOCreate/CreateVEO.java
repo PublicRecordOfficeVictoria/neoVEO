@@ -1024,6 +1024,7 @@ public class CreateVEO {
      * registerContentDirectories(Path...) methods. It converts the short hand
      * form 'c/d/e.txt' into a fully qualified name. If no directory 'c' has
      * been loaded by a registerContentDirectories() call, a VEOError is thrown.
+     * The short hand must have at least two components.
      *
      * @param file the path name to be used in the VEO
      * @return the real file
@@ -1038,6 +1039,9 @@ public class CreateVEO {
             destination = Paths.get(file);
         } catch (InvalidPathException ipe) {
             throw new VEOError(classname, method, 1, "veoFile '" + file + "' is not a valid file name: " + ipe.getMessage());
+        }
+        if (destination.getNameCount() < 2) {
+            throw new VEOError(classname, method, 1, "Filename (" + file + ") must have at least two components");
         }
         rootName = destination.getName(0).toString();
         rootPath = contentPrefixes.get(rootName);
