@@ -1,6 +1,7 @@
 # VERS V3 Development Package (neoVEO)
 
 Copyright Public Records Office Victoria 2022
+
 License CC BY 4.0
 
 ## What is VERS?
