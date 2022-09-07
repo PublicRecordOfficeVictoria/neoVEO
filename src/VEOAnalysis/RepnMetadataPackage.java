@@ -74,7 +74,8 @@ class RepnMetadataPackage extends Repn {
     // AGLS RDF properties
     static final String DC_TERMS = "http://purl.org/dc/terms/";
     static final String AGLS_TERMS = "http://www.agls.gov.au/agls/terms/";
-    static final String ANZS5478 = "http://www.prov.vic.gov.au/ANSZ5478/terms/";
+    // static final String ANZS5478 = "http://www.prov.vic.gov.au/ANSZ5478/terms/";
+    static final String ANZS5478 = "http://www.prov.vic.gov.au/VERS-as5478";
     static final String VERS_TERMS = "http://www.prov.vic.gov.au/vers/terms/";
 
     // AGRkMS RDF properties
@@ -399,7 +400,7 @@ class RepnMetadataPackage extends Repn {
      */
     private void checkCategory(String entity, Resource r) {
         if (r.getProperty(ANZS_CATEGORY) == null) {
-            createMesg("ANZS5478", entity, r.getURI(), true, "Category", "azns5478:Category");
+            createMesg("ANZS5478", entity, r.getURI(), true, "Category", "anzs5478:Category");
         }
     }
 
@@ -420,16 +421,16 @@ class RepnMetadataPackage extends Repn {
 
         id = r.getURI();
         if ((stmt = r.getProperty(ANZS_IDENTIFIER)) == null) {
-            createMesg("ANZS5478", entity, id, true, "Identifier", "azns5478:Identifier");
+            createMesg("ANZS5478", entity, id, true, "Identifier", "anzs5478:Identifier");
         } else {
             try {
                 r1 = stmt.getResource();
             } catch (ResourceRequiredException e) {
-                addError("ANZS5478 metadata package for " + entity + " '" + id + "' contains malformed azns5478:Identifier element");
+                addError("ANZS5478 metadata package for " + entity + " '" + id + "' contains malformed anzs5478:Identifier element");
                 return;
             }
             if (r1.getProperty(ANZS_IDENTIFIERSTRING) == null) {
-                createMesg("ANZS5478", entity, id, true, "Identifier String", "azns5478:IdentifierString");
+                createMesg("ANZS5478", entity, id, true, "Identifier String", "anzs5478:IdentifierString");
             }
         }
     }
@@ -450,16 +451,16 @@ class RepnMetadataPackage extends Repn {
 
         id = r.getURI();
         if ((stmt = r.getProperty(ANZS_NAME)) == null) {
-            createMesg("ANZS5478", entity, id, true, "Name", "azns5478:Name");
+            createMesg("ANZS5478", entity, id, true, "Name", "anzs5478:Name");
         } else {
             try {
                 r1 = stmt.getResource();
             } catch (ResourceRequiredException e) {
-                addError("ANZS5478 metadata package for " + entity + " '" + id + "' contains malformed azns5478:Name element");
+                addError("ANZS5478 metadata package for " + entity + " '" + id + "' contains malformed anzs5478:Name element");
                 return;
             }
             if (r1.getProperty(ANZS_NAMEWORDS) == null) {
-                createMesg("ANZS5478", entity, id, true, "Name String", "azns5478:NameWords");
+                createMesg("ANZS5478", entity, id, true, "Name String", "anzs5478:NameWords");
             }
         }
     }
@@ -481,16 +482,16 @@ class RepnMetadataPackage extends Repn {
 
         id = r.getURI();
         if ((stmt = r.getProperty(ANZS_DATERANGE)) == null) {
-            createMesg("ANZS5478", entity, id, true, "Date Range", "azns5478:DateRange");
+            createMesg("ANZS5478", entity, id, true, "Date Range", "anzs5478:DateRange");
         } else {
             try {
                 r1 = stmt.getResource();
             } catch (ResourceRequiredException e) {
-                addError("ANZS5478 metadata package for " + entity + " '" + id + "' contains malformed azns5478:DateRange element");
+                addError("ANZS5478 metadata package for " + entity + " '" + id + "' contains malformed anzs5478:DateRange element");
                 return;
             }
             if (r1.getProperty(ANZS_STARTDATE) == null) {
-                createMesg("ANZS5478", entity, id, true, "Start Date", "azns5478:StartDate");
+                createMesg("ANZS5478", entity, id, true, "Start Date", "anzs5478:StartDate");
             }
         }
     }
@@ -512,21 +513,21 @@ class RepnMetadataPackage extends Repn {
 
         id = r.getURI();
         if ((stmt = r.getProperty(ANZS_RELATEDENTITY)) == null) {
-            createMesg("ANZS5478", entity, id, true, "Related Entity", "azns5478:RelatedEntity");
+            createMesg("ANZS5478", entity, id, true, "Related Entity", "anzs5478:RelatedEntity");
         } else {
             try {
                 r1 = stmt.getResource();
             } catch (ResourceRequiredException e) {
-                addError("ANZS5478 metadata package for " + entity + " '" + id + "' contains malformed azns5478:RelatedEntity element");
+                addError("ANZS5478 metadata package for " + entity + " '" + id + "' contains malformed anzs5478:RelatedEntity element");
                 return;
             }
             if (r1.getProperty(ANZS_ASSIGNEDENTITYID) == null) {
-                createMesg("ANZS5478", entity, id, true, "Assigned Entity ID", "azns5478:AssignedEntityID");
+                createMesg("ANZS5478", entity, id, true, "Assigned Entity ID", "anzs5478:AssignedEntityID");
             }
             if ((stmt1 = r1.getProperty(ANZS_RELATIONSHIPROLE)) == null) {
-                createMesg("ANZS5478", entity, id, true, "Relationship Role", "azns5478:Relationship Role");
+                createMesg("ANZS5478", entity, id, true, "Relationship Role", "anzs5478:Relationship Role");
             } else if (!(stmt1.getString().trim().equals("1") || stmt1.getString().trim().equals("2"))) {
-                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must contain relationship role property (azns5478:RelationshipRole) with a value of '1' or '2'");
+                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must contain relationship role property (anzs5478:RelationshipRole) with a value of '1' or '2'");
             }
         }
     }
@@ -552,16 +553,16 @@ class RepnMetadataPackage extends Repn {
 
         id = r.getURI();
         if ((stmt = r.getProperty(ANZS_DISPOSAL)) == null) {
-            createMesg("ANZS5478", entity, id, true, "Disposal", "azns5478:Disposal");
+            createMesg("ANZS5478", entity, id, true, "Disposal", "anzs5478:Disposal");
         } else {
             try {
                 r1 = stmt.getResource();
             } catch (ResourceRequiredException e) {
-                addError("ANZS5478 metadata package for " + entity + " '" + id + "' contains malformed azns5478:Disposal element");
+                addError("ANZS5478 metadata package for " + entity + " '" + id + "' contains malformed anzs5478:Disposal element");
                 return;
             }
             if ((stmt1 = r1.getProperty(ANZS_RECORDSAUTHORITY)) == null) {
-                createMesg("ANZS5478", entity, id, true, "Retention and Disposal Authority", "azns5478:RetentionAndDisposalAuthority");
+                createMesg("ANZS5478", entity, id, true, "Retention and Disposal Authority", "anzs5478:RetentionAndDisposalAuthority");
             }
 
             // remaining sub properties are mandatory unless authority is no disposal coverage
@@ -569,16 +570,16 @@ class RepnMetadataPackage extends Repn {
                 return;
             }
             if (r1.getProperty(ANZS_DISPOSALCLASSID) == null) {
-                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must contain disposal class id property (azns5478:DisposalClassID) unless the Retention and Disposal Authority is set to 'No Disposal Coverage'");
+                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must contain disposal class id property (anzs5478:DisposalClassID) unless the Retention and Disposal Authority is set to 'No Disposal Coverage'");
             }
             if (r1.getProperty(ANZS_DISPOSALACTION) == null) {
-                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must contain disposal action property (azns5478:DisposalAction) unless the Retention and Disposal Authority is set to 'No Disposal Coverage'");
+                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must contain disposal action property (anzs5478:DisposalAction) unless the Retention and Disposal Authority is set to 'No Disposal Coverage'");
             }
             if (r1.getProperty(ANZS_DISPOSALTRIGGERDATE) == null) {
-                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must contain disposal trigger date property (azns5478:DisposalTriggerDate) unless the Retention and Disposal Authority is set to 'No Disposal Coverage'");
+                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must contain disposal trigger date property (anzs5478:DisposalTriggerDate) unless the Retention and Disposal Authority is set to 'No Disposal Coverage'");
             }
             if (r1.getProperty(ANZS_DISPOSALACTIONDUE) == null) {
-                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must contain disposal action due property (azns5478:DisposalActionDue) unless the Retention and Disposal Authority is set to 'No Disposal Coverage'");
+                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must contain disposal action due property (anzs5478:DisposalActionDue) unless the Retention and Disposal Authority is set to 'No Disposal Coverage'");
             }
         }
     }
@@ -599,14 +600,15 @@ class RepnMetadataPackage extends Repn {
         String id;
         boolean namePresent, applnPresent;
 
+        /* test deleted a/c azns:Format has no use in VERS V3 information objects
         id = r.getURI();
         if ((stmt = r.getProperty(ANZS_FORMAT)) == null) {
-            createMesg("ANZS5478", entity, id, true, "Format", "azns5478:Format");
+            createMesg("ANZS5478", entity, id, true, "Format", "anzs5478:Format");
         } else {
             try {
                 r1 = stmt.getResource();
             } catch (ResourceRequiredException e) {
-                addError("ANZS5478 metadata package for " + entity + " '" + id + "' contains malformed azns5478:Format element");
+                addError("ANZS5478 metadata package for " + entity + " '" + id + "' contains malformed anzs5478:Format element");
                 return;
             }
             namePresent = false;
@@ -618,11 +620,12 @@ class RepnMetadataPackage extends Repn {
                 applnPresent = true;
             }
             if (!namePresent && !applnPresent) {
-                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must contain either a format name or creating application name property (azns5478:FormatName or anzs5478:CreatingApplicationName)");
+                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must contain either a format name or creating application name property (anzs5478:FormatName or anzs5478:CreatingApplicationName)");
             } else if (namePresent && applnPresent) {
-                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must not contain both a format name or creating application name property (azns5478:FormatName or anzs5478:CreatingApplicationName)");
+                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must not contain both a format name or creating application name property (anzs5478:FormatName or anzs5478:CreatingApplicationName)");
             }
         }
+        */
     }
 
     static final Property ANZS_EXTENT = ResourceFactory.createProperty(ANZS5478, "Extent");
@@ -644,22 +647,22 @@ class RepnMetadataPackage extends Repn {
 
         id = r.getURI();
         if ((stmt = r.getProperty(ANZS_EXTENT)) == null) {
-            createMesg("ANZS5478", entity, id, true, "Extent", "azns5478:Extent");
+            createMesg("ANZS5478", entity, id, true, "Extent", "anzs5478:Extent");
         } else {
             try {
                 r1 = stmt.getResource();
             } catch (ResourceRequiredException e) {
-                addError("ANZS5478 metadata package for " + entity + " '" + id + "' contains malformed azns5478:Extent element");
+                addError("ANZS5478 metadata package for " + entity + " '" + id + "' contains malformed anzs5478:Extent element");
                 return;
             }
             if (r1.getProperty(ANZS_PHYSICALDIMENSIONS) != null) {
-                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must not contain a physical dimensions property (azns5478:PhysicalDimensions)");
+                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must not contain a physical dimensions property (anzs5478:PhysicalDimensions)");
             }
             if (r1.getProperty(ANZS_LOGICALSIZE) == null && r1.getProperty(ANZS_QUANTITY) == null) {
-                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must contain either a logical size or quantity property (azns5478:LogicalSize or anzs5478:Quantity)");
+                addError("ANZS5478 metadata package for " + entity + " '" + id + "' must contain either a logical size or quantity property (anzs5478:LogicalSize or anzs5478:Quantity)");
             }
             if (r1.getProperty(ANZS_UNITS) == null) {
-                createMesg("ANZS5478", entity, id, true, "Units", "azns5478:Units");
+                createMesg("ANZS5478", entity, id, true, "Units", "anzs5478:Units");
             }
         }
     }
@@ -1053,7 +1056,10 @@ class RepnMetadataPackage extends Repn {
         try {
             rdfModel.write(sw, syntax);
         } catch (BadURIException bue) {
-            throw new VEOError("RDF failure: " + bue.getMessage() + " RepnMetadataPackage.addRDF()");
+            sw.append("Failed to generate RDF: ");
+            sw.append(bue.getMessage());
+            sw.append(" RepnMetadataPackage.addRDF()");
+            // throw new VEOError("RDF failure: " + bue.getMessage() + " RepnMetadataPackage.addRDF()");
         }
         addTag("<pre>");
         addString(sw.toString());

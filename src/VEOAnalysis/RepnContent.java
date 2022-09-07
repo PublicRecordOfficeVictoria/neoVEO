@@ -323,7 +323,7 @@ class RepnContent extends RepnXML {
             version.genReport(verbose, w);
             hashAlgorithm.genReport(verbose, w);
             if (infoObjs.size() > 0) {
-                startDiv("InfoObjs", null);
+                startDiv(null, "InfoObjs", null);
                 addLabel("Information Objects: ");
                 for (i = 0; i < infoObjs.size(); i++) {
                     rio = infoObjs.get(i);

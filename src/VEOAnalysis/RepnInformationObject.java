@@ -361,15 +361,11 @@ class RepnInformationObject extends Repn {
             addTag("</ul>\n");
         }
 
-        if (hasErrors || hasWarnings) {
-            addTag("<ul>\n");
-            listIssues();
-            type.genReport(verbose, w);;
-            depth.genReport(verbose, w);;
-            addTag("</ul>\n");
-        }
+        type.genReport(verbose, w);
+        depth.genReport(verbose, w);
+
         if (metadata.size() > 0) {
-            startDiv("MetaPackages", null);
+            startDiv(null, "MetaPackages", null);
             addLabel("Metadata Packages:");
             for (i = 0; i < metadata.size(); i++) {
                 metadata.get(i).genReport(verbose, w);
@@ -377,7 +373,7 @@ class RepnInformationObject extends Repn {
             endDiv();
         }
         if (infoPieces.size() > 0) {
-            startDiv("InfoPieces", null);
+            startDiv(null, "InfoPieces", null);
             addLabel("Information Pieces:");
             for (i = 0; i < infoPieces.size(); i++) {
                 infoPieces.get(i).genReport(verbose, w);

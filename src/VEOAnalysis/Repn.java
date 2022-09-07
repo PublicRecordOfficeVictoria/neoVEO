@@ -51,8 +51,7 @@ abstract class Repn {
      * Construct a representation with default reporting parameters.
      *
      * @param id the identifier used to identify this object and not debugging
-     * @param results the results summary to build
-     * information.
+     * @param results the results summary to build information.
      */
     public Repn(String id, ResultSummary results) {
         fos = null;
@@ -102,7 +101,7 @@ abstract class Repn {
     final public String getId() {
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, "getId", "Called function after abandon() was called"));
-            return("");
+            return ("");
         }
         return id;
     }
@@ -161,7 +160,7 @@ abstract class Repn {
 
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, "getErrors", "Called function after abandon() was called"));
-            return("");
+            return ("");
         }
         sb = new StringBuffer();
         for (i = 0; i < errors.size(); i++) {
@@ -186,7 +185,7 @@ abstract class Repn {
     protected boolean hasWarnings() {
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, "hasWarnings", "Called function after abandon() was called"));
-            return(false);
+            return (false);
         }
         return hasWarnings;
     }
@@ -223,7 +222,7 @@ abstract class Repn {
 
         if (!infoAvailable) {
             log.log(Level.WARNING, errMesg(classname, "getWarnings", "Called function after abandon() was called"));
-            return("");
+            return ("");
         }
         sb = new StringBuffer();
         for (i = 0; i < warnings.size(); i++) {
@@ -350,7 +349,8 @@ abstract class Repn {
      * Start a division (HTML DIV element) in the report. A list of classes may
      * be associated with the DIV to control formatting in the CSS file. If an
      * anchor is specified, the DIV will contain an ID attribute to that the
-     * HTML DIV element can be linked to.
+     * HTML DIV element can be linked to. If r is null, force the division to
+     * be displayed as correct.
      *
      * @param r the Repn to test for errors and warnings
      * @param type list of class names (separated by spaces) to put in the DIV
@@ -372,12 +372,16 @@ abstract class Repn {
 
         try {
             w.write("<div");
-            if (r.hasErrors) {
-                w.write(" class=\"box error " + type + "\"");
-            } else if (r.hasWarnings) {
-                w.write(" class=\"box warning " + type + "\"");
-            } else {
+            if (r == null) {
                 w.write(" class=\"box correct " + type + "\"");
+            } else {
+                if (r.hasErrors) {
+                    w.write(" class=\"box error " + type + "\"");
+                } else if (r.hasWarnings) {
+                    w.write(" class=\"box warning " + type + "\"");
+                } else {
+                    w.write(" class=\"box correct " + type + "\"");
+                }
             }
             if (anchor != null) {
                 w.write(" id=\"" + anchor + "\"");
