@@ -157,10 +157,11 @@ class RepnContent extends RepnXML {
      * @param ltsfs List of valid long term sustainable formats
      * @param noRec true if not to complain about missing recommended metadata
      * elements
+     * @param vpa true if being called from VPA & limit some tests
      * @throws VEOError if an error occurred that won't preclude processing
      * another VEO
      */
-    public final void validate(Path veoDir, HashMap<Path, RepnFile> contentFiles, LTSF ltsfs, boolean noRec) throws VEOError {
+    public final void validate(Path veoDir, HashMap<Path, RepnFile> contentFiles, LTSF ltsfs, boolean noRec, boolean vpa) throws VEOError {
         String s;
         Boolean oneLevel;
         int prevDepth, i;
@@ -194,7 +195,7 @@ class RepnContent extends RepnXML {
                     oneLevel = true;
                 }
             }
-            prevDepth = rio.validate(veoDir, hashAlgorithm.getValue(), contentFiles, ltsfs, oneLevel, prevDepth, noRec);
+            prevDepth = rio.validate(veoDir, hashAlgorithm.getValue(), contentFiles, ltsfs, oneLevel, prevDepth, noRec, vpa);
         }
     }
 

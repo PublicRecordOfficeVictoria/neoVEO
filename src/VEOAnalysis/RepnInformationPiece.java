@@ -82,10 +82,11 @@ class RepnInformationPiece extends Repn {
      * @param hashAlgorithm the hash algorithm used to check integrity of the
      * @param contentFiles the collection of content files in the VEO files
      * @param ltsfs List of valid long term sustainable formats
+     * @param vpa true if being called from VPA & don't check for LTSF
      * @throws VEOError if an error occurred that won't preclude processing
      * another VEO
      */
-    public void validate(Path veoDir, String hashAlgorithm, HashMap<Path, RepnFile> contentFiles, LTSF ltsfs) throws VEOError {
+    public void validate(Path veoDir, String hashAlgorithm, HashMap<Path, RepnFile> contentFiles, LTSF ltsfs, boolean vpa) throws VEOError {
         int i;
         RepnContentFile rcf;
         boolean validLTPF;
@@ -97,13 +98,16 @@ class RepnInformationPiece extends Repn {
         }
 
         // must have at least one valid long term preservation format
-        validLTPF = false;
-        for (i = 0; i < contents.size(); i++) {
-            rcf = contents.get(i);
-            validLTPF |= rcf.isLTPF();
-        }
-        if (!validLTPF) {
-            addError("Information piece did not have a valid long term preservation format");
+        // do not perform this check if being called from VPA
+        if (!vpa) {
+            validLTPF = false;
+            for (i = 0; i < contents.size(); i++) {
+                rcf = contents.get(i);
+                validLTPF |= rcf.isLTPF();
+            }
+            if (!validLTPF) {
+                addError("Information piece did not have a valid long term preservation format");
+            }
         }
     }
 
@@ -202,7 +206,8 @@ class RepnInformationPiece extends Repn {
      *
      * @param verbose true if additional information is to be generated
      * @param writer where to write the output
-     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
+     * @throws VERSCommon.VEOError if prevented from continuing processing this
+     * VEO
      */
     public void genReport(boolean verbose, Writer w) throws VEOError {
         int i;

@@ -165,12 +165,13 @@ class RepnInformationObject extends Repn {
      * @param oneLevel true if the information objects are a flat list
      * @param prevDepth depth of previous information object
      * @param noRec true if not to complain about missing recommended metadata
+     * @param vpa true if being called from VPA & limit some tests
      * elements
      * @throws VEOError if an error occurred that won't preclude processing
      * another VEO
      * @return the depth of this Information Object
      */
-    public int validate(Path veoDir, String hashAlgorithm, HashMap<Path, RepnFile> contentFiles, LTSF ltsfs, boolean oneLevel, int prevDepth, boolean noRec) throws VEOError {
+    public int validate(Path veoDir, String hashAlgorithm, HashMap<Path, RepnFile> contentFiles, LTSF ltsfs, boolean oneLevel, int prevDepth, boolean noRec, boolean vpa) throws VEOError {
         int i;
         boolean stdMetadata;
 
@@ -205,7 +206,7 @@ class RepnInformationObject extends Repn {
             addError("The first information object did not contain an AGLS or AGRKMS metadata package");
         }
         for (i = 0; i < infoPieces.size(); i++) {
-            infoPieces.get(i).validate(veoDir, hashAlgorithm, contentFiles, ltsfs);
+            infoPieces.get(i).validate(veoDir, hashAlgorithm, contentFiles, ltsfs, vpa);
         }
         return getDepth();
     }

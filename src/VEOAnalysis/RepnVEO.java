@@ -36,7 +36,7 @@ import org.apache.log4j.PropertyConfigurator;
 // import org.apache.log4j.PropertyConfigurator;
 
 /**
- * This class encapsulates an Information Object in a VEO Content file.
+ * This class encapsulates testing the VEO as a whole.
  *
  * @author Andrew Waugh
  */
@@ -313,17 +313,18 @@ class RepnVEO extends Repn {
      * @param ltsfs List of valid long term sustainable formats
      * @param noRec true if not to complain about missing recommended metadata
      * elements
+     * @param vpa true if being called from VPA & limit some tests
      * @throws VERSCommon.VEOError if prevented from continuing processing this
      * VEO
      */
-    public final void validate(LTSF ltsfs, boolean noRec) throws VEOError {
+    public final void validate(LTSF ltsfs, boolean noRec, boolean vpa) throws VEOError {
         int i;
 
         // check to see that the required files are present
         if (veoContent == null) {
             addError("VEOContents.xml file is not present");
         } else {
-            veoContent.validate(veoDir, contentFiles, ltsfs, noRec);
+            veoContent.validate(veoDir, contentFiles, ltsfs, noRec, vpa);
         }
         if (veoHistory == null) {
             addError("VEOHistory.xml file is not present");

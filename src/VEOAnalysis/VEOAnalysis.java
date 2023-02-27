@@ -66,6 +66,7 @@ import java.util.logging.Logger;
  * problems with the program.</li>
  * <li>'-o directory'. Create the VEO directories in this output directory</li>
  * <li>'-iocnt'. Report on the number of IOs in the VEO</li>
+ * <li>'-vpa'. Being called from the VPA, so back off on some of the tests</li>
  * </ul>
  * <h1>API</h1>
  * <P>
@@ -86,6 +87,7 @@ public class VEOAnalysis {
     boolean debug;      // true if debugging information is to be generated
     boolean verbose;    // true if verbose descriptions are to be generated
     boolean norec;      // true if asked to not complain about missing recommended metadata elements
+    boolean vpa;        // true if being called from the VPA
     boolean hasErrors;  // true if VEO had errors
     boolean reportIOcnt;// true if requested to report on number of IOs in VEO
     int totalIOs;       // total IOs counted in VEO
@@ -96,7 +98,7 @@ public class VEOAnalysis {
     private ResultSummary results;  // summary of the errors & warnings
 
     private final static String USAGE
-            = "AnalyseVEOs [-help] [-e] [-sr] [-r|-u] [-v] [-d] [-c] [-iocnt] [-norec] -s supportDir [-o outputDir] [files*]";
+            = "AnalyseVEOs [-help] [-e] [-sr] [-r|-u] [-v] [-d] [-c] [-iocnt] [-norec] [-vpa] -s supportDir [-o outputDir] [files*]";
 
     /**
      * Report on version...
@@ -137,13 +139,14 @@ public class VEOAnalysis {
      * 20220520 3.22 Changed to catch invalid file names (e.g. Paths.get() & in resolve())
      * 20220615 3.23 Added 4746 & 5062 to the valid VEOReadme.txt file sizes
      * 20220907 3.24 Changed the URI for ANZS5478 metadata & fixed bugs generating HTML report
+     * 20230227 3.25 Added -vpa option & backed off testing for long term preservation formats in VPA
      * </pre>
      */
     static String version() {
-        return ("3.24");
+        return ("3.25");
     }
 
-    static String copyright = "Copyright 2015, 2022 Public Record Office Victoria";
+    static String copyright = "Copyright 2015, 2022, 2023 Public Record Office Victoria";
 
     /**
      * Instantiate an VEOAnalysis instance to be used as an API. In this mode,
@@ -163,12 +166,13 @@ public class VEOAnalysis {
      * @param chatty true if report when starting a new VEO
      * @param debug true if debugging information is to be generated
      * @param verbose true if verbose descriptions are to be generated
+     * @param vpa true if being called from VPA, and want to back off on some of the tests
      * @param results if not null, create a summary of the errors &amp; warnings
      * @throws VEOError if something goes wrong
      */
     public VEOAnalysis(Path supportDir, LTSF ltsfs, Path outputDir,
             Handler hndlr, boolean chatty, boolean error, boolean report, boolean unpack,
-            boolean debug, boolean verbose, boolean norec, ResultSummary results) throws VEOError {
+            boolean debug, boolean verbose, boolean norec, boolean vpa, ResultSummary results) throws VEOError {
         Handler h[];
         int i;
 
@@ -208,6 +212,7 @@ public class VEOAnalysis {
             LOG.getParent().setLevel(Level.FINE);
         }
         this.norec = norec;
+        this.vpa = vpa;
         veos = null;
         hasErrors = false;
         this.ltsfs = ltsfs;
@@ -265,6 +270,7 @@ public class VEOAnalysis {
             System.out.println("  -r: generate a HTML report describing each VEO (implies '-u')");
             System.out.println("  -u: leave the unpacked VEOs in the file system at the end of the run");
             System.out.println("  -norec: do not warn about missing recommended metadata elements");
+            System.out.println("  -vpa: back off on some of the tests (being called from VPA)");
             System.out.println("  -o <directory>: the directory in which the VEOs are unpacked");
             System.out.println("  -iocnt: report on the number of IOs in VEO");
             System.out.println("");
@@ -334,6 +340,9 @@ public class VEOAnalysis {
         } else {
             System.out.println(" Do not produce a summary report of errors and warnings at the end (-sr not set)");
         }
+        if (vpa) {
+            System.out.println(" Run in VPA mode. Do not carry out testing for valid LTSF.");
+        }
 
         System.out.println("Configuration:");
         System.out.println(" Output directory: " + outputDir.toString());
@@ -372,6 +381,7 @@ public class VEOAnalysis {
         debug = false;
         verbose = false;
         norec = false;
+        vpa = false;
         veos = new ArrayList<>();
         ltsfs = null;
         results = null;
@@ -452,6 +462,12 @@ public class VEOAnalysis {
                     // leave unpacked VEOs after the run
                     case "-u":
                         unpack = true;
+                        i++;
+                        break;
+
+                    // run in VPA mode
+                    case "-vpa":
+                        vpa = true;
                         i++;
                         break;
 
@@ -598,7 +614,7 @@ public class VEOAnalysis {
             // if validating, do so...
             if (error || report) {
                 rv.constructRepn(supportDir);
-                rv.validate(ltsfs, norec);
+                rv.validate(ltsfs, norec, vpa);
             }
 
             // if generating HTML report, do so...
@@ -696,7 +712,7 @@ public class VEOAnalysis {
             // if validating, do so...
             if (error || report) {
                 rv.constructRepn(supportDir);
-                rv.validate(ltsfs, norec);
+                rv.validate(ltsfs, false, norec);
             }
 
             // if generating HTML report, do so...
