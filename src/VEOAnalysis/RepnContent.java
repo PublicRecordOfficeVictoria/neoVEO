@@ -109,6 +109,9 @@ class RepnContent extends RepnXML {
 
                 // add this io as a child of the last io we saw at depth-1
                 if (io.getDepth() > 1) {
+                    if (io.getDepth() - 2 >= lastIOatDepth.size()) {
+                        throw new VEOError("Error detected:\n  Error (VEOContent.xml): IO has depth of " + io.getDepth() + " but deepest previous IO was "+lastIOatDepth.size());
+                    }
                     parentIO = lastIOatDepth.get(io.getDepth() - 2);
                     if (parentIO != null) {
                         parentIO.addChild(io);

@@ -140,10 +140,11 @@ public class VEOAnalysis {
      * 20220615 3.23 Added 4746 & 5062 to the valid VEOReadme.txt file sizes
      * 20220907 3.24 Changed the URI for ANZS5478 metadata & fixed bugs generating HTML report
      * 20230227 3.25 Added -vpa option & backed off testing for long term preservation formats in VPA
+     * 20230614 3.26 Added test for skipped IO depths
      * </pre>
      */
     static String version() {
-        return ("3.25");
+        return ("3.26");
     }
 
     static String copyright = "Copyright 2015, 2022, 2023 Public Record Office Victoria";
