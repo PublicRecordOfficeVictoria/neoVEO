@@ -9,6 +9,8 @@ package VEOAnalysis;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The object represents a unit of data (typically a string)
@@ -74,16 +76,19 @@ final class RepnItem extends Repn {
      */
     @Override
     public String toString() {
-        StringBuffer sb;
+        StringBuilder sb = new StringBuilder();
+        List<String> l = new ArrayList<>();
 
-        sb = new StringBuffer();
         sb.append("  ");
         sb.append(label);
         sb.append(": ");
         sb.append(value);
         sb.append("\n");
-        sb.append(getErrors());
-        sb.append(getWarnings());
+        sb.append("Errors:\n   ");
+        getMesgs(true, l);
+        l.clear();
+        sb.append("Warnings:\n   ");
+        getMesgs(false, l);
         return sb.toString();
     }
 

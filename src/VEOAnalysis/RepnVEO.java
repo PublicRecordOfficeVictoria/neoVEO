@@ -27,6 +27,7 @@ import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipException;
@@ -65,12 +66,11 @@ class RepnVEO extends Repn {
      * @param results the results summary to build
      * @throws VEOError if the XML document has not been properly parsed
      */
-    public RepnVEO(String veo, boolean debug, Path output, ResultSummary results) throws VEOError {
+    public RepnVEO(Path veo, boolean debug, Path output, ResultSummary results) throws VEOError {
         super("", results);
 
         int i;
         String s, safe;
-        Path zipFile;
 
         // initialise
         schemaDir = null;
@@ -85,34 +85,29 @@ class RepnVEO extends Repn {
         veoReadmePresent = false;
 
         // check if VEO exists
-        safe = veo.replaceAll("\\\\", "/");
-        try {
-            zipFile = Paths.get(safe);
-        } catch (InvalidPathException ipe) {
-            throw new VEOError(1, errMesg(classname, "VEO file name '" + safe + "' is invalid"));
-        }
-        if (!Files.exists(zipFile)) {
-            throw new VEOError(1, errMesg(classname, "VEO file name '" + safe + "' does not exist"));
+        safe = veo.toString().replaceAll("\\\\", "/");
+        if (!Files.exists(veo)) {
+            throw new VEOError(classname, 2, "VEO file name '" + safe + "' does not exist");
         }
 
         // get VEO directory name
-        s = zipFile.getFileName().toString();
+        s = veo.getFileName().toString();
         if ((i = s.lastIndexOf(".zip")) == -1) {
-            throw new VEOError(2, errMesg(classname, "VEO file name '" + safe + "' does not end in '.zip'"));
+            throw new VEOError(classname, 3, "VEO file name '" + safe + "' does not end in '.zip'");
         }
         s = s.substring(0, i);
         safe = s.replaceAll("\\\\", "/");
         try {
             veoDir = output.resolve(safe).normalize();
         } catch (InvalidPathException ipe) {
-            throw new VEOError(3, errMesg(classname, "VEO directory name '" + safe + "' is invalid: " + ipe.getMessage()));
+            throw new VEOError(classname, 4, "VEO directory name '" + safe + "' is invalid: " + ipe.getMessage());
         }
 
         // delete the VEO directory (if it exists)
         deleteVEO();
 
         // unzip veo into VEO directory
-        unzip(zipFile);
+        unzip(veo);
     }
 
     /**
@@ -190,7 +185,7 @@ class RepnVEO extends Repn {
                                     sb.append(", ");
                                 }
                             }
-                            readme.addWarning("VEOReadme.txt has an unexpected size (" + Files.size(entry) + ") instead of the valid values of " + sb.toString());
+                            readme.addWarning(new VEOError(classname, "constRepn", 1, "VEOReadme.txt has an unexpected size (" + Files.size(entry) + ") instead of the valid values of " + sb.toString()));
                         }
                         veoReadmePresent = true;
                         break;
@@ -208,20 +203,20 @@ class RepnVEO extends Repn {
                         } else if (fileName.equals("Report.css")) {
                             /* ignore */
                         } else {
-                            addWarning("Unexpected file in VEO directory: " + fileName);
+                            addWarning(new VEOError(classname, "constRepn", 2, "Unexpected file in VEO directory: " + fileName));
                         }
                 }
             }
         } catch (DirectoryIteratorException e) {
-            throw new VEOError(errMesg(classname, "Directory iterator failed", e));
+            throw new VEOError(classname, "constRepn", 2, "Directory iterator failed", e);
         } catch (IOException e) {
-            throw new VEOError(errMesg(classname, "Failed to open the VEO directory for reading files", e));
+            throw new VEOError(classname, "constRepn", 3, "Failed to open the VEO directory for reading files", e);
         } finally {
             if (ds != null) {
                 try {
                     ds.close();
                 } catch (IOException e) {
-                    LOG.log(Level.WARNING, errMesg(classname, "Closing directory stream failed", e));
+                    LOG.log(Level.WARNING, VEOError.errMesg(classname, "constRepn", 4, "Closing directory stream failed", e));
                 }
             }
         }
@@ -238,7 +233,7 @@ class RepnVEO extends Repn {
             try {
                 deleteFile(veoDir);
             } catch (IOException e) {
-                throw new VEOError(errMesg(classname, "IOException deleting VEO directory", e));
+                throw new VEOError(classname, "deleteVEO", 1, "IOException deleting VEO directory", e);
             }
         }
     }
@@ -322,27 +317,27 @@ class RepnVEO extends Repn {
 
         // check to see that the required files are present
         if (veoContent == null) {
-            addError("VEOContents.xml file is not present");
+            addError(new VEOError(classname, "validate", 1, "VEOContents.xml file is not present"));
         } else {
             veoContent.validate(veoDir, contentFiles, ltsfs, noRec, vpa);
         }
         if (veoHistory == null) {
-            addError("VEOHistory.xml file is not present");
+            addError(new VEOError(classname, "validate", 2, "VEOHistory.xml file is not present"));
         } else {
             veoHistory.validate();
         }
         if (!veoReadmePresent) {
-            addError("VEOReadme.txt file is not present");
+            addError(new VEOError(classname, "validate", 3, "VEOReadme.txt file is not present"));
         }
         if (veoContentSignatures.isEmpty()) {
-            addError("No VEOContentSignature?.xml files are present");
+            addError(new VEOError(classname, "validate", 4, "No VEOContentSignature?.xml files are present"));
         } else {
             for (i = 0; i < veoContentSignatures.size(); i++) {
                 veoContentSignatures.get(i).validate();
             }
         }
         if (veoHistorySignatures.isEmpty()) {
-            addError("No VEOHistorySignature?.xml files are present");
+            addError(new VEOError(classname, "validate", 5, "No VEOHistorySignature?.xml files are present"));
         } else {
             for (i = 0; i < veoHistorySignatures.size(); i++) {
                 veoHistorySignatures.get(i).validate();
@@ -366,7 +361,6 @@ class RepnVEO extends Repn {
      * @throws IOException
      */
     private void unzip(Path zipFilePath) throws VEOError {
-        String method = "unzip";
         ZipFile zipFile;
         Enumeration entries;
         ZipArchiveEntry entry;
@@ -410,11 +404,11 @@ class RepnVEO extends Repn {
                 claimedLength += entry.getCompressedSize();
             }
             if (zipFileLength < claimedLength) {
-                s = errMesg(classname, method, "ZIP file length (" + zipFileLength + ") is less than the sum of the compressed sizes of the ZIP entrys (" + claimedLength + ")");
+                s = "ZIP file length (" + zipFileLength + ") is less than the sum of the compressed sizes of the ZIP entrys (" + claimedLength + ")";
                 if (results != null) {
                     results.recordResult(Type.ERROR, s, null, null);
                 }
-                throw new VEOError(s);
+                throw new VEOError(classname, "unzip", 1, s);
             }
 
             // go through each entry
@@ -430,7 +424,7 @@ class RepnVEO extends Repn {
                 try {
                     zipEntryPath = Paths.get(safe);
                 } catch (InvalidPathException ipe) {
-                    throw new VEOError(1, errMesg(classname, "ZIP path entry '" + safe + "' is invalid: "+ipe.getMessage()));
+                    throw new VEOError(classname, "unzip", 2, "ZIP path entry '" + safe + "' is invalid", ipe);
                 }
 
                 // complain (once!) if filename of the VEO is different to the
@@ -439,7 +433,7 @@ class RepnVEO extends Repn {
                 if (!veoName.equals(zipEntryPath.getName(0).toString())) {
                     if (!complainedOnceAlready) {
                         s = "The filename of the VEO (" + veoName + ") is different to that contained in the entries in the ZIP file (" + entry.getName() + ")";
-                        addWarning(s);
+                        addWarning(new VEOError(classname, "unzip", 3, s));
                         if (results != null) {
                             results.recordResult(Type.WARNING, s, null, null);
                         }
@@ -458,7 +452,7 @@ class RepnVEO extends Repn {
                         p = veoDir.getParent().resolve(veoName).resolve(zipEntryPath);
                     }
                 } catch (InvalidPathException ipe) {
-                    throw new VEOError(1, errMesg(classname, "File name '" + veoName + "' is invalid: "+ipe.getMessage()));
+                    throw new VEOError(classname, "unzip", 4, "File name '" + veoName + "' is invalid", ipe);
                 }
 
                 // where does the file name in the ZIP entry really point to?
@@ -467,23 +461,23 @@ class RepnVEO extends Repn {
                 // be really, really, paranoid - the file we are creating
                 // shouldn't have any 'parent' ('..') elements in the file path
                 for (i = 0; i < vze.getNameCount(); i++) {
-                    if (vze.getName(i).equals("..")) {
-                        s = errMesg(classname, method, "ZIP file contains a pathname that includes '..' elements: '" + zipEntryPath + "'");
+                    if (vze.getName(i).toString().equals("..")) {
+                        s = "ZIP file contains a pathname that includes '..' elements: '" + zipEntryPath + "'";
                         if (results != null) {
                             results.recordResult(Type.ERROR, s, null, null);
                         }
-                        throw new VEOError(s);
+                        throw new VEOError(classname, "unzip", 5, s);
                     }
                 }
 
                 // just be cynical and check that the file name to be extracted
                 // from the ZIP file is actually in the VEO directory...
                 if (!vze.startsWith(veoDir)) {
-                    s = errMesg(classname, method, "ZIP entry in VEO '" + veoName + "' is attempting to create a file outside the VEO directory '" + vze.toString());
+                    s = "ZIP entry in VEO '" + veoName + "' is attempting to create a file outside the VEO directory '" + vze.toString();
                     if (results != null) {
                         results.recordResult(Type.ERROR, s, null, null);
                     }
-                    throw new VEOError(s);
+                    throw new VEOError(classname, "unzip", 6, s);
                 }
 
                 // make any directories...
@@ -520,13 +514,13 @@ class RepnVEO extends Repn {
             }
             zipFile.close();
         } catch (ZipException e) {
-            s = errMesg(classname, method, "ZIP format error in opening Zip file", e);
+            s = "ZIP format error in opening Zip file"+ e.getMessage();
             if (results != null) {
                 results.recordResult(Type.ERROR, s, null, null);
             }
-            throw new VEOError(s);
+            throw new VEOError(classname, "unzip", 7, s);
         } catch (IOException e) {
-            throw new VEOError(errMesg(classname, method, "IO error reading Zip file", e));
+            throw new VEOError(classname,"unzip", 8, "IO error reading Zip file", e);
         } finally {
             try {
                 if (bos != null) {
@@ -545,7 +539,7 @@ class RepnVEO extends Repn {
                     zipFile.close();
                 }
             } catch (IOException e) {
-                LOG.log(Level.WARNING, errMesg(classname, method, "IOException in closing Zip files", e));
+                LOG.log(Level.WARNING, VEOError.errMesg(classname, "unzip", 9, "IOException in closing Zip files", e));
             }
         }
     }
@@ -581,35 +575,64 @@ class RepnVEO extends Repn {
     /**
      * Build a list of all of the errors generated by this RepnVEO and its
      * children.
+     * 
+     * @param returnErrors if true return errors, otherwise return warnings
+     * @param l list in which to place the errors/warnings
+     */
+    @Override
+    public void getProblems(boolean returnErrors, List<VEOError> l) {
+        int i;
+        
+        super.getProblems(returnErrors, l);
+        if (veoContent != null) {
+            veoContent.getProblems(returnErrors, l);
+        }
+        if (veoHistory != null) {
+            veoHistory.getProblems(returnErrors, l);
+        }
+        if (readme != null) {
+            readme.getProblems(returnErrors, l);
+        }
+        for (i = 0; i < veoContentSignatures.size(); i++) {
+            veoContentSignatures.get(i).getProblems(returnErrors, l);
+        }
+        for (i = 0; i < veoHistorySignatures.size(); i++) {
+            veoHistorySignatures.get(i).getProblems(returnErrors, l);
+        }
+        for (i = 0; i < contentDirs.size(); i++) {
+            contentDirs.get(i).getProblems(returnErrors, l);
+        }
+    }
+
+    /**
+     * Build a list of all of the errors generated by this RepnVEO and its
+     * children.
      *
      * @return String containing the concatenated error list
      */
     @Override
-    public String getErrors() {
+    public void getMesgs(boolean returnErrors, List<String> l) {
         int i;
-        StringBuffer sb;
-
-        sb = new StringBuffer();
-        sb.append(super.getErrors());
+        
+        super.getMesgs(returnErrors, l);
         if (veoContent != null) {
-            sb.append(veoContent.getErrors());
+            veoContent.getMesgs(returnErrors, l);
         }
         if (veoHistory != null) {
-            sb.append(veoHistory.getErrors());
+            veoHistory.getMesgs(returnErrors, l);
         }
         if (readme != null) {
-            sb.append(readme.getErrors());
+            readme.getMesgs(returnErrors, l);
         }
         for (i = 0; i < veoContentSignatures.size(); i++) {
-            sb.append(veoContentSignatures.get(i).getErrors());
+            veoContentSignatures.get(i).getMesgs(returnErrors, l);
         }
         for (i = 0; i < veoHistorySignatures.size(); i++) {
-            sb.append(veoHistorySignatures.get(i).getErrors());
+            veoHistorySignatures.get(i).getMesgs(returnErrors, l);
         }
         for (i = 0; i < contentDirs.size(); i++) {
-            sb.append(contentDirs.get(i).getErrors());
+            contentDirs.get(i).getMesgs(returnErrors, l);
         }
-        return sb.toString();
     }
 
     /**
@@ -641,62 +664,41 @@ class RepnVEO extends Repn {
     }
 
     /**
-     * Build a list of all of the warnings generated by this RepnVEO and its
-     * children.
-     *
-     * @return String containing the concatenated error list
-     */
-    @Override
-    public String getWarnings() {
-        int i;
-        StringBuffer sb;
-
-        sb = new StringBuffer();
-        sb.append(super.getWarnings());
-        if (veoContent != null) {
-            sb.append(veoContent.getWarnings());
-        }
-        if (veoHistory != null) {
-            sb.append(veoHistory.getWarnings());
-        }
-        if (readme != null) {
-            sb.append(readme.getWarnings());
-        }
-        for (i = 0; i < veoContentSignatures.size(); i++) {
-            sb.append(veoContentSignatures.get(i).getWarnings());
-        }
-        for (i = 0; i < veoHistorySignatures.size(); i++) {
-            sb.append(veoHistorySignatures.get(i).getWarnings());
-        }
-        for (i = 0; i < contentDirs.size(); i++) {
-            sb.append(contentDirs.get(i).getWarnings());
-        }
-        return sb.toString();
-    }
-
-    /**
      * Return a summary of the errors and warnings that occurred in the VEO.
      *
      * @return a String containing the errors and warnings
      */
     public String getStatus() {
-        StringBuffer sb;
+        StringBuilder sb = new StringBuilder();
+        List<VEOError> l = new ArrayList<>();
+        int i;
 
         // check for errors
-        sb = new StringBuffer();
         if (!hasErrors()) {
             sb.append("No errors detected\n");
         } else {
             sb.append("Errors detected:\n");
-            sb.append(getErrors());
+            getProblems(true, l);
+            for (i=0; i<l.size(); i++) {
+                sb.append("   Error: ");
+                sb.append(l.get(i).getMessage());
+                sb.append("\n");
+            }
         }
 
         // check for warnings
+        l.clear();
+        sb.append("\n");
         if (!hasWarnings()) {
             sb.append("No warnings detected\n");
         } else {
             sb.append("Warnings detected:\n");
-            sb.append(getWarnings());
+            getProblems(false, l);
+            for (i=0; i<l.size(); i++) {
+                sb.append("   Warning: ");
+                sb.append(l.get(i).getMessage());
+                sb.append("\n");
+            }
         }
         return sb.toString();
     }
@@ -760,10 +762,10 @@ class RepnVEO extends Repn {
             try {
                 Files.copy(cssSource, cssDest, StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e) {
-                LOG.log(Level.WARNING, errMesg(classname, method, "Copying ReportStyle.css file to VEO directory failed", e));
+                LOG.log(Level.WARNING, VEOError.errMesg(classname, "genReport", 1, "Copying ReportStyle.css file to VEO directory failed", e));
             }
         } else {
-            LOG.log(Level.WARNING, errMesg(classname, method, "File: '" + cssSource.toAbsolutePath().toString() + "' doesn't exist"));
+            LOG.log(Level.WARNING, VEOError.errMesg(classname, "genReport", 2, "File: '" + cssSource.toAbsolutePath().toString() + "' doesn't exist"));
         }
 
         // create index file
@@ -844,7 +846,7 @@ class RepnVEO extends Repn {
             addString(" file\n");
             if (readme.hasErrors || readme.hasWarnings) {
                 addTag("<ul>\n");
-                readme.genReport(verbose, w);;
+                readme.genReport(verbose, w);
                 addTag("</ul>\n");
             }
             endDiv();

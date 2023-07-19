@@ -52,7 +52,7 @@ final class StressTest {
                     ds = Files.newDirectoryStream(veoFile);
                     for (Path p : ds) {
                         if (Files.isRegularFile(p) && p.toString().toLowerCase().endsWith(".veo.zip")) {
-                            testVEO(p.toString(), i);
+                            testVEO(p, i);
                         }
                     }
                     ds.close();
@@ -60,12 +60,12 @@ final class StressTest {
                     System.out.println("Failed to process directory '" + veo + "': " + e.getMessage());
                 }
             } else {
-                testVEO(veo, i);
+                testVEO(veoFile, i);
             }
         }
     }
 
-    public void testVEO(String veo, int i) throws VEOError {
+    public void testVEO(Path veo, int i) throws VEOError {
         RepnVEO rv;
 
         rv = null;

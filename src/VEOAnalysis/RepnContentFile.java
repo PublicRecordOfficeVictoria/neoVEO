@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.Base64;
+import java.util.List;
 
 /**
  * This class encapsulates a Content File in a VEO Content file.
@@ -113,12 +114,12 @@ class RepnContentFile extends Repn {
 
         // check to see that vers:PathName element exists and has a non empty value
         if (pathName == null || pathName.getValue() == null) {
-            addError("vers:PathName element is not present or is empty");
+            addError(new VEOError(classname, "validate", 1, "vers:PathName element is not present or is empty"));
             return false;
         }
         s = pathName.getValue().trim();
         if (s.equals("") || s.equals(" ")) {
-            addError("vers:PathName element is blank");
+            addError(new VEOError(classname, "validate", 2, "vers:PathName element is blank"));
             return false;
         }
 
@@ -134,11 +135,11 @@ class RepnContentFile extends Repn {
         try {
             fileToHash = veoDir.resolve(safe);
         } catch (InvalidPathException ipe) {
-            addError("Referenced file '" + safe + "' is not a valid file name: "+ipe.getMessage());
+            addError(new VEOError(classname, "validate", 3, "Referenced file '" + safe + "' is not a valid file name", ipe));
             return false;
         }
         if (Files.notExists(fileToHash)) {
-            addError("Referenced file '" + safe + "' does not exist");
+            addError(new VEOError(classname, "validate", 4, "Referenced file '" + safe + "' does not exist"));
             return false;
         }
 
@@ -146,24 +147,24 @@ class RepnContentFile extends Repn {
         try {
             p = Paths.get(safe);
         } catch (InvalidPathException ipe) {
-            addError("Content file name '"+safe+"' is a valid file name");
+            addError(new VEOError(classname, "validate", 5, "Content file name '"+safe+"' is a valid file name"));
             return false;
         }
         if (contentFiles.containsKey(p)) {
             rf = contentFiles.get(p);
             rf.setContentFile(this);
         } else {
-            LOG.log(Level.WARNING, errMesg(classname, method, "VEOContent.xml referenced content file (" + pathName.getValue() + "), but it could not be found in the index"));
+            LOG.log(Level.WARNING, VEOError.errMesg(classname, "validate", 6, "VEOContent.xml referenced content file (" + pathName.getValue() + "), but it could not be found in the index"));
         }
 
         // check to see that vers:HashVale element exists and has a non empty value
         if (hashValue == null || hashValue.getValue() == null) {
-            addError("vers:HashValue element is not present or is empty");
+            addError(new VEOError(classname, "validate", 7, "vers:HashValue element is not present or is empty"));
             return false;
         }
         s = hashValue.getValue().trim();
         if (s.equals("") || s.equals(" ")) {
-            addError("vers:HashValue element is blank");
+            addError(new VEOError(classname, "validate", 8, "vers:HashValue element is blank"));
             return false;
         }
 
@@ -171,7 +172,7 @@ class RepnContentFile extends Repn {
         try {
             md = MessageDigest.getInstance(hashAlgorithm);
         } catch (NoSuchAlgorithmException e) {
-            addError("Hash algorithm '" + hashAlgorithm + "' not supported");
+            addError(new VEOError(classname, "validate", 9, "Hash algorithm '" + hashAlgorithm + "' not supported"));
             return false;
         }
 
@@ -179,7 +180,7 @@ class RepnContentFile extends Repn {
         try {
             fis = new FileInputStream(fileToHash.toString());
         } catch (FileNotFoundException e) {
-            LOG.log(Level.WARNING, errMesg(classname, method, "File to hash not found", e));
+            LOG.log(Level.WARNING, VEOError.errMesg(classname, method, 10, "File to hash not found", e));
             return false;
         }
         bis = new BufferedInputStream(fis);
@@ -190,12 +191,12 @@ class RepnContentFile extends Repn {
                 md.update(b, 0, i);
             }
         } catch (IOException e) {
-            LOG.log(Level.WARNING, errMesg(classname, method, "Failed reading file to hash", e));
+            LOG.log(Level.WARNING, VEOError.errMesg(classname, "validate", 11, "Failed reading file to hash", e));
         } finally {
             try {
                 bis.close();
             } catch (IOException e) {
-                LOG.log(Level.WARNING, errMesg(classname, method, "failed closing file to hash", e));
+                LOG.log(Level.WARNING, VEOError.errMesg(classname, method, 12, "failed closing file to hash", e));
             }
         }
 
@@ -207,14 +208,14 @@ class RepnContentFile extends Repn {
         try {
             storedHash = Base64.getMimeDecoder().decode(hashValue.getValue());
         } catch (IllegalArgumentException e) {
-            hashValue.addError("Converting Base64 encoded hash failed: " + e.getMessage());
+            hashValue.addError(new VEOError(classname, "validate", 13, "Converting Base64 encoded hash failed", e));
         }
 
         // System.out.println("Hashing "+pathName);
         // System.out.println("Orig "+DatatypeConverter.printBase64Binary(hashValue));
         // System.out.println("Calc "+DatatypeConverter.printBase64Binary(genHash));
         if (storedHash != null && !MessageDigest.isEqual(genHash, storedHash)) {
-            addError("Integrity check of file '" + pathName.getValue() + "' failed as hash value has changed.");
+            addError(new VEOError(classname, "validate", 14, "Integrity check of file '" + pathName.getValue() + "' failed as hash value has changed."));
             return false;
         }
 
@@ -252,19 +253,28 @@ class RepnContentFile extends Repn {
     }
 
     /**
+     * Build a list of all of the errors generated by this ContentFile
+     * 
+     * @param returnErrors if true return errors, otherwise return warnings
+     * @param l list in which to place the errors/warnings
+     */
+    @Override
+    public void getProblems(boolean returnErrors, List<VEOError> l) {
+        super.getProblems(returnErrors, l);
+        pathName.getProblems(returnErrors, l);
+        hashValue.getProblems(returnErrors, l);
+    }
+
+    /**
      * Build a list of all of the errors generated by this object
      *
      * @return The concatenated error list
      */
     @Override
-    public String getErrors() {
-        StringBuffer sb;
-
-        sb = new StringBuffer();
-        sb.append(super.getErrors());
-        sb.append(pathName.getErrors());
-        sb.append(hashValue.getErrors());
-        return sb.toString();
+    public void getMesgs(boolean returnErrors, List<String> l) {
+        super.getMesgs(returnErrors, l);
+        pathName.getMesgs(returnErrors, l);
+        hashValue.getMesgs(returnErrors, l);
     }
 
     /**
@@ -276,22 +286,6 @@ class RepnContentFile extends Repn {
     public boolean hasWarnings() {
         hasWarnings |= pathName.hasWarnings() | hashValue.hasWarnings();
         return hasWarnings;
-    }
-
-    /**
-     * Build a list of all of the warnings generated by this object
-     *
-     * @return The concatenated error list
-     */
-    @Override
-    public String getWarnings() {
-        StringBuffer sb;
-
-        sb = new StringBuffer();
-        sb.append(super.getWarnings());
-        sb.append(pathName.getWarnings());
-        sb.append(hashValue.getWarnings());
-        return sb.toString();
     }
 
     /**

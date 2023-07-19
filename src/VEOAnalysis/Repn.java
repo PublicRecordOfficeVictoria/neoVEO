@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -37,9 +38,9 @@ abstract class Repn {
     String classname = "Repn";      // for logging
     private final String id;        // identifier of this object for messages
     protected boolean hasErrors;    // true if this object (or its children) have errors
-    protected ArrayList<String> errors;   // list of errors that occurred
+    protected ArrayList<VEOError> errors;   // list of errors that occurred
     protected boolean hasWarnings;  // true if this object (or its children) have warnings
-    protected ArrayList<String> warnings; // list of warnings that occurred
+    protected ArrayList<VEOError> warnings; // list of warnings that occurred
     private FileOutputStream fos;
     private OutputStreamWriter osw;
     protected Writer w;             // if not null, generate a HTML version of this representation
@@ -89,7 +90,7 @@ abstract class Repn {
             }
             fos = null;
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, "abandon", "Failed to close HTML output file", e));
+            log.log(Level.WARNING, VEOError.errMesg(classname, "abandon", 1, "Failed to close HTML output file", e));
         }
     }
 
@@ -99,10 +100,7 @@ abstract class Repn {
      * @return a String containing the id
      */
     final public String getId() {
-        if (!infoAvailable) {
-            log.log(Level.WARNING, errMesg(classname, "getId", "Called function after abandon() was called"));
-            return ("");
-        }
+        assert(infoAvailable);
         return id;
     }
 
@@ -119,20 +117,14 @@ abstract class Repn {
      * Add an error to this message. Will ignore requests to add a null or blank
      * message
      *
-     * @param s The error to add
+     * @param v The error to add
      */
-    final public void addError(String s) {
-        if (s == null || s.equals("") || s.trim().equals(" ")) {
-            return;
-        }
-        if (!infoAvailable) {
-            log.log(Level.WARNING, errMesg(classname, "addError", "Called function after abandon() was called"));
-            return;
-        }
+    final public void addError(VEOError v) {
+        assert(infoAvailable);
         hasErrors = true;
-        errors.add(s);
+        errors.add(v);
         if (results != null) {
-            results.recordResult(Type.ERROR, s, null, id);
+            results.recordResult(Type.ERROR, v.getMessage(), null, id);
         }
     }
 
@@ -142,39 +134,61 @@ abstract class Repn {
      * @return true if there are error messages
      */
     protected boolean hasErrors() {
-        if (!infoAvailable) {
-            log.log(Level.WARNING, errMesg(classname, "hasErrors", "Called function after abandon() was called"));
-            return false;
-        }
+        assert(infoAvailable);
         return hasErrors;
     }
 
     /**
-     * Return a formated list of errors
+     * Add problems encountered with this object to a list of problems
      *
+     * @param returnErrors if true return errors, otherwise return warnings
+     * @param l list in which to place the errors/warnings
+     */
+    protected void getProblems(boolean returnErrors, List<VEOError> l) {
+        assert(infoAvailable);
+        if (returnErrors) {
+            l.addAll(errors);
+        } else {
+            l.addAll(warnings);
+        }
+    }
+
+    /**
+     * Return a list of messages
+     *
+     * @param returnErrors if true return error messages, otherwise return warnings
+     * @param l list in which to place the messages
      * @return a String containing the errors
      */
-    protected String getErrors() {
-        StringBuffer sb;
+    
+    protected void getMesgs(boolean returnErrors, List<String> l) {
         int i;
 
-        if (!infoAvailable) {
-            log.log(Level.WARNING, errMesg(classname, "getErrors", "Called function after abandon() was called"));
-            return ("");
-        }
-        sb = new StringBuffer();
-        for (i = 0; i < errors.size(); i++) {
-            sb.append("   Error");
-            if (id != null && !id.equals("")) {
-                sb.append(" (");
-                sb.append(id);
-                sb.append(")");
+        assert(infoAvailable);
+        if (returnErrors) {
+            for (i = 0; i < errors.size(); i++) {
+                l.add(formatMesg("Error", errors.get(i).getMessage()));
             }
-            sb.append(": ");
-            sb.append(errors.get(i));
+        } else {
+            for (i = 0; i < warnings.size(); i++) {
+                l.add(formatMesg("Warning", warnings.get(i).getMessage()));
+            }
+        }
+    }
+    
+    /**
+     * Turn a list of messages into a formatted string in a StringBuilder
+     * @param l a list of messages
+     * @param sb the StringBuilder to receive the messages
+     */
+    protected void mesgs2String(List<VEOError> l, StringBuilder sb) {
+        int i;
+        
+        for (i = 0; i < l.size(); i++) {
+            sb.append("   ");
+            sb.append(l.get(i).getMessage());
             sb.append("\n");
         }
-        return sb.toString();
     }
 
     /**
@@ -183,10 +197,7 @@ abstract class Repn {
      * @return true if there are warning messages
      */
     protected boolean hasWarnings() {
-        if (!infoAvailable) {
-            log.log(Level.WARNING, errMesg(classname, "hasWarnings", "Called function after abandon() was called"));
-            return (false);
-        }
+        assert(infoAvailable);
         return hasWarnings;
     }
 
@@ -194,48 +205,45 @@ abstract class Repn {
      * Add a warning to this message. Will ignore requests to add a null or
      * blank message
      *
-     * @param s The warning to add
+     * @param v The warning to add
      */
-    protected void addWarning(String s) {
-        if (!infoAvailable) {
-            log.log(Level.WARNING, errMesg(classname, "addWarning", "Called function after abandon() was called"));
-            return;
-        }
-        if (s == null || s.equals("") || s.trim().equals(" ")) {
-            return;
-        }
+    protected void addWarning(VEOError v) {
+        assert(infoAvailable);
         hasWarnings = true;
-        warnings.add(s);
+        warnings.add(v);
         if (results != null) {
-            results.recordResult(Type.WARNING, s, null, id);
+            results.recordResult(Type.WARNING, v.getMessage(), null, id);
         }
+    }
+    
+    /**
+     * Return the list of warnings associated with this object. Will never be
+     * null, but may be empty.
+     * 
+     * @return 
+     */
+    protected List<VEOError> getWarnings() {
+        return warnings;
     }
 
     /**
-     * Return a formatted list of warnings
+     * Format an error or warning message.
      *
-     * @return a string
+     * @param type type of message
+     * @param mesg message to output
+     * @return
      */
-    protected String getWarnings() {
-        StringBuffer sb;
-        int i;
+    private String formatMesg(String type, String mesg) {
+        StringBuilder sb = new StringBuilder();
 
-        if (!infoAvailable) {
-            log.log(Level.WARNING, errMesg(classname, "getWarnings", "Called function after abandon() was called"));
-            return ("");
+        sb.append(type);
+        if (id != null && !id.equals("")) {
+            sb.append(" (");
+            sb.append(id);
+            sb.append(")");
         }
-        sb = new StringBuffer();
-        for (i = 0; i < warnings.size(); i++) {
-            sb.append("   Warning");
-            if (id != null && !id.equals("")) {
-                sb.append(" (");
-                sb.append(id);
-                sb.append(")");
-            }
-            sb.append(": ");
-            sb.append(warnings.get(i));
-            sb.append("\n");
-        }
+        sb.append(": ");
+        sb.append(mesg);
         return sb.toString();
     }
 
@@ -250,26 +258,22 @@ abstract class Repn {
      * @throws VEOError if something happened (e.g. it couldn't be created)
      */
     final protected void createReport(Path veoDir, String htmlFileName, String title, String pVersion, String copyright) throws VEOError {
-        String method = "createReport";
         Path htmlFile;
         TimeZone tz;
         SimpleDateFormat sdf;
 
-        if (!infoAvailable) {
-            log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
-            return;
-        }
+        assert(infoAvailable);
         try {
             htmlFile = veoDir.resolve(htmlFileName);
         } catch (InvalidPathException e) {
-            throw new VEOError(errMesg(classname, method, "Error when attempting to open HTML output file; '" + htmlFileName + "' is not a valid file name: ", e));
+            throw new VEOError(classname, "createReport", 1, "Error when attempting to open HTML output file; '" + htmlFileName + "' is not a valid file name", e);
         }
         try {
             fos = new FileOutputStream(htmlFile.toFile());
             osw = new OutputStreamWriter(fos, Charset.forName("UTF-8"));
             w = new BufferedWriter(osw);
         } catch (IOException e) {
-            throw new VEOError(errMesg(classname, method, "Error when attempting to open HTML output file '" + htmlFile.toString() + "'. Error was", e));
+            throw new VEOError(classname, "createReport", 2, "Error when attempting to open HTML output file '" + htmlFile.toString() + "'", e);
         }
         try {
             w.write("<!DOCTYPE html>\n<html>\n<head>\n");
@@ -292,7 +296,7 @@ abstract class Repn {
             w.write("<br>\n");
             w.write("</p>\n");
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
+            log.log(Level.WARNING, VEOError.errMesg(classname, "createReport", 3, "IOException when writing to HTML output file", e));
         }
     }
 
@@ -302,17 +306,10 @@ abstract class Repn {
      * @throws VEOError if a fatal error occurred
      */
     final protected void finishReport() throws VEOError {
-        String method = "finishReport";
 
         // sanity check
-        if (!infoAvailable) {
-            log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
-            return;
-        }
-        if (fos == null || osw == null || w == null) {
-            log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
-            return;
-        }
+        assert(infoAvailable);
+        assert(fos != null && osw != null & w != null);
 
         // finish and close HTML report
         try {
@@ -328,7 +325,7 @@ abstract class Repn {
             }
             fos = null;
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
+            log.log(Level.WARNING, VEOError.errMesg(classname, "finishReport", 1, "IOException when writing to HTML output file", e));
         }
     }
 
@@ -349,8 +346,8 @@ abstract class Repn {
      * Start a division (HTML DIV element) in the report. A list of classes may
      * be associated with the DIV to control formatting in the CSS file. If an
      * anchor is specified, the DIV will contain an ID attribute to that the
-     * HTML DIV element can be linked to. If r is null, force the division to
-     * be displayed as correct.
+     * HTML DIV element can be linked to. If r is null, force the division to be
+     * displayed as correct.
      *
      * @param r the Repn to test for errors and warnings
      * @param type list of class names (separated by spaces) to put in the DIV
@@ -358,17 +355,10 @@ abstract class Repn {
      * @param anchor anchor to put in the div to allow linking
      */
     final protected void startDiv(Repn r, String type, String anchor) {
-        String method = "startDiv";
 
         // sanity check...
-        if (!infoAvailable) {
-            log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
-            return;
-        }
-        if (w == null) {
-            log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
-            return;
-        }
+        assert(infoAvailable);
+        assert(w != null);
 
         try {
             w.write("<div");
@@ -388,7 +378,7 @@ abstract class Repn {
             }
             w.write(">\n");
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
+            log.log(Level.WARNING, VEOError.errMesg(classname, "startDiv", 1, "IOException when writing to HTML output file", e));
         }
     }
 
@@ -399,18 +389,12 @@ abstract class Repn {
         String method = "endDiv";
 
         // sanity check...
-        if (!infoAvailable) {
-            log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
-            return;
-        }
-        if (w == null) {
-            log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
-            return;
-        }
+        assert(infoAvailable);
+        assert(w != null);
         try {
             w.write("</div>\n");
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
+            log.log(Level.WARNING, VEOError.errMesg(classname, method, 1, "IOException when writing to HTML output file", e));
         }
     }
 
@@ -418,34 +402,27 @@ abstract class Repn {
      * Add the error and warning messages to the report.
      */
     final protected void listIssues() {
-        String method = "listIssues";
         int i;
 
         // sanity check...
-        if (!infoAvailable) {
-            log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
-            return;
-        }
-        if (w == null) {
-            log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
-            return;
-        }
+        assert(infoAvailable);
+        assert(w != null);
 
         try {
             for (i = 0; i < errors.size(); i++) {
                 w.write(" <li class=\"error\">");
                 w.write("Error: ");
-                w.write(safeXML(errors.get(i)));
+                w.write(safeXML(errors.get(i).getMessage()));
                 w.write("</li>\n");
             }
             for (i = 0; i < warnings.size(); i++) {
                 w.write(" <li class=\"warning\">");
                 w.write("Warning: ");
-                w.write(safeXML(warnings.get(i)));
+                w.write(safeXML(warnings.get(i).getMessage()));
                 w.write("</li>\n");
             }
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
+            log.log(Level.WARNING, VEOError.errMesg(classname, "listIssues", 1, "IOException when writing to HTML output file", e));
         }
     }
 
@@ -456,21 +433,14 @@ abstract class Repn {
      * @param s String to add to the HTML.
      */
     final protected void addTag(String s) {
-        String method = "addTag";
 
         // sanity checks
-        if (!infoAvailable) {
-            log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
-            return;
-        }
-        if (w == null) {
-            log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
-            return;
-        }
+        assert(infoAvailable);
+        assert(w != null);
         try {
             w.write(s);
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
+            log.log(Level.WARNING, VEOError.errMesg(classname, "addTag", 1, "IOException when writing to HTML output file", e));
         }
     }
 
@@ -481,23 +451,16 @@ abstract class Repn {
      * @param s String to add to the HTML.
      */
     final protected void addLabel(String s) {
-        String method = "addLabel";
 
         // sanity check...
-        if (!infoAvailable) {
-            log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
-            return;
-        }
-        if (w == null) {
-            log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
-            return;
-        }
+        assert(infoAvailable);
+        assert(w != null);
         try {
             w.write("<strong>");
             w.write(safeXML(s));
             w.write("</strong>");
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
+            log.log(Level.WARNING, VEOError.errMesg(classname, "addLabel", 1, "IOException when writing to HTML output file", e));
         }
     }
 
@@ -508,21 +471,14 @@ abstract class Repn {
      * @param s String to add to the HTML.
      */
     final protected void addString(String s) {
-        String method = "addString";
 
         // sanity check...
-        if (!infoAvailable) {
-            log.log(Level.WARNING, errMesg(classname, method, "Called function after abandon() was called"));
-            return;
-        }
-        if (w == null) {
-            log.log(Level.WARNING, errMesg(classname, method, "Attempt to write to HTML output file while it was not open"));
-            return;
-        }
+        assert(infoAvailable);
+        assert(w != null);
         try {
             w.write(safeXML(s));
         } catch (IOException e) {
-            log.log(Level.WARNING, errMesg(classname, method, "IOException when writing to HTML output file. Error was", e));
+            log.log(Level.WARNING, VEOError.errMesg(classname, "addString", 1, "IOException when writing to HTML output file", e));
         }
     }
 
@@ -535,7 +491,6 @@ abstract class Repn {
      * @return the XML safe string
      */
     final protected String safeXML(String s) {
-        String method = "safeXML";
         StringBuilder sb = new StringBuilder();
         int i;
         char c;
@@ -578,55 +533,6 @@ abstract class Repn {
          throw new VEOError(classname, module, 2, "Failed writing to XML document");
          }
          */
-    }
-
-    /**
-     * Produce a standard error message from a constructor
-     *
-     * @param classname Class the error occurred in
-     * @param problem Description of the problem
-     * @return String containing standard error
-     */
-    final protected String errMesg(String classname, String problem) {
-        return problem + " (" + classname + "())";
-    }
-
-    /**
-     * Produce a standard error message
-     *
-     * @param classname Class the error occurred in
-     * @param method Method the error occurred in
-     * @param problem Description of the problem
-     * @return String containing standard error
-     */
-    final protected String errMesg(String classname, String method, String problem) {
-        return problem + " (" + classname + "." + method + "())";
-    }
-
-    /**
-     * Produce a standard error message from a constructor about a thrown
-     * exception.
-     *
-     * @param classname Class the error occurred in
-     * @param problem Description of the problem
-     * @param e exception
-     * @return String containing standard error
-     */
-    final protected String errMesg(String classname, String problem, Exception e) {
-        return problem + ": " + e.getMessage() + " (" + classname + "())";
-    }
-
-    /**
-     * Produce a standard error message about a thrown exception.
-     *
-     * @param classname Class the error occurred in
-     * @param method Method the error occurred in
-     * @param problem Description of the problem
-     * @param e the thrown exception
-     * @return String containing standard error
-     */
-    final protected String errMesg(String classname, String method, String problem, Exception e) {
-        return problem + ": " + e.getMessage() + " (" + classname + "." + method + "())";
     }
 
     /**
