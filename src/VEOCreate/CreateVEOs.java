@@ -466,7 +466,7 @@ public class CreateVEOs {
                         try {
                             baseDir = controlFile.toRealPath().getParent();
                         } catch (IOException ioe) {
-                            throw new VEOFatal("Couldn't convert control file '" + args[i] + "' to a path:" + ioe.getMessage());
+                            throw new VEOFatal(classname, "configure", 1, "Couldn't convert control file '" + args[i] + "' to a path:" + ioe.getMessage());
                         }
                         i++;
                         break;
@@ -573,7 +573,7 @@ public class CreateVEOs {
         try {
             p = Paths.get(name);
         } catch (InvalidPathException ipe) {
-            throw new VEOFatal(classname, 9, type + " '" + name + "' is not a valid file name: "+ipe.getMessage());
+            throw new VEOFatal(classname, 9, type + " '" + name + "' is not a valid file name: " + ipe.getMessage());
         }
 
         if (!Files.exists(p)) {
@@ -1488,7 +1488,7 @@ public class CreateVEOs {
         try {
             f = Paths.get(fileRef);
         } catch (InvalidPathException ipe) {
-            throw new VEOError("Invalid file reference (" + fileRef + ") in control file:");
+            throw new VEOError(classname, "getRealFile", 1, "Invalid file reference (" + fileRef + ") in control file:");
         }
 
         // if fileRef is not relative to current working directory and
@@ -1499,7 +1499,7 @@ public class CreateVEOs {
         try {
             f = f.toRealPath();
         } catch (IOException ioe) {
-            throw new VEOError("Invalid file reference in control file: '" + ioe.getMessage() + "'; typically this file doesn't exist");
+            throw new VEOError(classname, "getRealFile", 2, "Invalid file reference in control file: '" + ioe.getMessage() + "'; typically this file doesn't exist");
         }
         return f;
     }

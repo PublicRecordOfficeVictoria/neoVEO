@@ -664,46 +664,6 @@ class RepnVEO extends Repn {
     }
 
     /**
-     * Return a summary of the errors and warnings that occurred in the VEO.
-     *
-     * @return a String containing the errors and warnings
-     */
-    public String getStatus() {
-        StringBuilder sb = new StringBuilder();
-        List<VEOError> l = new ArrayList<>();
-        int i;
-
-        // check for errors
-        if (!hasErrors()) {
-            sb.append("No errors detected\n");
-        } else {
-            sb.append("Errors detected:\n");
-            getProblems(true, l);
-            for (i=0; i<l.size(); i++) {
-                sb.append("   Error: ");
-                sb.append(l.get(i).getMessage());
-                sb.append("\n");
-            }
-        }
-
-        // check for warnings
-        l.clear();
-        sb.append("\n");
-        if (!hasWarnings()) {
-            sb.append("No warnings detected\n");
-        } else {
-            sb.append("Warnings detected:\n");
-            getProblems(false, l);
-            for (i=0; i<l.size(); i++) {
-                sb.append("   Warning: ");
-                sb.append(l.get(i).getMessage());
-                sb.append("\n");
-            }
-        }
-        return sb.toString();
-    }
-
-    /**
      * Produce a string representation of the VEO
      *
      * @return The string representation
