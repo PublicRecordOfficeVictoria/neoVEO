@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 /**
  * Test and visualise VEOs. This class has three functions: it tests VEOs to
@@ -83,32 +84,17 @@ import java.util.logging.Logger;
  */
 public class VEOAnalysis {
 
-    String classname = "VEOAnalysis";
-    String runDateTime; // run date/time
-    Path supportDir;    // directory in which XML schemas are to be found
-    Path outputDir;     // directory in which the VEOs are generated
-    boolean chatty;     // true if report when starting a new VEO
-    boolean genErrorReport; // true if produce an error report
-    boolean genHTMLReport; // true if produce HTML reports
-    Path genTSVReport;  // path of the TSV report (null if not to be generated)
-    Writer tsvReportW;  // not null if asked to produce a TSV report
-    boolean unpack;     // true if leave the VEO directories after execution
-    boolean debug;      // true if debugging information is to be generated
-    boolean verbose;    // true if verbose descriptions are to be generated
-    boolean norec;      // true if asked to not complain about missing recommended metadata elements
-    Path classErrDir;   // not null if asked to classify the errors in a shadow directory
-    boolean vpa;        // true if being called from the VPA
+    private static final String CLASSNAME = "VEOAnalysis";
+    private Config c;    // configuration of this run
+    private String runDateTime; // run date/time
+    private Writer tsvReportW;  // not null if asked to produce a TSV report
+    private LTSF ltsfs;         // valid long term preservation formats
+    private int totalIOs;       // total IOs counted in VEO
     boolean hasErrors;  // true if VEO had errors
-    boolean reportIOcnt;// true if requested to report on number of IOs in VEO
-    int totalIOs;       // total IOs counted in VEO
-    boolean help;       // if true, generate a help summary of command line arguements
-    ArrayList<String> veos; // The list of VEOS to process
-    LTSF ltsfs;         // valid long term preservation formats
     private final static Logger LOG = Logger.getLogger("VEOAnalysis.VEOAnalysis");
     private ResultSummary resultSummary;  // summary of the errors & warnings
-
-    private final static String USAGE
-            = "AnalyseVEOs [-help] [-e] [-sr] [-tsv [tsvReport file] [-r|-u] [-v] [-d] [-c] [-iocnt] [-norec] [-vpa] -s supportDir [-o outputDir] [files*]";
+    private Path classifyVEOsDir; // directory in which to classify the VEOs
+    private Path tsvReport;     // TSV report
 
     /**
      * Report on version...
@@ -154,160 +140,14 @@ public class VEOAnalysis {
      * 20230628 3.27 Added ability to record the results in a TSV file
      * 20230714 3.28 Completely recast reporting to be based around VEOErrors & provide unique ids for errors
      * 20230721 3.29 Added ability to classify VEOs in a shadow directory by error status
+     * 20230725 3.30 Cleaned up top level VEOAnalysis code & added Config class
      * </pre>
      */
     static String version() {
-        return ("3.29");
+        return ("3.30");
     }
 
     static String copyright = "Copyright 2015, 2022, 2023 Public Record Office Victoria";
-
-    /**
-     * Instantiate an VEOAnalysis instance to be used as an API.In this mode,
-     * VEOAnalysis is called by another program to unpack and validate VEOs.
-     * Once an instance of a VEOAnalysis class has been created it can be used
-     * to validate multiple VEOs.
-     *
-     * @param supportDir directory in which VERS3 support information is found
-     * @param ltsfs long term sustainable formats
-     * @param outputDir directory in which the VEO will be unpacked
-     * @param hndlr where to send the LOG reports
-     * @param genErrorReport true if produce a summary error report
-     * @param genHTMLReport true if produce HTML reports
-     * @param classErr true if classifying VEOs according to their error status
-     * @param unpack true if leave the VEO directories after execution
-     * @param genTSVReport not null if a TSV report is to be generated of the
-     * results
-     * @param norec true if asked to not complain about missing recommended
-     * metadata elements
-     * @param chatty true if report when starting a new VEO
-     * @param debug true if debugging information is to be generated
-     * @param verbose true if verbose descriptions are to be generated
-     * @param vpa true if being called from VPA, and want to back off on some of
-     * the tests
-     * @param results if not null, create a summary of the errors &amp; warnings
-     * @throws VEOError if something goes wrong
-     */
-    public VEOAnalysis(Path supportDir, LTSF ltsfs, Path outputDir,
-            Handler hndlr, boolean chatty, boolean genErrorReport, boolean genHTMLReport, boolean classErr, Writer genTSVReport, boolean unpack,
-            boolean debug, boolean verbose, boolean norec, boolean vpa, ResultSummary results) throws VEOError {
-        init(supportDir, ltsfs, outputDir, hndlr, chatty, genErrorReport, genHTMLReport, classErr, genTSVReport, unpack, debug, verbose, norec, vpa, results);
-    }
-
-    /**
-     * Instantiate an VEOAnalysis instance to be used as an API (Old version
-     * without tsvReport). In this mode, VEOAnalysis is called by another
-     * program to unpack and validate VEOs. Once an instance of a VEOAnalysis
-     * class has been created it can be used to validate multiple VEOs.
-     *
-     * @param supportDir directory in which VERS3 support information is found
-     * @param ltsfs long term sustainable formats
-     * @param outputDir directory in which the VEO will be unpacked
-     * @param hndlr where to send the LOG reports
-     * @param genErrorReport true if produce a summary error report
-     * @param genHTMLReport true if produce HTML reports
-     * @param unpack true if leave the VEO directories after execution
-     * @param norec true if asked to not complain about missing recommended
-     * metadata elements
-     * @param chatty true if report when starting a new VEO
-     * @param debug true if debugging information is to be generated
-     * @param verbose true if verbose descriptions are to be generated
-     * @param vpa true if being called from VPA, and want to back off on some of
-     * the tests
-     * @param results if not null, create a summary of the errors &amp; warnings
-     * @throws VEOError if something goes wrong
-     */
-    public VEOAnalysis(Path supportDir, LTSF ltsfs, Path outputDir,
-            Handler hndlr, boolean chatty, boolean genErrorReport, boolean genHTMLReport, boolean unpack,
-            boolean debug, boolean verbose, boolean norec, boolean vpa, ResultSummary results) throws VEOError {
-        init(supportDir, ltsfs, outputDir, hndlr, chatty, genErrorReport, genHTMLReport, false, null, unpack, debug, verbose, norec, vpa, results);
-    }
-
-    /**
-     * Instantiate an VEOAnalysis instance to be used as an API. In this mode,
-     * VEOAnalysis is called by another program to unpack and validate VEOs.
-     * Once an instance of a VEOAnalysis class has been created it can be used
-     * to validate multiple VEOs.
-     *
-     * @param supportDir directory in which VERS3 support information is found
-     * @param ltsfs long term sustainable formats
-     * @param outputDir directory in which the VEO will be unpacked
-     * @param hndlr where to send the LOG reports
-     * @param genErrorReport true if produce a summary error report
-     * @param genHTMLReport true if produce HTML reports
-     * @param classError true if classifying VEOs according to their error
-     * status
-     * @param unpack true if leave the VEO directories after execution
-     * @param tsvReport writer on which to generate a TSV version of the results
-     * @param norec true if asked to not complain about missing recommended
-     * metadata elements
-     * @param chatty true if report when starting a new VEO
-     * @param debug true if debugging information is to be generated
-     * @param verbose true if verbose descriptions are to be generated
-     * @param vpa true if being called from VPA, and want to back off on some of
-     * the tests
-     * @param resultSummary if not null, create a summary of the errors &amp;
-     * warnings
-     * @throws VEOError if something goes wrong
-     */
-    private void init(Path supportDir, LTSF ltsfs, Path outputDir,
-            Handler hndlr, boolean chatty, boolean genErrorReport, boolean genHTMLReport, boolean classError, Writer tsvReportW, boolean unpack,
-            boolean debug, boolean verbose, boolean norec, boolean vpa, ResultSummary resultSummary) throws VEOError {
-        Handler h[];
-        int i;
-
-        // remove any handlers associated with the LOG & LOG messages aren't to
-        // go to the parent
-        h = LOG.getHandlers();
-        for (i = 0; i < h.length; i++) {
-            LOG.removeHandler(h[i]);
-        }
-        LOG.setUseParentHandlers(false);
-
-        // add LOG handler from calling program
-        LOG.addHandler(hndlr);
-
-        // default logging
-        LOG.getParent().setLevel(Level.WARNING);
-        LOG.setLevel(null);
-
-        if (supportDir == null || !Files.isDirectory(supportDir)) {
-            throw new VEOError(classname, 1, "Specified schema directory is null or is not a directory");
-        }
-        this.supportDir = supportDir;
-        if (outputDir == null || !Files.isDirectory(outputDir)) {
-            throw new VEOError(classname, 2, "Specified output directory is null or is not a directory");
-        }
-        runDateTime = getISODateTime(' ', ':', false);
-        this.outputDir = outputDir;
-        this.chatty = chatty;
-        this.genErrorReport = genErrorReport;
-        this.genHTMLReport = genHTMLReport;
-        if (classError) {
-            classErrDir = outputDir.resolve("Run-" + runDateTime.replaceAll(":", "-"));
-        } else {
-            classErrDir = null;
-        }
-        this.tsvReportW = tsvReportW;
-        this.unpack = unpack;
-        this.verbose = verbose;
-        if (verbose) {
-            LOG.getParent().setLevel(Level.INFO);
-        }
-        this.debug = debug;
-        if (debug) {
-            LOG.getParent().setLevel(Level.FINE);
-        }
-        this.norec = norec;
-        this.vpa = vpa;
-        veos = null;
-        hasErrors = false;
-        this.ltsfs = ltsfs;
-        this.resultSummary = resultSummary;
-        this.help = false;
-        this.reportIOcnt = false;
-        this.totalIOs = 0;
-    }
 
     /**
      * Initialise the analysis regime using command line arguments. Note that in
@@ -319,320 +159,119 @@ public class VEOAnalysis {
      */
     public VEOAnalysis(String args[]) throws VEOError {
 
-        // configure the run
-        System.setProperty("java.util.logging.SimpleFormatter.format", "%4$s: %5$s%n");
-        LOG.getParent().setLevel(Level.WARNING);
-        LOG.setLevel(null);
-        runDateTime = getISODateTime(' ', ':', false);
-        configure(args);
+        // set up the console handler for log messages and set it to output anything
+        System.setProperty("java.util.logging.SimpleFormatter.format", "%5$s%n");
+        Handler[] hs = LOG.getHandlers();
+        for (Handler h : hs) {
+            h.setLevel(Level.FINEST);
+            h.setFormatter(new SimpleFormatter());
+        }
+        LOG.setLevel(Level.FINEST);
+        c = new Config();
+        c.configure(args);
+        init(c, null);
 
         // say what we are doing
-        System.out.println("******************************************************************************");
-        System.out.println("*                                                                            *");
-        System.out.println("*                 V E O ( V 3 )   A N A L Y S I S   T O O L                  *");
-        System.out.println("*                                                                            *");
-        System.out.println("*                                Version " + version() + "                                *");
-        System.out.println("*               " + copyright + "                 *");
-        System.out.println("*                                                                            *");
-        System.out.println("******************************************************************************");
-        System.out.println("");
-        System.out.println("Run at " + runDateTime);
+        LOG.info("******************************************************************************");
+        LOG.info("*                                                                            *");
+        LOG.info("*                 V E O ( V 3 )   A N A L Y S I S   T O O L                  *");
+        LOG.info("*                                                                            *");
+        LOG.log(Level.INFO, "*                                Version {0}                                *", version());
+        LOG.log(Level.INFO, "*               {0}                 *", copyright);
+        LOG.info("*                                                                            *");
+        LOG.info("******************************************************************************");
+        LOG.info("");
+        LOG.log(Level.INFO, "Run at {0}", runDateTime);
 
-        // "AnalyseVEOs [-e] [-sr] [-r] [-u] [-v] [-d] [-c] [-norec] -s supportDir [-o outputDir] [files*]
-        if (help) {
-            System.out.println("Command line arguments:");
-            System.out.println(" Mandatory:");
-            System.out.println("  one or more VEO files, or directories where VEOs are to be found");
-            System.out.println("  -s <support directory>: file path to where the support files are located");
-            System.out.println("");
-            System.out.println(" Optional:");
-            System.out.println("  -e: generate a list of errors and warnings as each VEO is processed");
-            System.out.println("  -sr: as for -e, but also generate a summary report of all the unique errors and warnings");
-            System.out.println("  -tsv <file>: as for -sr, but also generate a TSV file with of all the errors and warnings");
-            System.out.println("  -classErr: classify the VEOs according to error status in the output directory");
-            System.out.println("  -r: generate a HTML report describing each VEO (implies '-u')");
-            System.out.println("  -u: leave the unpacked VEOs in the file system at the end of the run");
-            System.out.println("  -norec: do not warn about missing recommended metadata elements");
-            System.out.println("  -vpa: back off on some of the tests (being called from VPA)");
-            System.out.println("  -o <directory>: the directory in which the VEOs are unpacked");
-            System.out.println("  -iocnt: report on the number of IOs in VEO");
-            System.out.println("");
-            System.out.println("  -c: chatty mode: report when starting a new VEO when using -r or -u");
-            System.out.println("  -v: verbose mode: give more details about processing");
-            System.out.println("  -d: debug mode: give a lot of details about processing");
-            System.out.println("  -help: print this listing");
-            System.out.println("");
+        // output help file
+        if (c.help) {
+            c.outputHelp();
         }
+
+        // report on what has been asked to do
+        c.reportConfig();
+    }
+
+    /**
+     * Initialise via API.
+     *
+     * @param c configuration parameters
+     * @param hndlr log handlers
+     * @throws VEOError
+     */
+    public VEOAnalysis(Config c, Handler hndlr) throws VEOError {
+        init(c, hndlr);
+    }
+
+    /**
+     * Instantiate an VEOAnalysis instance to be used as an API. In this mode,
+     * VEOAnalysis is called by another program to unpack and validate VEOs.
+     * Once an instance of a VEOAnalysis class has been created it can be used
+     * to validate multiple VEOs.
+     *
+     * @param c configuration structure
+     * @param hndlr where to send the LOG reports
+     * @throws VEOError if something goes wrong
+     */
+    private void init(Config c, Handler hndlr) throws VEOError {
+        Handler h[];
+        int i;
+
+        runDateTime = getISODateTime('-', ':', false);
+        tsvReportW = null;
+        ltsfs = null;
+        totalIOs = 0;
+        hasErrors = false;
+
+        if (hndlr != null) {
+            // remove any handlers associated with the LOG & LOG messages aren't to
+            // go to the parent
+            h = LOG.getHandlers();
+            for (i = 0; i < h.length; i++) {
+                LOG.removeHandler(h[i]);
+            }
+            LOG.setUseParentHandlers(false);
+
+            // add LOG handler from calling program
+            LOG.addHandler(hndlr);
+
+            // default logging
+            LOG.getParent().setLevel(Level.WARNING);
+            LOG.setLevel(null);
+        }
+
+        this.c = c;
 
         // check to see that user wants to do something
-        if (!genErrorReport && !genHTMLReport && !unpack) {
-            throw new VEOFatal(classname, 5, "Must specify at least one of -e, -r, and -u. Usage: " + USAGE);
+        if (!c.genErrorReport && !c.genHTMLReport && !c.classifyVEOs && !c.unpack) {
+            throw new VEOFatal(CLASSNAME, 5, "Must request at least one of generate Error report, HTML report, classifyVEOs, and unpack (-e, -r, -c, and -u)");
         }
-
-        // check to see that user specified a support directory
-        if (supportDir == null) {
-            throw new VEOFatal(classname, 4, "No support directory specified. Usage: " + USAGE);
+        if (c.supportDir == null || !Files.isDirectory(c.supportDir)) {
+            throw new VEOError(CLASSNAME, 1, "Specified schema directory is null or is not a directory");
+        }
+        if (c.outputDir == null || !Files.isDirectory(c.outputDir)) {
+            throw new VEOError(CLASSNAME, 2, "Specified output directory is null or is not a directory");
         }
 
         // read valid long term preservation formats
-        ltsfs = new LTSF(supportDir.resolve("validLTSF.txt"));
+        ltsfs = new LTSF(c.supportDir.resolve("validLTSF.txt"));
 
-        // report on what has been asked to do
-        System.out.println("Output mode:");
-        if (genErrorReport || resultSummary != null) {
-            System.out.println(" Report on each VEO processed, including any errors or warnings (-e, -sr, or -tsv set)");
-            if (norec) {
-                System.out.println(" Do not warn about missing recommended metadata elements (-norec set)");
-            } else {
-                System.out.println(" Warn about missing recommended metadata elements");
-            }
+        if (c.classifyVEOs) {
+            classifyVEOsDir = c.outputDir.resolve("Run-" + runDateTime.replaceAll(":", "-"));
         } else {
-            System.out.println(" Do not list VEOs as they are processed, nor on any errors and warnings (-e not set)");
+            classifyVEOsDir = null;
         }
-        if (genHTMLReport) {
-            System.out.println(" Unpack each VEO and produce a HTML report for each VEO processed (-r set)");
-            if (!genErrorReport) {
-                if (norec) {
-                    System.out.println(" Do not warn about missing recommended metadata elements (-norec set)");
-                } else {
-                    System.out.println(" Warn about missing recommended metadata elements");
-                }
-                if (chatty) {
-                    System.out.println(" Report processing each VEO (-c set)");
-                } else {
-                    System.out.println(" Do not report processing each VEO (-c not set)");
-                }
-            }
-        } else if (unpack) {
-            System.out.println(" Leave an unpacked copy of each VEO processed (-u set)");
-            if (!genErrorReport) {
-                if (chatty) {
-                    System.out.println(" Report processing each VEO (-c set)");
-                } else {
-                    System.out.println(" Do not report processing each VEO (-c not set)");
-                }
-            }
+        if (c.genResultSummary) {
+            resultSummary = new ResultSummary();
         } else {
-            System.out.println(" Do not unpack or produce a final HTML report for each VEO processed (neither -u or -r set)");
+            resultSummary = null;
         }
-        if (classErrDir != null) {
-            System.out.println(" Classify the VEOs by error status in the output directory (-classErr set)");
-        } else {
-            System.out.println(" Do not classify the VEOs by error status (-classErr not set)");
+        if (c.verbose) {
+            LOG.getParent().setLevel(Level.INFO);
         }
-        if (reportIOcnt) {
-            System.out.println(" Report on number of IOs in VEO (-iocnt set)");
+        if (c.debug) {
+            LOG.getParent().setLevel(Level.FINE);
         }
-        if (resultSummary != null) {
-            System.out.println(" Produce a summary report of errors and warnings at the end (-sr or -tsv set)");
-        } else {
-            System.out.println(" Do not produce a summary report of errors and warnings at the end (-sr and -tsv not set)");
-        }
-        if (genTSVReport != null) {
-            System.out.println(" Produce a TSV report of errors and warnings at the end (-tsv set)");
-        } else {
-            System.out.println(" Do not produce a TSV report of errors and warnings at the end (-tsv not set)");
-        }
-        if (vpa) {
-            System.out.println(" Run in VPA mode. Do not carry out testing for valid LTSF.");
-        }
-
-        System.out.println("Configuration:");
-        System.out.println(" Output directory: " + outputDir.toString());
-        if (supportDir != null) {
-            System.out.println(" Support directory: " + supportDir.toString());
-        } else {
-            System.out.println(" Support directory is not set");
-        }
-
-        if (debug) {
-            System.out.println(" Debug mode is selected");
-        }
-        if (verbose) {
-            System.out.println(" Verbose output is selected");
-        }
-        System.out.println("");
-    }
-
-    /**
-     * This method configures the VEO analysis from the arguments on the command
-     * line. See the comment at the start of this file for the command line
-     * arguments.
-     *
-     * @param args[] the command line arguments
-     * @throws VEOFatal if any errors are found in the command line arguments
-     */
-    private void configure(String args[]) throws VEOFatal {
-        int i;
-
-        supportDir = null;
-        outputDir = Paths.get(".").toAbsolutePath();
-        chatty = false;
-        genErrorReport = false;
-        genHTMLReport = false;
-        classErrDir = null;
-        unpack = false;
-        debug = false;
-        verbose = false;
-        norec = false;
-        vpa = false;
-        veos = new ArrayList<>();
-        ltsfs = null;
-        resultSummary = null;
-        genTSVReport = null;
-        help = false;
-        reportIOcnt = false;
-        totalIOs = 0;
-
-        // process command line arguments
-        i = 0;
-        try {
-            while (i < args.length) {
-                switch (args[i].toLowerCase()) {
-                    // if chatty mode...
-                    case "-c":
-                        chatty = true;
-                        i++;
-                        break;
-
-                    // classify VEOs by error status
-                    case "-classerr":
-                        classErrDir = outputDir.resolve("Run-" + runDateTime.replaceAll(":", "-"));
-                        i++;
-                        break;
-
-                    // if debugging...
-                    case "-d":
-                        debug = true;
-                        i++;
-                        LOG.getParent().setLevel(Level.FINE);
-                        break;
-
-                    // produce report containing errors and warnings
-                    case "-e":
-                        genErrorReport = true;
-                        i++;
-                        break;
-
-                    // write a summary of the command line options to the std out
-                    case "-help":
-                        help = true;
-                        i++;
-                        break;
-
-                    // report on number of IOs in VEO
-                    case "-iocnt":
-                        reportIOcnt = true;
-                        i++;
-                        break;
-
-                    // do not complain about missing recommended metadata elements
-                    case "-norec":
-                        norec = true;
-                        i++;
-                        break;
-
-                    // get output directory
-                    case "-o":
-                        i++;
-                        outputDir = checkFile("output directory", args[i], true);
-                        outputDir = outputDir.toAbsolutePath();
-                        i++;
-                        break;
-
-                    // produce HMTL report for each VEO
-                    case "-r":
-                        genHTMLReport = true;
-                        i++;
-                        break;
-
-                    // get support directory
-                    case "-s":
-                        i++;
-                        supportDir = checkFile("support directory", args[i], true);
-                        i++;
-                        break;
-
-                    // produce summary report summarising the errors and warnings (also implies -e)
-                    case "-sr":
-                        genErrorReport = true;
-                        resultSummary = new ResultSummary();
-                        i++;
-                        break;
-
-                    // get output directory (also implies -sr)
-                    case "-tsv":
-                        genErrorReport = true;
-                        resultSummary = new ResultSummary();
-                        i++;
-                        genTSVReport = Paths.get(args[i]).toAbsolutePath();
-                        i++;
-                        break;
-
-                    // leave unpacked VEOs after the run
-                    case "-u":
-                        unpack = true;
-                        i++;
-                        break;
-
-                    // if verbose...
-                    case "-v":
-                        verbose = true;
-                        i++;
-                        LOG.getParent().setLevel(Level.INFO);
-                        break;
-
-                    // run in VPA mode
-                    case "-vpa":
-                        vpa = true;
-                        i++;
-                        break;
-
-                    // otherwise, check if it starts with a '-' and complain, otherwise assume it is a VEO pathname
-                    default:
-                        if (args[i].startsWith("-")) {
-                            throw new VEOFatal(classname, 2, "Unrecognised argument '" + args[i] + "'. Usage: " + USAGE);
-                        } else {
-                            veos.add(args[i]);
-                            i++;
-                        }
-                }
-            }
-        } catch (ArrayIndexOutOfBoundsException ae) {
-            throw new VEOFatal(classname, 3, "Missing argument. Usage: " + USAGE);
-        }
-    }
-
-    /**
-     * Check a file to see that it exists and is of the correct type (regular
-     * file or directory). The program terminates if an error is encountered.
-     *
-     * @param type a String describing the file to be opened
-     * @param name the file name to be opened
-     * @param isDirectory true if the file is supposed to be a directory
-     * @throws VEOFatal if the file does not exist, or is of the correct type
-     * @return the File opened
-     */
-    private Path checkFile(String type, String name, boolean isDirectory) throws VEOFatal {
-        Path p;
-
-        String safe = name.replaceAll("\\\\", "/");
-        try {
-            p = Paths.get(safe);
-        } catch (InvalidPathException ipe) {
-            throw new VEOFatal(classname, 9, type + " '" + safe + "' is not a valid file name." + ipe.getMessage());
-        }
-
-        if (!Files.exists(p)) {
-            throw new VEOFatal(classname, 6, type + " '" + p.toAbsolutePath().toString() + "' does not exist");
-        }
-        if (isDirectory && !Files.isDirectory(p)) {
-            throw new VEOFatal(classname, 7, type + " '" + p.toAbsolutePath().toString() + "' is a file not a directory");
-        }
-        if (!isDirectory && Files.isDirectory(p)) {
-            throw new VEOFatal(classname, 8, type + " '" + p.toAbsolutePath().toString() + "' is a directory not a file");
-        }
-        return p;
     }
 
     /**
@@ -650,25 +289,24 @@ public class VEOAnalysis {
         Path veoFile;
         FileOutputStream fos;
         OutputStreamWriter osw;
-        BufferedWriter tsvFile;
 
         // are we generating a TSV file?
         fos = null;
         osw = null;
-        tsvFile = null;
-        if (genTSVReport != null) {
+        if (c.genTSVReport) {
+            Path p = c.outputDir.resolve("Results-" + runDateTime.replaceAll(":", "-") + ".tsv");
             try {
-                fos = new FileOutputStream(genTSVReport.toFile());
+                fos = new FileOutputStream(p.toFile());
             } catch (FileNotFoundException fnfe) {
-                throw new VEOError(classname, 3, "Attempting to open the TSV report file: '" + genTSVReport.toString() + "': " + fnfe.getMessage());
+                throw new VEOError(CLASSNAME, 3, "Failed attempting to open the TSV report file: " + fnfe.getMessage());
             }
             osw = new OutputStreamWriter(fos, Charset.forName("UTF-8"));
-            tsvFile = new BufferedWriter(osw);
+            tsvReportW = new BufferedWriter(osw);
         }
 
         // go through the list of VEOs
-        for (i = 0; i < veos.size(); i++) {
-            veo = veos.get(i);
+        for (i = 0; i < c.veos.size(); i++) {
+            veo = c.veos.get(i);
             if (veo == null) {
                 continue;
             }
@@ -679,30 +317,16 @@ public class VEOAnalysis {
             try {
                 veoFile = Paths.get(safe);
             } catch (InvalidPathException ipe) {
-                System.out.println("Failed trying to open file '" + safe + "': " + ipe.getMessage());
+                LOG.log(Level.WARNING, "Failed trying to open file ''{0}'': {1}", new Object[]{safe, ipe.getMessage()});
                 continue;
             }
-            if (Files.isDirectory(veoFile)) {
-                try {
-                    ds = Files.newDirectoryStream(veoFile);
-                    for (Path p : ds) {
-                        if (Files.isRegularFile(p) && p.toString().toLowerCase().endsWith(".veo.zip")) {
-                            testVEOint(p, outputDir, tsvFile);
-                        }
-                    }
-                    ds.close();
-                } catch (IOException e) {
-                    System.out.println("Failed to process directory '" + safe + "': " + e.getMessage());
-                }
-            } else {
-                testVEOint(veoFile, outputDir, tsvFile);
-            }
+            processPath(veoFile);
         }
 
         // close TSV report
         try {
-            if (tsvFile != null) {
-                tsvFile.close();
+            if (tsvReportW != null) {
+                tsvReportW.close();
             }
             if (osw != null) {
                 osw.close();
@@ -711,107 +335,80 @@ public class VEOAnalysis {
                 fos.close();
             }
         } catch (IOException ioe) {
-            // ignore
+            LOG.log(Level.WARNING, "Failed to close the TSV report: {0}", ioe.getMessage());
         }
 
         // go through classErr directory and rename directories to include count of instances
-        try {
-            ds = Files.newDirectoryStream(classErrDir);
-            for (Path entry : ds) {
-                ds1 = Files.newDirectoryStream(entry);
-                i = 0;
-                for (Path v : ds1) {
-                    if (v.getFileName().toString().toLowerCase().endsWith(".veo.zip")) {
-                        i++;
+        if (c.classifyVEOs) {
+            try {
+                ds = Files.newDirectoryStream(classifyVEOsDir);
+                for (Path entry : ds) {
+                    ds1 = Files.newDirectoryStream(entry);
+                    i = 0;
+                    for (Path v : ds1) {
+                        if (v.getFileName().toString().toLowerCase().endsWith(".veo.zip")) {
+                            i++;
+                        }
+                    }
+                    s = entry.getFileName().toString();
+                    if (s.startsWith("E-")) {
+                        s = "E-" + i + "-" + s.substring(2);
+                        Files.move(entry, classifyVEOsDir.resolve(s));
+                    } else if (s.startsWith("W-")) {
+                        s = "W-" + i + "-" + s.substring(2);
+                        Files.move(entry, classifyVEOsDir.resolve(s));
+                    } else if (s.startsWith("OK")) {
+                        s = "OK-" + i;
+                        Files.move(entry, classifyVEOsDir.resolve(s));
                     }
                 }
-                s = entry.getFileName().toString();
-                if (s.startsWith("E-")) {
-                    s = "E-"+i+"-"+s.substring(2);
-                    Files.move(entry, classErrDir.resolve(s));
-                } else if (s.startsWith("W-")) {
-                    s = "W-"+i+"-"+s.substring(2);
-                    Files.move(entry, classErrDir.resolve(s));
-                } else if (s.startsWith("OK")) {
-                    s = "OK-"+i;
-                    Files.move(entry, classErrDir.resolve(s));
-                }
+            } catch (IOException ioe) {
+                LOG.log(Level.WARNING, "Failed renaming a classification directory: {0}", ioe.getMessage());
             }
-        } catch (IOException ioe) {
-
         }
 
         // report total IOs generated in run
-        if (reportIOcnt) {
-            System.out.println("Total IOs encountered in run: " + totalIOs);
+        if (c.reportIOcnt) {
+            LOG.log(Level.INFO, "Total IOs encountered in run: {0}", totalIOs);
         }
     }
 
     /**
-     * Test a VEO and print the result on std out. This is used when testing
-     * VEOs as a standalone program
+     * Recursively process a path name
      *
-     * @param veo the file name of the zip file containing the VEO
-     * @param dir the directory in which to unpack this VEO
-     * @param tsvReport a writer on which to produce a TSV report
-     * @return the path of the created VEO directory
-     * @throws VEOError if something went wrong
+     * @param p a path that could be a directory or a VEO.
+     * @throws VEOError
      */
-    private Path testVEOint(Path veo, Path dir, Writer tsvReportW) throws VEOError {
-        String method = "testVEOint";
-        TestVEOResult tvr;
+    private void processPath(Path p) throws VEOError {
+        DirectoryStream<Path> ds;
 
-        // report time and VEO if in chatty mode
-        if (chatty && !genErrorReport) {
-            System.out.println((System.currentTimeMillis() / 1000) + ": " + veo);
-        }
-
-        // if in error mode, print the header for this VEO
-        if (genErrorReport) {
-            printHeader(veo);
-        }
-
-        // validate
-        try {
-            tvr = testVEO(veo, dir);
-        } catch (VEOError ve) {
-            System.out.println(ve.getMessage());
-            System.out.println();
-            return null;
-        }
-
-        // report on results of validation
-        if (genErrorReport) {
-            System.out.println(tvr.result);
-        }
-
-        // if reporting the number of IOs in this VEO...
-        if (reportIOcnt) {
-            System.out.println("Number of information objects in VEO: " + tvr.ioCnt);
-            totalIOs += tvr.ioCnt;
-        }
-
-        // if outputing a TSV file about the VEO
-        if (genTSVReport != null) {
+        if (Files.isDirectory(p)) {
             try {
-                tsvReportW.write(tvr.toTSVstring());
-                tsvReportW.write("\n");
-            } catch (IOException ioe) {
-                throw new VEOError(classname, method, 4, "Failed writing to TSV report file: " + ioe.getMessage());
+                ds = Files.newDirectoryStream(p);
+                for (Path pd : ds) {
+                    processPath(pd);
+                }
+                ds.close();
+            } catch (IOException e) {
+                LOG.log(Level.WARNING, "Failed to process directory ''{0}'': {1}", new Object[]{p.toString(), e.getMessage()});
+            }
+        } else {
+            try {
+                testVEO(p);
+            } catch (VEOError ve) {
+                LOG.warning(ve.getMessage());
             }
         }
-        return (tvr.veoDir);
     }
 
     /**
-     * Test an individual VEO.
+     * Test result for an individual VEO.
      *
      * @param veo the file path of the VEO
-     * @param outputDir the directory in which to unpack this VEO
      * @return a structure containing information about the VEO
      * @throws VEOError if something went wrong
      */
-    public TestVEOResult testVEO(Path veo, Path outputDir) throws VEOError {
+    public TestVEOResult testVEO(Path veo) throws VEOError {
         RepnVEO rv;
         TestVEOResult tvr;
         String uniqueId;
@@ -819,7 +416,20 @@ public class VEOAnalysis {
         ArrayList<VEOError> errors = new ArrayList<>();
         ArrayList<VEOError> warnings = new ArrayList<>();
         String result;
-        int cnt, i;
+        int i;
+
+        // if in error mode, print the header for this VEO
+        if (c.genErrorReport) {
+            LOG.info("******************************************************************************");
+            LOG.info("*                                                                            *");
+            LOG.log(Level.INFO, "* V3 VEO analysed: {0} at {1}", new Object[]{veo.getFileName().toString(), getISODateTime('T', ':', false)});
+            LOG.log(Level.INFO, "* ''{0}''", veo.toString());
+            LOG.info("*                                                                            *");
+            LOG.info("******************************************************************************");
+            LOG.info("");
+        } else if (c.chatty) {
+            LOG.log(Level.INFO, "{0}: {1}", new Object[]{System.currentTimeMillis() / 1000, veo});
+        }
 
         // set this VEO id in the results summary
         if (resultSummary != null) {
@@ -828,13 +438,13 @@ public class VEOAnalysis {
 
         // perform the analysis
         hasErrors = false;
-        rv = new RepnVEO(veo, debug, outputDir, resultSummary);
+        rv = new RepnVEO(veo, c.debug, c.outputDir, resultSummary);
         result = null;
         try {
             // if validating, do so...
-            if (genErrorReport || genHTMLReport) {
-                rv.constructRepn(supportDir);
-                rv.validate(ltsfs, norec, vpa); // note originally this was rv.validate(ltsfs, false, norec) with norec always being true when called from VPA
+            if (c.genErrorReport || c.genHTMLReport) {
+                rv.constructRepn(c.supportDir);
+                rv.validate(ltsfs, c.norec, c.vpa); // note originally this was rv.validate(ltsfs, false, norec) with norec always being true when called from VPA
             }
 
             // if VEO had at least one signature, get it...
@@ -848,14 +458,12 @@ public class VEOAnalysis {
 
             // get number of IOs seen in this VEO
             if (rv.veoContent != null) {
-                cnt = rv.veoContent.ioCnt;
-            } else {
-                cnt = 0;
+                totalIOs += rv.veoContent.ioCnt;
             }
 
             // if generating HTML report, do so...
-            if (genHTMLReport) {
-                rv.genReport(verbose, version(), copyright);
+            if (c.genHTMLReport) {
+                rv.genReport(c.verbose, version(), copyright);
             }
 
             // collect the errors and warnings (note these will not survive the call to abandon())
@@ -863,37 +471,57 @@ public class VEOAnalysis {
             rv.getProblems(false, warnings);
 
             // if in error mode, print the results for this VEO
-            if (genErrorReport) {
-                result = getStatus(errors, warnings);
+            if (c.genErrorReport) {
+                LOG.info(getStatus(errors, warnings));
             }
 
             // if classifying the VEOs by error category, do so
-            if (classErrDir != null) {
+            if (classifyVEOsDir != null) {
 
                 // if no errors or warnings, put in 'NoProblems' directory
                 if (errors.isEmpty() && warnings.isEmpty()) {
-                    linkVEOinto(veo, classErrDir, "OK-NoProblems", null);
+                    linkVEOinto(veo, classifyVEOsDir, "OK-NoProblems", null);
                 }
 
                 // go through errors
                 for (i = 0; i < errors.size(); i++) {
-                    linkVEOinto(veo, classErrDir, "E-" + errors.get(i).getErrorId(), errors.get(i).getMessage());
+                    linkVEOinto(veo, classifyVEOsDir, "E-" + errors.get(i).getErrorId(), errors.get(i).getMessage());
                 }
 
                 // go through warnings
                 for (i = 0; i < warnings.size(); i++) {
-                    linkVEOinto(veo, classErrDir, "W-" + warnings.get(i).getErrorId(), warnings.get(i).getMessage());
+                    linkVEOinto(veo, classifyVEOsDir, "W-" + warnings.get(i).getErrorId(), warnings.get(i).getMessage());
+                }
+            }
+
+            // if producing a TSV file of the results, do so
+            if (tsvReportW != null) {
+                try {
+                    if (errors.isEmpty() && warnings.isEmpty()) {
+                        writeTSVReportLine(veo, null, false);
+                    } else {
+                        for (i = 0; i < errors.size(); i++) {
+                            writeTSVReportLine(veo, errors.get(i), true);
+                        }
+                        for (i = 0; i < warnings.size(); i++) {
+                            writeTSVReportLine(veo, warnings.get(i), false);
+                        }
+                    }
+                    tsvReportW.flush();
+
+                } catch (IOException ioe) {
+                    LOG.log(Level.WARNING, "Failed writing to TSV report. Cause: {0}", ioe.getMessage());
                 }
             }
 
             // capture results of processing this VEO
-            tvr = new TestVEOResult(rv.getVEODir(), uniqueId, cnt, !errors.isEmpty(), !warnings.isEmpty(), result);
+            tvr = new TestVEOResult(rv.getVEODir(), uniqueId, 0, !errors.isEmpty(), !warnings.isEmpty(), result);
 
         } finally {
             hasErrors = rv.hasErrors();
 
             // delete the unpacked VEO
-            if (!unpack && !genHTMLReport) {
+            if (!c.unpack && !c.genHTMLReport) {
                 rv.deleteVEO();
             }
 
@@ -924,7 +552,7 @@ public class VEOAnalysis {
             try {
                 Files.createDirectories(pd);
             } catch (IOException ioe) {
-                System.out.println("Failed creating class directory '" + pd.toString() + "': " + ioe.getMessage());
+                LOG.log(Level.WARNING, "Failed creating class directory ''{0}'': {1}", new Object[]{pd.toString(), ioe.getMessage()});
                 return;
             }
             if (mesg != null) {
@@ -938,13 +566,13 @@ public class VEOAnalysis {
                     osw.close();
                     fos.close();
                 } catch (IOException ioe) {
-                    System.out.println("Failed creating description of error: " + ioe.getMessage());
+                    LOG.log(Level.WARNING, "Failed creating description of error: {0}", ioe.getMessage());
                     return;
                 }
             }
         }
         if (!Files.isDirectory(pd)) {
-            System.out.println("Class directory '" + pd.toString() + "' exists, but is not a directory");
+            LOG.log(Level.WARNING, "Class directory ''{0}'' exists, but is not a directory", pd.toString());
             return;
         }
 
@@ -953,13 +581,41 @@ public class VEOAnalysis {
             p = Files.createLink(pd.resolve(veo.getFileName()), veo);
         } catch (IOException | UnsupportedOperationException ioe) {
             if (ioe.getMessage().trim().endsWith("Incorrect function.")) {
-                System.out.println("Failed linking '" + pd.resolve(veo.getFileName()) + "' to '" + veo.toString() + "': Might be because the file system containing the output directory is not NTSF");
+                LOG.log(Level.WARNING, "Failed linking ''{0}'' to ''{1}'': Might be because the file system containing the output directory is not NTSF", new Object[]{pd.resolve(veo.getFileName()), veo.toString()});
             } else if (ioe.getMessage().trim().endsWith("different disk drive.")) {
-                System.out.println("Failed linking '" + pd.resolve(veo.getFileName()) + "' to '" + veo.toString() + "': Might be because the VEOs and the output directory are on different file systems");
+                LOG.log(Level.WARNING, "Failed linking ''{0}'' to ''{1}'': Might be because the VEOs and the output directory are on different file systems", new Object[]{pd.resolve(veo.getFileName()), veo.toString()});
             } else {
-                System.out.println("Failed linking '" + pd.resolve(veo.getFileName()) + "' to '" + veo.toString() + "': " + ioe.getMessage());
+                LOG.log(Level.WARNING, "Failed linking ''{0}'' to ''{1}'': {2}", new Object[]{pd.resolve(veo.getFileName()), veo.toString(), ioe.getMessage()});
             }
         }
+    }
+
+    /**
+     * Write a line in the TSV Report
+     *
+     * @param veo the VEO being reported on
+     * @param error true if an error occurred, false if it is a warning
+     * @param ve the error/warning that occurred
+     * @throws IOException
+     */
+    private void writeTSVReportLine(Path veo, VEOError ve, boolean error) throws IOException {
+        tsvReportW.write(veo != null ? veo.getFileName().toString() : "");
+        tsvReportW.write('\t');
+        tsvReportW.write(veo != null ? veo.toString() : "");
+        tsvReportW.write('\t');
+        if (ve != null) {
+            if (error) {
+                tsvReportW.write("Error\t");
+            } else {
+                tsvReportW.write("Warning\t");
+            }
+            tsvReportW.write(ve.getErrorId());
+            tsvReportW.write('\t');
+            tsvReportW.write(ve.getMessage());
+        } else {
+            tsvReportW.write("OK\t\t");
+        }
+        tsvReportW.write("\n");
     }
 
     /**
@@ -1008,21 +664,6 @@ public class VEOAnalysis {
     }
 
     /**
-     * Print a header about this VEO test on the standard output
-     *
-     * @param veo The VEO.veo.zip file being tested
-     */
-    private void printHeader(Path veo) {
-        System.out.println("******************************************************************************");
-        System.out.println("*                                                                            *");
-        System.out.println("* V3 VEO analysed: " + veo.getFileName().toString() + " at " + getISODateTime('T', ':', false));
-        System.out.println("* '" + veo.toString() + "'");
-        System.out.println("*                                                                            *");
-        System.out.println("******************************************************************************");
-        System.out.println("");
-    }
-
-    /**
      * Write a result summary on the specified Writer. Nothing will be reported
      * unless the '-rs' flag was used when instantiating the class (or a
      * ResultSummary passed).
@@ -1039,7 +680,7 @@ public class VEOAnalysis {
                 resultSummary.report(bw);
                 bw.close();
             } catch (IOException ioe) {
-                throw new VEOError(classname, "resultSummary", 5, "Error producing summary report: " + ioe.getMessage());
+                throw new VEOError(CLASSNAME, "resultSummary", 5, "Error producing summary report: " + ioe.getMessage());
             }
         }
     }
@@ -1127,7 +768,7 @@ public class VEOAnalysis {
             try {
                 osw.close();
             } catch (IOException ioe) {
-                /* ignore */
+                LOG.log(Level.WARNING, "Failed closing output: {0}", ioe.getMessage());
             }
         } catch (VEOFatal e) {
             LOG.log(Level.SEVERE, e.getMessage());
