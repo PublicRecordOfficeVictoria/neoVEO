@@ -9,6 +9,7 @@ package VEOAnalysis;
 import VERSCommon.ResultSummary;
 import VERSCommon.ResultSummary.Type;
 import VERSCommon.VEOError;
+import VERSCommon.VEOFailure;
 import java.io.BufferedWriter;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -35,17 +36,18 @@ import java.util.logging.Logger;
  */
 abstract class Repn {
 
-    String classname = "Repn";      // for logging
+    private static final String CLASSNAME = "Repn"; // for logging
+    private final static Logger LOG = Logger.getLogger("VEOAnalysis.Repn");
+    boolean objectValid;            // true if instantion suceeded, so information in object is valid
+    boolean infoAvailable;          // true if information can be retrieved from this object
     private final String id;        // identifier of this object for messages
     protected boolean hasErrors;    // true if this object (or its children) have errors
-    protected ArrayList<VEOError> errors;   // list of errors that occurred
+    protected ArrayList<VEOFailure> errors;   // list of errors that occurred
     protected boolean hasWarnings;  // true if this object (or its children) have warnings
-    protected ArrayList<VEOError> warnings; // list of warnings that occurred
+    protected ArrayList<VEOFailure> warnings; // list of warnings that occurred
     private FileOutputStream fos;
     private OutputStreamWriter osw;
     protected Writer w;             // if not null, generate a HTML version of this representation
-    private boolean infoAvailable;  // true if information can be retrieved from this object
-    private final static Logger log = Logger.getLogger("VEOAnalysis.Repn");
     protected ResultSummary results;// summary of results
 
     /**
@@ -55,6 +57,8 @@ abstract class Repn {
      * @param results the results summary to build information.
      */
     public Repn(String id, ResultSummary results) {
+        assert (id != null);
+
         fos = null;
         osw = null;
         w = null;
@@ -63,8 +67,9 @@ abstract class Repn {
         warnings = new ArrayList<>();
         hasWarnings = false;
         this.id = id;
-        infoAvailable = true;
         this.results = results;
+        infoAvailable = true;
+        objectValid = false;
     }
 
     /**
@@ -72,10 +77,14 @@ abstract class Repn {
      */
     public void abandon() {
         infoAvailable = false;
-        errors.clear();
-        errors = null;
-        warnings.clear();
-        warnings = null;
+        if (errors != null) {
+            errors.clear();
+            errors = null;
+        }
+        if (warnings != null) {
+            warnings.clear();
+            warnings = null;
+        }
         try {
             if (w != null) {
                 w.close();
@@ -90,7 +99,7 @@ abstract class Repn {
             }
             fos = null;
         } catch (IOException e) {
-            log.log(Level.WARNING, VEOError.errMesg(classname, "abandon", 1, "Failed to close HTML output file", e));
+            LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, "abandon", 1, "Failed to close HTML output file", e));
         }
     }
 
@@ -100,17 +109,8 @@ abstract class Repn {
      * @return a String containing the id
      */
     final public String getId() {
-        assert(infoAvailable);
+        assert (infoAvailable);
         return id;
-    }
-
-    /**
-     * Report if information is available from this object
-     *
-     * @return true if component is valid
-     */
-    final public boolean isInfoAvailable() {
-        return infoAvailable;
     }
 
     /**
@@ -119,8 +119,9 @@ abstract class Repn {
      *
      * @param v The error to add
      */
-    final public void addError(VEOError v) {
-        assert(infoAvailable);
+    final protected void addError(VEOFailure v) {
+        assert (infoAvailable);
+        assert (v != null);
         hasErrors = true;
         errors.add(v);
         if (results != null) {
@@ -134,61 +135,8 @@ abstract class Repn {
      * @return true if there are error messages
      */
     protected boolean hasErrors() {
-        assert(infoAvailable);
+        assert (infoAvailable);
         return hasErrors;
-    }
-
-    /**
-     * Add problems encountered with this object to a list of problems
-     *
-     * @param returnErrors if true return errors, otherwise return warnings
-     * @param l list in which to place the errors/warnings
-     */
-    protected void getProblems(boolean returnErrors, List<VEOError> l) {
-        assert(infoAvailable);
-        if (returnErrors) {
-            l.addAll(errors);
-        } else {
-            l.addAll(warnings);
-        }
-    }
-
-    /**
-     * Return a list of messages
-     *
-     * @param returnErrors if true return error messages, otherwise return warnings
-     * @param l list in which to place the messages
-     * @return a String containing the errors
-     */
-    
-    protected void getMesgs(boolean returnErrors, List<String> l) {
-        int i;
-
-        assert(infoAvailable);
-        if (returnErrors) {
-            for (i = 0; i < errors.size(); i++) {
-                l.add(formatMesg("Error", errors.get(i).getMessage()));
-            }
-        } else {
-            for (i = 0; i < warnings.size(); i++) {
-                l.add(formatMesg("Warning", warnings.get(i).getMessage()));
-            }
-        }
-    }
-    
-    /**
-     * Turn a list of messages into a formatted string in a StringBuilder
-     * @param l a list of messages
-     * @param sb the StringBuilder to receive the messages
-     */
-    protected void mesgs2String(List<VEOError> l, StringBuilder sb) {
-        int i;
-        
-        for (i = 0; i < l.size(); i++) {
-            sb.append("   ");
-            sb.append(l.get(i).getMessage());
-            sb.append("\n");
-        }
     }
 
     /**
@@ -197,7 +145,7 @@ abstract class Repn {
      * @return true if there are warning messages
      */
     protected boolean hasWarnings() {
-        assert(infoAvailable);
+        assert (infoAvailable);
         return hasWarnings;
     }
 
@@ -207,23 +155,61 @@ abstract class Repn {
      *
      * @param v The warning to add
      */
-    protected void addWarning(VEOError v) {
-        assert(infoAvailable);
+    final protected void addWarning(VEOFailure v) {
+        assert (infoAvailable);
+        assert (v != null);
         hasWarnings = true;
         warnings.add(v);
         if (results != null) {
             results.recordResult(Type.WARNING, v.getMessage(), null, id);
         }
     }
-    
+
     /**
      * Return the list of warnings associated with this object. Will never be
      * null, but may be empty.
-     * 
-     * @return 
+     *
+     * @return
      */
-    protected List<VEOError> getWarnings() {
+    protected List<VEOFailure> getWarnings() {
+        assert (infoAvailable);
         return warnings;
+    }
+
+    /**
+     * Add problems encountered with this object to a list of problems
+     *
+     * @param returnErrors if true return errors, otherwise return warnings
+     * @param l list in which to place the errors/warnings
+     */
+    protected void getProblems(boolean returnErrors, List<VEOFailure> l) {
+        assert (infoAvailable);
+        assert (l != null);
+        if (returnErrors) {
+            l.addAll(errors);
+        } else {
+            l.addAll(warnings);
+        }
+    }
+
+    /**
+     * Turn a list of messages into a formatted string in a StringBuilder
+     *
+     * @param l a list of messages
+     * @param sb the StringBuilder to receive the messages
+     */
+    protected void mesgs2String(List<VEOFailure> l, StringBuilder sb) {
+        int i;
+
+        assert (infoAvailable);
+        assert (l != null);
+        assert (sb != null);
+
+        for (i = 0; i < l.size(); i++) {
+            sb.append("   ");
+            sb.append(l.get(i).getMessage());
+            sb.append("\n");
+        }
     }
 
     /**
@@ -235,6 +221,10 @@ abstract class Repn {
      */
     private String formatMesg(String type, String mesg) {
         StringBuilder sb = new StringBuilder();
+
+        assert (infoAvailable);
+        assert (type != null);
+        assert (mesg != null);
 
         sb.append(type);
         if (id != null && !id.equals("")) {
@@ -262,18 +252,23 @@ abstract class Repn {
         TimeZone tz;
         SimpleDateFormat sdf;
 
-        assert(infoAvailable);
+        assert (infoAvailable);
+        assert (veoDir != null);
+        assert (htmlFileName != null && !htmlFileName.equals(""));
+        assert (pVersion != null);
+        assert (copyright != null);
+
         try {
             htmlFile = veoDir.resolve(htmlFileName);
         } catch (InvalidPathException e) {
-            throw new VEOError(classname, "createReport", 1, "Error when attempting to open HTML output file; '" + htmlFileName + "' is not a valid file name", e);
+            throw new VEOError(CLASSNAME, "createReport", 1, "Error when attempting to open HTML output file; '" + htmlFileName + "' is not a valid file name", e);
         }
         try {
             fos = new FileOutputStream(htmlFile.toFile());
             osw = new OutputStreamWriter(fos, Charset.forName("UTF-8"));
             w = new BufferedWriter(osw);
         } catch (IOException e) {
-            throw new VEOError(classname, "createReport", 2, "Error when attempting to open HTML output file '" + htmlFile.toString() + "'", e);
+            throw new VEOError(CLASSNAME, "createReport", 2, "Error when attempting to open HTML output file '" + htmlFile.toString() + "'", e);
         }
         try {
             w.write("<!DOCTYPE html>\n<html>\n<head>\n");
@@ -296,7 +291,7 @@ abstract class Repn {
             w.write("<br>\n");
             w.write("</p>\n");
         } catch (IOException e) {
-            log.log(Level.WARNING, VEOError.errMesg(classname, "createReport", 3, "IOException when writing to HTML output file", e));
+            LOG.log(Level.WARNING, VEOError.errMesg(CLASSNAME, "createReport", 3, "IOException when writing to HTML output file", e));
         }
     }
 
@@ -308,8 +303,8 @@ abstract class Repn {
     final protected void finishReport() throws VEOError {
 
         // sanity check
-        assert(infoAvailable);
-        assert(fos != null && osw != null & w != null);
+        assert (infoAvailable);
+        assert (fos != null && osw != null & w != null);
 
         // finish and close HTML report
         try {
@@ -325,7 +320,7 @@ abstract class Repn {
             }
             fos = null;
         } catch (IOException e) {
-            log.log(Level.WARNING, VEOError.errMesg(classname, "finishReport", 1, "IOException when writing to HTML output file", e));
+            LOG.log(Level.WARNING, VEOError.errMesg(CLASSNAME, "finishReport", 1, "IOException when writing to HTML output file", e));
         }
     }
 
@@ -339,6 +334,9 @@ abstract class Repn {
      * @param anchor anchor to put in the div to allow linking
      */
     final protected void startDiv(String type, String anchor) {
+        assert (type != null);
+        assert (anchor != null);
+
         startDiv(this, type, anchor);
     }
 
@@ -357,8 +355,11 @@ abstract class Repn {
     final protected void startDiv(Repn r, String type, String anchor) {
 
         // sanity check...
-        assert(infoAvailable);
-        assert(w != null);
+        assert (infoAvailable);
+        assert (w != null);
+        assert (r != null);
+        assert (type != null);
+        assert (anchor != null);
 
         try {
             w.write("<div");
@@ -378,7 +379,7 @@ abstract class Repn {
             }
             w.write(">\n");
         } catch (IOException e) {
-            log.log(Level.WARNING, VEOError.errMesg(classname, "startDiv", 1, "IOException when writing to HTML output file", e));
+            LOG.log(Level.WARNING, VEOError.errMesg(CLASSNAME, "startDiv", 1, "IOException when writing to HTML output file", e));
         }
     }
 
@@ -389,12 +390,12 @@ abstract class Repn {
         String method = "endDiv";
 
         // sanity check...
-        assert(infoAvailable);
-        assert(w != null);
+        assert (infoAvailable);
+        assert (w != null);
         try {
             w.write("</div>\n");
         } catch (IOException e) {
-            log.log(Level.WARNING, VEOError.errMesg(classname, method, 1, "IOException when writing to HTML output file", e));
+            LOG.log(Level.WARNING, VEOError.errMesg(CLASSNAME, method, 1, "IOException when writing to HTML output file", e));
         }
     }
 
@@ -405,8 +406,8 @@ abstract class Repn {
         int i;
 
         // sanity check...
-        assert(infoAvailable);
-        assert(w != null);
+        assert (infoAvailable);
+        assert (w != null);
 
         try {
             for (i = 0; i < errors.size(); i++) {
@@ -422,7 +423,7 @@ abstract class Repn {
                 w.write("</li>\n");
             }
         } catch (IOException e) {
-            log.log(Level.WARNING, VEOError.errMesg(classname, "listIssues", 1, "IOException when writing to HTML output file", e));
+            LOG.log(Level.WARNING, VEOError.errMesg(CLASSNAME, "listIssues", 1, "IOException when writing to HTML output file", e));
         }
     }
 
@@ -433,14 +434,15 @@ abstract class Repn {
      * @param s String to add to the HTML.
      */
     final protected void addTag(String s) {
+        assert (s != null && !s.equals(""));
 
         // sanity checks
-        assert(infoAvailable);
-        assert(w != null);
+        assert (infoAvailable);
+        assert (w != null);
         try {
             w.write(s);
         } catch (IOException e) {
-            log.log(Level.WARNING, VEOError.errMesg(classname, "addTag", 1, "IOException when writing to HTML output file", e));
+            LOG.log(Level.WARNING, VEOError.errMesg(CLASSNAME, "addTag", 1, "IOException when writing to HTML output file", e));
         }
     }
 
@@ -451,16 +453,17 @@ abstract class Repn {
      * @param s String to add to the HTML.
      */
     final protected void addLabel(String s) {
+        assert (s != null && !s.equals(""));
 
         // sanity check...
-        assert(infoAvailable);
-        assert(w != null);
+        assert (infoAvailable);
+        assert (w != null);
         try {
             w.write("<strong>");
             w.write(safeXML(s));
             w.write("</strong>");
         } catch (IOException e) {
-            log.log(Level.WARNING, VEOError.errMesg(classname, "addLabel", 1, "IOException when writing to HTML output file", e));
+            LOG.log(Level.WARNING, VEOError.errMesg(CLASSNAME, "addLabel", 1, "IOException when writing to HTML output file", e));
         }
     }
 
@@ -473,12 +476,14 @@ abstract class Repn {
     final protected void addString(String s) {
 
         // sanity check...
-        assert(infoAvailable);
-        assert(w != null);
+        assert (infoAvailable);
+        assert (w != null);
+        assert (s != null && !s.equals(""));
+
         try {
             w.write(safeXML(s));
         } catch (IOException e) {
-            log.log(Level.WARNING, VEOError.errMesg(classname, "addString", 1, "IOException when writing to HTML output file", e));
+            LOG.log(Level.WARNING, VEOError.errMesg(CLASSNAME, "addString", 1, "IOException when writing to HTML output file", e));
         }
     }
 
@@ -490,7 +495,7 @@ abstract class Repn {
      * @param s string to write to XML document
      * @return the XML safe string
      */
-    final protected String safeXML(String s) {
+    final protected static String safeXML(String s) {
         StringBuilder sb = new StringBuilder();
         int i;
         char c;

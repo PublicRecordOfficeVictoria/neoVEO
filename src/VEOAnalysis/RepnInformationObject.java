@@ -9,6 +9,7 @@ package VEOAnalysis;
 import VERSCommon.LTSF;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
+import VERSCommon.VEOFailure;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,7 +21,7 @@ import java.util.List;
  * @author Andrew Waugh
  */
 class RepnInformationObject extends Repn {
-    private static String classname = "RepnInformationObject";
+    private static final String CLASSNAME = "RepnInformationObject";
     private int IOid;       // integer used to distinguish this IO from all other IOs in the VEO
     private RepnItem type;  // information object type
     private RepnItem depth;   // depth of the information object
@@ -45,7 +46,13 @@ class RepnInformationObject extends Repn {
 
         int i;
         String rdfNameSpace;
-
+        
+        assert (document != null);
+        assert (parentId != null);
+        assert (seq > -1);
+        
+        metadata = new ArrayList<>();
+        infoPieces = new ArrayList<>();
         children = new ArrayList<>();
         parent = null;
 
@@ -63,8 +70,6 @@ class RepnInformationObject extends Repn {
         depth = new RepnItem(getId(), "Information Object depth", results);
         depth.setValue(document.getTextValue());
         document.gotoNextElement();
-
-        metadata = new ArrayList<>();
         i = 0;
         while (document.checkElement("vers:MetadataPackage")) {
             rdfNameSpace = document.getAttribute("xmlns:rdf");
@@ -75,7 +80,8 @@ class RepnInformationObject extends Repn {
                         rdf = true;
                         break;
                     default:
-                        throw new VEOError(classname, 1, "Error detected:\n  Error (VEOContent.xml): vers:MetadataPackage element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+                        addError(new VEOFailure(CLASSNAME, 1, "vers:MetadataPackage element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#"));
+                        break;
                 }
             }
 
@@ -83,13 +89,13 @@ class RepnInformationObject extends Repn {
             i++;
             metadata.add(new RepnMetadataPackage(document, getId(), i, rdf, results));
         }
-        infoPieces = new ArrayList<>();
         i = 0;
         while (!document.atEnd() && document.checkElement("vers:InformationPiece")) {
             document.gotoNextElement();
             i++;
             infoPieces.add(new RepnInformationPiece(document, getId(), i, results));
         }
+        objectValid = true;
     }
 
     /**
@@ -144,6 +150,7 @@ class RepnInformationObject extends Repn {
      * @param io the child Information Object
      */
     public void addChild(RepnInformationObject io) {
+        assert(io != null);
         children.add(io);
     }
 
@@ -153,6 +160,7 @@ class RepnInformationObject extends Repn {
      * @param io
      */
     public void setParent(RepnInformationObject io) {
+        assert(io != null);
         parent = io;
     }
 
@@ -166,45 +174,47 @@ class RepnInformationObject extends Repn {
      * @param oneLevel true if the information objects are a flat list
      * @param prevDepth depth of previous information object
      * @param noRec true if not to complain about missing recommended metadata
-     * @param vpa true if being called from VPA & limit some tests
-     * elements
-     * @throws VEOError if an error occurred that won't preclude processing
-     * another VEO
+     * @param vpa true if being called from VPA & limit some tests elements
      * @return the depth of this Information Object
      */
-    public int validate(Path veoDir, String hashAlgorithm, HashMap<Path, RepnFile> contentFiles, LTSF ltsfs, boolean oneLevel, int prevDepth, boolean noRec, boolean vpa) throws VEOError {
+    public int validate(Path veoDir, String hashAlgorithm, HashMap<Path, RepnFile> contentFiles, LTSF ltsfs, boolean oneLevel, int prevDepth, boolean noRec, boolean vpa) {
         int i;
         boolean stdMetadata;
+        
+        assert(veoDir != null);
+        assert(hashAlgorithm != null);
+        assert(contentFiles != null);
+        assert(ltsfs != null);
 
         // check to see if the depth values of the Information Objects are valid
         // the depth values must either be all zero, or they must be a depth
         // first traversal
         if (oneLevel) {
             if (getDepth() != 0) {
-                depth.addError(new VEOError(classname, "validate", 1, "First information object had a depth of 0 (indicating a flat list), but this information object has a depth > 0"));
+                depth.addError(new VEOFailure(CLASSNAME, "validate", 1, "First information object had a depth of 0 (indicating a flat list), but this information object has a depth > 0"));
             }
         } else {
             if (getDepth() == 0) {
-                depth.addError(new VEOError(classname, "validate", 2, "First information object had a depth > 0 (indicating a tree structure), but this information object has a depth = 0"));
+                depth.addError(new VEOFailure(CLASSNAME, "validate", 2, "First information object had a depth > 0 (indicating a tree structure), but this information object has a depth = 0"));
             }
             if (firstIO && getDepth() > 1) {
-                depth.addError(new VEOError(classname, "validate", 3, "First information object must have a depth of 0 or 1"));
+                depth.addError(new VEOFailure(CLASSNAME, "validate", 3, "First information object must have a depth of 0 or 1"));
             } else if (getDepth() - prevDepth > 1) {
-                depth.addError(new VEOError(classname, "validate", 4, "Information object has a depth which is more than one greater than the previous depth (" + prevDepth + ")"));
+                depth.addError(new VEOFailure(CLASSNAME, "validate", 4, "Information object has a depth which is more than one greater than the previous depth (" + prevDepth + ")"));
             }
         }
 
         // do not need to validate depth, as XML schema checks it is non negative integer
         // if this is the first Information Object, must have at least one metadata package
         if (firstIO && metadata.isEmpty()) {
-            addError(new VEOError(classname, "validate", 5, "The first information object must have at least one metadata package"));
+            addError(new VEOFailure(CLASSNAME, "validate", 5, "The first information object must have at least one metadata package"));
         }
         stdMetadata = false;
         for (i = 0; i < metadata.size(); i++) {
             stdMetadata |= metadata.get(i).validate(veoDir, noRec);
         }
         if (firstIO && !stdMetadata) {
-            addError(new VEOError(classname, "validate", 6, "The first information object did not contain an AGLS or AGRKMS metadata package"));
+            addError(new VEOFailure(CLASSNAME, "validate", 6, "The first information object did not contain an AGLS or AGRKMS metadata package"));
         }
         for (i = 0; i < infoPieces.size(); i++) {
             infoPieces.get(i).validate(veoDir, hashAlgorithm, contentFiles, ltsfs, vpa);
@@ -238,9 +248,11 @@ class RepnInformationObject extends Repn {
      * @param l list in which to place the errors/warnings
      */
     @Override
-    public void getProblems(boolean returnErrors, List<VEOError> l) {
+    public void getProblems(boolean returnErrors, List<VEOFailure> l) {
         int i;
 
+        assert(l != null);
+        
         super.getProblems(returnErrors, l);
         type.getProblems(returnErrors, l);
         depth.getProblems(returnErrors, l);
@@ -249,26 +261,6 @@ class RepnInformationObject extends Repn {
         }
         for (i = 0; i < infoPieces.size(); i++) {
             infoPieces.get(i).getProblems(returnErrors, l);
-        }
-    }
-
-    /**
-     * Build a list of all of the errors generated by this object
-     *
-     * @return The concatenated error list
-     */
-    @Override
-    public void getMesgs(boolean returnErrors, List<String> l) {
-        int i;
-
-        super.getMesgs(returnErrors, l);
-        type.getMesgs(returnErrors, l);
-        depth.getMesgs(returnErrors, l);
-        for (i = 0; i < metadata.size(); i++) {
-            metadata.get(i).getMesgs(returnErrors, l);
-        }
-        for (i = 0; i < infoPieces.size(); i++) {
-            infoPieces.get(i).getMesgs(returnErrors, l);
         }
     }
 
@@ -325,13 +317,17 @@ class RepnInformationObject extends Repn {
      * @throws VERSCommon.VEOError if prevented from continuing processing this
      * VEO
      */
-    public String genLink() throws VEOError {
+    public String genLink() {
         return "Report-IO" + IOid + ".html";
     }
 
     public void genReport(boolean verbose, Path veoDir, String pVersion, String copyright) throws VEOError {
         int i;
         RepnInformationObject rio;
+        
+        assert(veoDir != null);
+        assert(pVersion != null);
+        assert(copyright != null);
 
         createReport(veoDir, genLink(), "Report for Information Object " + IOid, pVersion, copyright);
         startDiv("InfoObj", null);

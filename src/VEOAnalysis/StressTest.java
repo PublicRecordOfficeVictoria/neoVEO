@@ -74,8 +74,8 @@ final class StressTest {
 
         // perform the analysis
         try {
-            rv = new RepnVEO(veo, true, outputDir, null);
-            rv.constructRepn(schemaDir);
+            rv = new RepnVEO(schemaDir, veo, true, outputDir, null);
+            rv.constructRepn();
             rv.validate(ltsfs, false, false);
             rv.genReport(false, "1.0", "Copyright");
         } catch (VEOError e) {

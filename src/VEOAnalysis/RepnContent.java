@@ -9,6 +9,7 @@ package VEOAnalysis;
 import VERSCommon.LTSF;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
+import VERSCommon.VEOFailure;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -23,11 +24,11 @@ import java.util.List;
  */
 class RepnContent extends RepnXML {
 
-    String classname = "RepnContent";
-    RepnItem version; // version identifier of this VEOContent.xml file
-    RepnItem hashAlgorithm; // identifier of the hash function used
-    ArrayList<RepnInformationObject> infoObjs;    // list of events associated with this history
-    public int ioCnt;       // count of number of IOs in VERSContent file
+    private final static String CLASSNAME = "RepnContent";
+    private RepnItem version; // version identifier of this VEOContent.xml file
+    private RepnItem hashAlgorithm; // identifier of the hash function used
+    private ArrayList<RepnInformationObject> infoObjs;    // list of events associated with this history
+    private int ioCnt;       // count of number of IOs in VERSContent file
 
     /**
      * Builds an internal representation of the VEOContent.xml file, validating
@@ -48,9 +49,13 @@ class RepnContent extends RepnXML {
         boolean rdf; // true if we have seen the RDF namespace declaration
         ArrayList<RepnInformationObject> lastIOatDepth = new ArrayList<>();
 
+        assert (veoDir != null);
+        assert (schemaDir != null);
+        assert (contentFiles != null);
+
+        infoObjs = new ArrayList<>();
         version = new RepnItem(getId(), "Version", results);
         hashAlgorithm = new RepnItem(getId(), "Hash algorithm", results);
-        infoObjs = new ArrayList<>();
         rdf = false;
 
         // parse the VEOContent.xml file against the VEOContent scheme
@@ -71,7 +76,7 @@ class RepnContent extends RepnXML {
                 case "http://www.w3.org/1999/02/22-rdf-syntax-ns":
                     break;
                 default:
-                    throw new VEOError(classname, 1, "Error detected:\n  Error (VEOContent.xml): vers:VEOContentFile element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+                    addError(new VEOFailure(CLASSNAME, 2, "vers:VEOContentFile element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#"));
             }
             rdf = true;
         }
@@ -97,13 +102,14 @@ class RepnContent extends RepnXML {
                     case "http://www.w3.org/1999/02/22-rdf-syntax-ns":
                         break;
                     default:
-                        throw new VEOError(classname, 2, "Error detected:\n  Error (VEOContent.xml): vers:InformationObject element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+                        addError(new VEOFailure(CLASSNAME, 2, "vers:InformationObject element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#"));
                 }
                 rdf = true;
             }
             gotoNextElement();
             ioCnt++;
             io = new RepnInformationObject(this, getId(), ioCnt, rdf, results);
+            infoObjs.add(io);
 
             // build the tree of IOs
             if (io.getDepth() > 0) {
@@ -111,14 +117,16 @@ class RepnContent extends RepnXML {
                 // add this io as a child of the last io we saw at depth-1
                 if (io.getDepth() > 1) {
                     if (io.getDepth() - 2 >= lastIOatDepth.size()) {
-                        throw new VEOError(classname, 3, "Error detected:\n  Error (VEOContent.xml): IO has depth of " + io.getDepth() + " but deepest previous IO was "+lastIOatDepth.size());
+                        addError(new VEOFailure(CLASSNAME, 3, "IO has depth of " + io.getDepth() + " but deepest previous IO was " + lastIOatDepth.size()));
+                        continue;
                     }
                     parentIO = lastIOatDepth.get(io.getDepth() - 2);
                     if (parentIO != null) {
                         parentIO.addChild(io);
                         io.setParent(parentIO);
                     } else {
-                        throw new VEOError(classname, 4, "Error detected:\n  Error (VEOContent.xml): IO has depth of " + io.getDepth() + " but last seen IO at depth-1 is null");
+                        addError(new VEOFailure(CLASSNAME, 4, "Error detected:\n  Error (VEOContent.xml): IO has depth of " + io.getDepth() + " but last seen IO at depth-1 is null"));
+                        continue;
                     }
                 }
 
@@ -128,11 +136,11 @@ class RepnContent extends RepnXML {
                 } else if (io.getDepth() - 1 < lastIOatDepth.size()) {
                     lastIOatDepth.set(io.getDepth() - 1, io);
                 } else {
-                    throw new VEOError(classname, 5, "Error detected:\n  Error (VEOContent.xml): IO has depth of " + io.getDepth() + " which is more than one more than the maximum depth " + lastIOatDepth.size());
+                    addError(new VEOFailure(CLASSNAME, 5, "Error detected:\n  Error (VEOContent.xml): IO has depth of " + io.getDepth() + " which is more than one more than the maximum depth " + lastIOatDepth.size()));
                 }
             }
-            infoObjs.add(io);
         }
+        objectValid = true;
     }
 
     /**
@@ -143,10 +151,14 @@ class RepnContent extends RepnXML {
         int i;
 
         super.abandon();
-        version.abandon();
-        version = null;
-        hashAlgorithm.abandon();
-        hashAlgorithm = null;
+        if (version != null) {
+            version.abandon();
+            version = null;
+        }
+        if (hashAlgorithm != null) {
+            hashAlgorithm.abandon();
+            hashAlgorithm = null;
+        }
         for (i = 0; i < infoObjs.size(); i++) {
             infoObjs.get(i).abandon();
         }
@@ -171,6 +183,10 @@ class RepnContent extends RepnXML {
         int prevDepth, i;
         RepnInformationObject rio;
 
+        assert (veoDir != null);
+        assert (contentFiles != null);
+        assert (ltsfs != null);
+
         // can't validate if parse failed...
         if (!contentsAvailable()) {
             return;
@@ -178,13 +194,13 @@ class RepnContent extends RepnXML {
 
         // validate version...
         if (!version.getValue().equals("3.0")) {
-            version.addWarning(new VEOError(classname, "validate", 1, "VEOVersion has a value of '" + version.getValue() + "' instead of '3.0'"));
+            version.addWarning(new VEOFailure(CLASSNAME, "validate", 1, "VEOVersion has a value of '" + version.getValue() + "' instead of '3.0'"));
         }
 
         // validate hash algorithm...
         s = hashAlgorithm.getValue();
         if (!s.equals("SHA-1") && !s.equals("SHA-256") && !s.equals("SHA-384") && !s.equals("SHA-512")) {
-            hashAlgorithm.addError(new VEOError(classname, "validate", 2, "VEOHashFunctionAlgorithm has a value of '" + hashAlgorithm.getValue() + "' instead of 'SHA-1', 'SHA-256', 'SHA-384', or 'SHA-512'"));
+            hashAlgorithm.addError(new VEOFailure(CLASSNAME, "validate", 2, "VEOHashFunctionAlgorithm has a value of '" + hashAlgorithm.getValue() + "' instead of 'SHA-1', 'SHA-256', 'SHA-384', or 'SHA-512'"));
         }
 
         // validate information objects...
@@ -201,6 +217,15 @@ class RepnContent extends RepnXML {
             }
             prevDepth = rio.validate(veoDir, hashAlgorithm.getValue(), contentFiles, ltsfs, oneLevel, prevDepth, noRec, vpa);
         }
+    }
+
+    /**
+     * Return the number of IOs in this VEOContent.xml file
+     *
+     * @return
+     */
+    public int getIOCount() {
+        return ioCnt;
     }
 
     /**
@@ -237,13 +262,15 @@ class RepnContent extends RepnXML {
 
     /**
      * Build a list of all of the errors generated by this VEOContent.xml file
-     * 
+     *
      * @param returnErrors if true return errors, otherwise return warnings
      * @param l list in which to place the errors/warnings
      */
     @Override
-    public void getProblems(boolean returnErrors, List<VEOError> l) {
+    public void getProblems(boolean returnErrors, List<VEOFailure> l) {
         int i;
+
+        assert (l != null);
 
         super.getProblems(returnErrors, l);
         version.getProblems(returnErrors, l);
@@ -254,22 +281,7 @@ class RepnContent extends RepnXML {
     }
 
     /**
-     * Build a list of all of the warnings generated by this VEOContent.xml file
-     */
-    @Override
-    public void getMesgs(boolean returnErrors, List<String> l) {
-        int i;
-
-        super.getMesgs(returnErrors, l);
-        version.getMesgs(returnErrors, l);
-        hashAlgorithm.getMesgs(returnErrors, l);
-        for (i = 0; i < infoObjs.size(); i++) {
-            infoObjs.get(i).getMesgs(returnErrors, l);
-        }
-    }
-    
-    /**
-     * Generate a String representation of the signature
+     * Generate a String representation of the content file
      *
      * @return the String representation
      */
@@ -308,6 +320,10 @@ class RepnContent extends RepnXML {
     public void genReport(boolean verbose, Path veoDir, String pVersion, String copyright) throws VEOError {
         int i;
         RepnInformationObject rio;
+
+        assert (veoDir != null);
+        assert (pVersion != null);
+        assert (copyright != null);
 
         createReport(veoDir, "Report-VEOContent.html", "Report for 'VEOContent.xml'", pVersion, copyright);
         startDiv("xml", null);

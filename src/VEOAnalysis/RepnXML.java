@@ -8,6 +8,7 @@ package VEOAnalysis;
 
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
+import VERSCommon.VEOFailure;
 import VERSCommon.VEOFatal;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -41,8 +42,7 @@ import org.xml.sax.SAXParseException;
  * @author Andrew Waugh
  */
 abstract class RepnXML extends Repn implements ErrorHandler {
-
-    private final String classname = "RepnXML";
+    private static final String CLASSNAME = "RepnXML";
     private Document doc;    // internal DOM representation of XML document
     private DocumentBuilder parser; // parser
     private DocumentBuilderFactory dbf; // DOM factory
@@ -62,6 +62,7 @@ abstract class RepnXML extends Repn implements ErrorHandler {
      */
     protected RepnXML(String id, ResultSummary results) throws VEOFatal {
         super(id, results);
+        
         // create parser
         dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
@@ -69,7 +70,7 @@ abstract class RepnXML extends Repn implements ErrorHandler {
         try {
             parser = dbf.newDocumentBuilder();
         } catch (ParserConfigurationException e) {
-            throw new VEOFatal(classname, 1, "Failed to construct an XML parser", e);
+            throw new VEOFatal(CLASSNAME, 1, "Failed to construct an XML parser", e);
         }
         contentsAvailable = false;
     }
@@ -97,30 +98,29 @@ abstract class RepnXML extends Repn implements ErrorHandler {
      * @param file XML file to be parsed and validated.
      * @param schemaFile a file containing the XML schema
      * @return false if the representation could not be constructed
-     * @throws VEOSupport.VEOFatal if a system error occurred would prevent
-     * processing any VEO
-     * @throws VEOSupport.VEOError if an error occurred processing this VEO
      */
-    final boolean parse(Path file, Path schemaFile) throws VEOError {
+    final boolean parse(Path file, Path schemaFile) {
         SchemaFactory sf;
         Schema schema;
         Validator validator;
 
         // sanity check...
+        assert (file != null);
+        assert (schemaFile != null);
+        
         if (contentsAvailable) {
-            LOG.log(Level.WARNING, VEOError.errMesg(classname, "parse", 1, "Calling parse() twice"));
+            LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, "parse", 1, "Calling parse() twice"));
             return false;
         }
 
         // check that the file exists and is an ordinary file
-        if (file == null) {
-            throw new VEOError(classname, "parse", 2, "file parameter is null");
-        }
         if (!Files.exists(file)) {
-            throw new VEOError(classname, "parse", 3, "file '" + file.toString() + "' does not exist");
+            addError(new VEOFailure(CLASSNAME, "parse", 3, "file '" + file.toString() + "' does not exist"));
+            return false;
         }
         if (!Files.isRegularFile(file)) {
-            throw new VEOError(classname, "parse", 4, "file '" + file.toString() + "' is not a regular file");
+            addError(new VEOFailure(CLASSNAME, "parse", 4, "file '" + file.toString() + "' is not a regular file"));
+            return false;
         }
 
         // parse the schema and construct a validator
@@ -128,7 +128,8 @@ abstract class RepnXML extends Repn implements ErrorHandler {
         try {
             schema = sf.newSchema(schemaFile.toFile());
         } catch (SAXException e) {
-            throw new VEOFatal(classname, "parse", 5, "Failed to parse schema '" + schemaFile.toString() + "'", e);
+            addError(new VEOFailure(CLASSNAME, "parse", 5, "Failed to parse schema '" + schemaFile.toString() + "'", e));
+            return false;
         }
         validator = schema.newValidator();
 
@@ -140,23 +141,25 @@ abstract class RepnXML extends Repn implements ErrorHandler {
             is.setEncoding("UTF-8");
             doc = parser.parse(is);
         } catch (SAXParseException e) {
-            addError(new VEOError(classname, "parse", 6, "Parse error when parsing file" + e.getSystemId() + " (line " + e.getLineNumber() + " column " + e.getColumnNumber() + ")", e));
+            addError(new VEOFailure(CLASSNAME, "parse", 6, "Parse error when parsing file" + e.getSystemId() + " (line " + e.getLineNumber() + " column " + e.getColumnNumber() + ")", e));
             return false;
         } catch (SAXException e) {
-            addError(new VEOError(classname, "parse", 7, "Problem when parsing file", e));
+            addError(new VEOFailure(CLASSNAME, "parse", 7, "Problem when parsing file", e));
             return false;
         } catch (IOException e) {
-            throw new VEOFatal(classname, "parse", 8, "System error when parsing file '" + file.toString() + "'", e);
+            addError(new VEOFailure(CLASSNAME, "parse", 8, "System error when parsing file '" + file.toString() + "'", e));
+            return false;
         }
 
         // validate the DOM tree against the schema
         try {
             validator.validate(new DOMSource(doc));
         } catch (SAXException e) {
-            addError(new VEOError(classname, "parse", 9, "Error when validating " + file.getFileName().toString() + " against schema '" + schemaFile.toString() + "'", e));
+            addError(new VEOFailure(CLASSNAME, "parse", 9, "Error when validating " + file.getFileName().toString() + " against schema '" + schemaFile.toString() + "'", e));
             return false;
         } catch (IOException e) {
-            throw new VEOFatal(classname, "parse", 10, "System error when validating XML", e);
+            addError(new VEOFailure(CLASSNAME, "parse", 10, "System error when validating XML", e));
+            return false;
         }
 
         // get list of elements
@@ -175,7 +178,7 @@ abstract class RepnXML extends Repn implements ErrorHandler {
      */
     @Override
     public void warning(SAXParseException e) throws SAXException {
-        addWarning(new VEOError(classname, "warning", 1, "Warning when parsing file", e));
+        addWarning(new VEOFailure(CLASSNAME, "warning", 1, "Warning when parsing file", e));
     }
 
     /**
@@ -186,7 +189,7 @@ abstract class RepnXML extends Repn implements ErrorHandler {
      */
     @Override
     public void error(SAXParseException e) throws SAXException {
-        addError(new VEOError(classname, "error", 1, "Error when parsing file", e));
+        addError(new VEOFailure(CLASSNAME, "error", 1, "Error when parsing file", e));
     }
 
     /**
@@ -210,9 +213,10 @@ abstract class RepnXML extends Repn implements ErrorHandler {
     }
 
     /**
-     * Goto the root (first) element of the XML document.
+     * Go to the root (first) element of the XML document.
      */
     final public void gotoRootElement() {
+        assert(contentsAvailable);
         currentElement = 0;
     }
 
@@ -220,6 +224,7 @@ abstract class RepnXML extends Repn implements ErrorHandler {
      * Step to the next element of the XML document in document order.
      */
     final public void gotoNextElement() {
+        assert(contentsAvailable);
         currentElement++;
     }
 
@@ -230,6 +235,7 @@ abstract class RepnXML extends Repn implements ErrorHandler {
      * @return the index
      */
     final public int getCurrentElementIndex() {
+        assert(contentsAvailable);
         return currentElement;
     }
 
@@ -239,7 +245,8 @@ abstract class RepnXML extends Repn implements ErrorHandler {
      * @return true if at or beyond current element
      */
     final public boolean atEnd() {
-        if (elements == null || !contentsAvailable) {
+        assert(contentsAvailable);
+        if (elements == null) {
             return true;
         }
         return currentElement >= elements.getLength();
@@ -256,14 +263,11 @@ abstract class RepnXML extends Repn implements ErrorHandler {
      * @throws VEOError if a sibling was supposed to exist, but we didn't find
      * it in the list of elements
      */
-    final public boolean gotoSibling() throws IndexOutOfBoundsException, VEOError {
-        String method = "gotoSibling";
+    final public boolean gotoSibling() {
         Node next;
 
         // sanity check...
-        if (!contentsAvailable) {
-            throw new VEOError(classname, method, 1, "Parse failed and no contents are available");
-        }
+        assert(contentsAvailable);
 
         // get the next element at this level (or parent level if none at this level)
         next = getCurrentElement();
@@ -282,10 +286,7 @@ abstract class RepnXML extends Repn implements ErrorHandler {
         } while (currentElement < elements.getLength() && elements.item(currentElement) != next);
 
         // if it was not found, complain
-        if (atEnd()) {
-            throw new VEOError(classname, method, 2, "Failed to find next sibling: " + next.getNodeName());
-        }
-        return true;
+        return !atEnd();
     }
 
     /**
@@ -299,14 +300,11 @@ abstract class RepnXML extends Repn implements ErrorHandler {
      * @throws VEOError if a sibling was supposed to exist, but we didn't find
      * it in the list of elements
      */
-    final public boolean gotoParentSibling() throws IndexOutOfBoundsException, VEOError {
-        String method = "gotoParentSibling";
+    final public boolean gotoParentSibling() {
         Node next;
 
         // sanity check...
-        if (!contentsAvailable) {
-            throw new VEOError(classname, method, 3, "Parse failed and no contents are available");
-        }
+        assert(contentsAvailable);
 
         // get the parent node
         next = getCurrentElement().getParentNode();
@@ -326,30 +324,20 @@ abstract class RepnXML extends Repn implements ErrorHandler {
         do {
             currentElement++;
         } while (currentElement < elements.getLength() && elements.item(currentElement) != next);
-
+        
         // if it was not found, complain
-        if (atEnd()) {
-            throw new VEOError(classname, method, 4, "Failed to find next sibling: " + next.getNodeName());
-        }
-        return true;
+        return !atEnd();
     }
 
     /**
      * Get the current element.
      *
      * @return the current element
-     * @throws IndexOutOfBoundsException if past the end of list of elements
-     * @throws VEOError if there are no elements because the parse failed
      */
-    final public Element getCurrentElement() throws IndexOutOfBoundsException, VEOError {
-        String method = "getCurrentElement";
-
-        if (!contentsAvailable || elements == null) {
-            throw new VEOError(classname, method, 5, "Valid content not available from XML document");
-        }
-        if (currentElement > elements.getLength()) {
-            throw new IndexOutOfBoundsException("Stepped past end of document");
-        }
+    final public Element getCurrentElement() {
+        assert(contentsAvailable);
+        assert(elements != null);
+        assert(currentElement <= elements.getLength());
         return (Element) elements.item(currentElement);
     }
 
@@ -362,9 +350,10 @@ abstract class RepnXML extends Repn implements ErrorHandler {
      * been processed
      * @throws VEOError if the parse failed and no elements are available
      */
-    final public boolean checkElement(String tagName) throws IndexOutOfBoundsException, VEOError {
+    final public boolean checkElement(String tagName) {
         Element e;
 
+        assert(contentsAvailable);
         e = getCurrentElement();
         if (e == null) {
             return false;
@@ -381,9 +370,10 @@ abstract class RepnXML extends Repn implements ErrorHandler {
      * been processed
      * @throws VEOError if the parse failed and no elements are available 
      */
-    final public String getAttribute(String attributeName) throws IndexOutOfBoundsException, VEOError {
+    final public String getAttribute(String attributeName) {
         Element e;
         
+        assert(contentsAvailable);
         e = getCurrentElement();
         if (e == null) {
             return null;
@@ -397,15 +387,12 @@ abstract class RepnXML extends Repn implements ErrorHandler {
      * of whitespace at the start and end.
      *
      * @return a string containing the complete value
-     * @throws VEOError if the parse failed or no elements are available
      */
-    final public String getTextValue() throws VEOError {
-        String method = "getTextValue";
+    final public String getTextValue() {
         Node n;
 
-        if (!contentsAvailable || elements == null) {
-            throw new VEOError(classname, method, 6, "Valid content not available from XML document");
-        }
+        assert(contentsAvailable);
+        assert(elements != null);
 
         // get first child of this element
         n = elements.item(currentElement).getFirstChild();
@@ -442,7 +429,7 @@ abstract class RepnXML extends Repn implements ErrorHandler {
         NodeList nl;
         int i;
         String v;
-
+        
         if (n == null) {
             return "";
         }
@@ -490,6 +477,8 @@ abstract class RepnXML extends Repn implements ErrorHandler {
      * @return String containing the DOM representation
      */
     final public String dumpDOM() {
+        
+        assert(contentsAvailable);
         return dumpNode(elements.item(0), 0);
     }
 

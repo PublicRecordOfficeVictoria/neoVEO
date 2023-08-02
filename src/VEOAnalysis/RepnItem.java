@@ -7,7 +7,7 @@
 package VEOAnalysis;
 
 import VERSCommon.ResultSummary;
-import VERSCommon.VEOError;
+import VERSCommon.VEOFailure;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,16 +20,20 @@ final class RepnItem extends Repn {
     private String value; // the value of the data
 
     /**
-     * Constructor
+     * Constructor. This cannot throw a VEOError, so can be assumed to exist.
      *
      * @param id item identifier
-     * @param label label to use to describe this item
+     * @param label label to use to describe this item (must not be null)
      * @param results the results summary to build
      */
     public RepnItem(String id, String label, ResultSummary results) {
         super(id, results);
+        
+        assert(label != null);
+        
         this.label = label;
         value = null;
+        objectValid = true;
     }
 
     /**
@@ -48,16 +52,18 @@ final class RepnItem extends Repn {
      * @param s the value
      */
     public void setValue(String s) {
+        assert(s != null);
+        
         value = s;
     }
 
     /**
-     * Get the value of the item
+     * Get the value of the item. Note can never return null
      *
      * @return a String containing the value as read
      */
     public String getValue() {
-        return value;
+        return value != null?value:"";
     }
 
     /**
@@ -66,6 +72,8 @@ final class RepnItem extends Repn {
      * @param s the label
      */
     public void setLabel(String s) {
+        assert(s != null && !s.equals(""));
+        
         label = s;
     }
 
@@ -77,7 +85,8 @@ final class RepnItem extends Repn {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        List<String> l = new ArrayList<>();
+        List<VEOFailure> l = new ArrayList<>();
+        int i;
 
         sb.append("  ");
         sb.append(label);
@@ -85,10 +94,20 @@ final class RepnItem extends Repn {
         sb.append(value);
         sb.append("\n");
         sb.append("Errors:\n   ");
-        getMesgs(true, l);
+        getProblems(true, l);
+        for (i=0; i<l.size(); i++) {
+            sb.append("  ");
+            sb.append(l.get(i).getMessage());
+            sb.append("\n");
+        }
         l.clear();
         sb.append("Warnings:\n   ");
-        getMesgs(false, l);
+        getProblems(false, l);
+        for (i=0; i<l.size(); i++) {
+            sb.append("  ");
+            sb.append(l.get(i).getMessage());
+            sb.append("\n");
+        }
         return sb.toString();
     }
 
@@ -97,9 +116,9 @@ final class RepnItem extends Repn {
      *
      * @param verbose true if additional information is to be generated
      * @param writer where to write the output
-     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
      */
-    public void genReport(boolean verbose, Writer w) throws VEOError {
+    public void genReport(boolean verbose, Writer w) {
+        assert(w != null);
         genReport(verbose, null, w);
     }
 
@@ -109,9 +128,11 @@ final class RepnItem extends Repn {
      * @param verbose true if additional information is to be generated
      * @param mesg a String message to add to report
      * @param writer where to write the output
-     * @throws VERSCommon.VEOError if prevented from continuing processing this VEO
      */
-    public void genReport(boolean verbose, String mesg, Writer w) throws VEOError {
+    public void genReport(boolean verbose, String mesg, Writer w) {
+        assert(mesg != null);
+        assert(w != null);
+        
         this.w = w;
         startDiv("Item", null);
         addLabel(label);

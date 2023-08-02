@@ -6,7 +6,7 @@
  */
 package VEOAnalysis;
 
-import VERSCommon.ResultSummary;
+import VERSCommon.LTSF;
 import VERSCommon.VEOFatal;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -28,6 +28,7 @@ public class Config {
             = "AnalyseVEOs [-help] [-e] [-sr] [-tsv] [-classify] [-r|-u] [-v] [-d] [-c] [-iocnt] [-norec] [-vpa] -s supportDir [-o outputDir] [files*]";
 
     public Path supportDir;    // directory in which XML schemas are to be found
+    public LTSF ltsfs;         // long term sustainable formats (if null, will be read from supportDir/validLTSF.txt)
     public Path outputDir;     // directory in which the output of the analysis is to be placed (default current working directory)
     public boolean genErrorReport; // if true report on output of analysis for each VEO on standard out (default false) 
     public boolean genHTMLReport; // if true produce HTML reports about each VEO (default false)
@@ -46,6 +47,7 @@ public class Config {
 
     public Config() {
         supportDir = null;
+        ltsfs = null;
         outputDir = Paths.get(".").toAbsolutePath();
         chatty = false;
         genErrorReport = false;
