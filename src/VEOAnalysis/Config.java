@@ -25,14 +25,14 @@ public class Config {
     private final static String CLASSNAME = "Config";
 
     private String USAGE
-            = "AnalyseVEOs [-help] [-e] [-sr] [-tsv] [-classify] [-r|-u] [-v] [-d] [-c] [-iocnt] [-norec] [-vpa] -s supportDir [-o outputDir] [files*]";
+            = "AnalyseVEOs [-help] [-e] [-sr] [-csv] [-classify] [-r|-u] [-v] [-d] [-c] [-iocnt] [-norec] [-vpa] -s supportDir [-o outputDir] [files*]";
 
     public Path supportDir;    // directory in which XML schemas are to be found
     public LTSF ltsfs;         // long term sustainable formats (if null, will be read from supportDir/validLTSF.txt)
     public Path outputDir;     // directory in which the output of the analysis is to be placed (default current working directory)
     public boolean genErrorReport; // if true report on output of analysis for each VEO on standard out (default false) 
     public boolean genHTMLReport; // if true produce HTML reports about each VEO (default false)
-    public boolean genTSVReport; // if true generate a TSV report about analysis of each VEO (default false)
+    public boolean genCSVReport; // if true generate a TSV report about analysis of each VEO (default false)
     public boolean genResultSummary; // if true summarise the results at the end of the run (default false)
     public boolean unpack;     // if true leave the unpacked VEOs after analysis (default false)
     public boolean norec;      // if true asked to not complain about missing recommended metadata elements (default false)
@@ -52,7 +52,7 @@ public class Config {
         chatty = false;
         genErrorReport = false;
         genHTMLReport = false;
-        genTSVReport = false;
+        genCSVReport = false;
         genResultSummary = false;
         unpack = false;
         debug = false;
@@ -91,6 +91,12 @@ public class Config {
                     case "-classerr":
                         classifyVEOs = true;
                         // classErrDir = outputDir.resolve("Run-" + runDateTime.replaceAll(":", "-"));
+                        i++;
+                        break;
+                        
+                    // get output directory
+                    case "-csv":
+                        genCSVReport = true;
                         i++;
                         break;
 
@@ -150,14 +156,6 @@ public class Config {
                     case "-sr":
                         genErrorReport = true;
                         genResultSummary = true;
-                        i++;
-                        break;
-
-                    // get output directory (also implies -sr)
-                    case "-tsv":
-                        genErrorReport = true;
-                        genResultSummary = true;
-                        genTSVReport = true;
                         i++;
                         break;
 
@@ -306,7 +304,7 @@ public class Config {
         } else {
             LOG.info(" Do not produce a summary report of errors and warnings at the end (-sr and -tsv not set)");
         }
-        if (genTSVReport) {
+        if (genCSVReport) {
             LOG.info(" Produce a TSV report of errors and warnings at the end (-tsv set)");
         } else {
             LOG.info(" Do not produce a TSV report of errors and warnings at the end (-tsv not set)");

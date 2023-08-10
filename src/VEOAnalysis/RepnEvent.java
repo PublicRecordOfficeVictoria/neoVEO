@@ -46,28 +46,28 @@ class RepnEvent extends Repn {
         errorDescs = new ArrayList<>();
 
         // vers:EventDateTime
-        dateTime = new RepnItem(getId(), "Event date & time", results);
+        dateTime = new RepnItem(id, "Event date & time", results);
         dateTime.setValue(document.getTextValue());
         document.gotoNextElement();
 
         // vers:EventType
-        eventType = new RepnItem(getId(), "Event type", results);
+        eventType = new RepnItem(id, "Event type", results);
         eventType.setValue(document.getTextValue());
         document.gotoNextElement();
 
         // vers:Initiator
-        initiator = new RepnItem(getId(), "Event initiator", results);
+        initiator = new RepnItem(id, "Event initiator", results);
         initiator.setValue(document.getTextValue());
         document.gotoNextElement();
 
         while (document.checkElement("vers:Description")) {
-            ri = new RepnItem(getId(), "Event description", results);
+            ri = new RepnItem(id, "Event description", results);
             ri.setValue(document.getTextValue());
             descriptions.add(ri);
             document.gotoNextElement();
         }
         while (document.checkElement("vers:Error")) {
-            ri = new RepnItem(getId(), "Event error", results);
+            ri = new RepnItem(id, "Event error", results);
             ri.setValue(document.getTextValue());
             errorDescs.add(ri);
             document.gotoNextElement();
@@ -109,7 +109,7 @@ class RepnEvent extends Repn {
         try {
             VERSDate.testValueAsDate(dateTime.getValue());
         } catch (IllegalArgumentException e) {
-            dateTime.addError(new VEOFailure(CLASSNAME, "validate", 1, "Date in event is invalid", e));
+            dateTime.addError(new VEOFailure(CLASSNAME, "validate", 1, id, "Date in event is invalid", e));
             hasErrors = true;
         }
     }

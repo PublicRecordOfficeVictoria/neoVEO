@@ -77,26 +77,26 @@ class RepnSignature extends RepnXML {
         assert(schemaDir != null);
 
         source = null;
-        version = new RepnItem(getId(), "Version of XML file", results);
-        sigAlgorithm = new RepnItem(getId(), "Signature algorithm OID", results);
+        version = new RepnItem(id, "Version of XML file", results);
+        sigAlgorithm = new RepnItem(id, "Signature algorithm OID", results);
         sa = "";
-        sigDateTime = new RepnItem(getId(), "Date/time signature created", results);
-        signer = new RepnItem(getId(), "Signer", results);
-        signature = new RepnItem(getId(), "Signature", results);
+        sigDateTime = new RepnItem(id, "Date/time signature created", results);
+        signer = new RepnItem(id, "Signer", results);
+        signature = new RepnItem(id, "Signature", results);
         certificates = new ArrayList<>();
 
         // get the files involved
         try {
             file = veoDir.resolve(sigFileName);
         } catch (InvalidPathException ipe) {
-            addError(new VEOFailure(CLASSNAME, 1, "Signature file name (" + sigFileName + ") is not valid", ipe));
+            addError(new VEOFailure(CLASSNAME, 1, id, "Signature file name (" + sigFileName + ") is not valid", ipe));
             return;
         }
         schema = schemaDir.resolve("vers3-signature.xsd");
 
         // work out whether we are validating the content file or the history file
         if (!Files.exists(file)) {
-            addError(new VEOFailure(CLASSNAME, 2, "Signature file '" + file.toString() + "' does not exist"));
+            addError(new VEOFailure(CLASSNAME, 2, id, "Signature file '" + file.toString() + "' does not exist"));
             return;
         }
         if (file.toString().contains("VEOContentSignature")) {
@@ -104,7 +104,7 @@ class RepnSignature extends RepnXML {
         } else if (file.toString().contains("VEOHistorySignature")) {
             source = veoDir.resolve("VEOHistory.xml");
         } else {
-            addError(new VEOFailure(CLASSNAME, 3, "File name must be of the form 'VEOContentSignature?.xml' or 'VEOHistorySignature?.xml' but is '" + file.toString() + "'"));
+            addError(new VEOFailure(CLASSNAME, 3, id, "File name must be of the form 'VEOContentSignature?.xml' or 'VEOHistorySignature?.xml' but is '" + file.toString() + "'"));
         }
 
         // parse the signature file and extract the data
@@ -156,7 +156,7 @@ class RepnSignature extends RepnXML {
         // step through the certificates
         i = 0;
         while (checkElement("vers:Certificate")) {
-            ri = new RepnItem(getId() + ":" + i, "Certificate(" + i + ")", results);
+            ri = new RepnItem(id + ":" + i, "Certificate(" + i + ")", results);
             ri.setValue(getTextValue());
             certificates.add(ri);
             gotoNextElement();
@@ -204,7 +204,7 @@ class RepnSignature extends RepnXML {
 
         // validate the version number
         if (!version.getValue().equals("3.0")) {
-            version.addWarning(new VEOFailure(CLASSNAME, "validate", 1, "VEOVersion has a value of '" + version + "' instead of '3.0'"));
+            version.addWarning(new VEOFailure(CLASSNAME, "validate", 1, id, "VEOVersion has a value of '" + version + "' instead of '3.0'"));
         }
 
         // validate the algorithm
@@ -223,14 +223,14 @@ class RepnSignature extends RepnXML {
             case "SHA1withRSA":
                 break;
             default:
-                sigAlgorithm.addError(new VEOFailure(CLASSNAME, "validate", 2, "Hash/signature algorithm combination '" + sa + "' is not supported"));
+                sigAlgorithm.addError(new VEOFailure(CLASSNAME, "validate", 2, id, "Hash/signature algorithm combination '" + sa + "' is not supported"));
         }
 
         // validate a valid date and time
         try {
             VERSDate.testValueAsDate(sigDateTime.getValue());
         } catch (IllegalArgumentException e) {
-            sigDateTime.addError(new VEOFailure(CLASSNAME, "validate", 3, "Date in event is invalid. Value is '" + sigDateTime + "'", e));
+            sigDateTime.addError(new VEOFailure(CLASSNAME, "validate", 3, id, "Date in event is invalid. Value is '" + sigDateTime + "'", e));
         }
 
         // verify the digital signature
@@ -261,20 +261,20 @@ class RepnSignature extends RepnXML {
         try {
             sigba = Base64.getMimeDecoder().decode(signature.getValue());
         } catch (IllegalArgumentException e) {
-            signature.addError(new VEOFailure(CLASSNAME, "verifySignature", 1, "Converting Base64 encoded signature failed: " + e.getMessage()));
+            signature.addError(new VEOFailure(CLASSNAME, "verifySignature", 1, id, "Converting Base64 encoded signature failed: " + e.getMessage()));
             return false;
         }
 
         // check that we have at least one certificate
         if (certificates.size() < 1) {
-            addError(new VEOFailure(CLASSNAME, "verifySignature", 2, "The signature file does not contain any vers:Certificate elements"));
+            addError(new VEOFailure(CLASSNAME, "verifySignature", 2, id, "The signature file does not contain any vers:Certificate elements"));
             return false;
         }
 
         // decode the byte array into an X.509 certificate
         x509c = extractCertificate(certificates.get(0));
         if (x509c == null) {
-            addError(new VEOFailure(CLASSNAME, "verifySignature", 3, "Could not decode first vers:Certificate"));
+            addError(new VEOFailure(CLASSNAME, "verifySignature", 3, id, "Could not decode first vers:Certificate"));
             return false;
         }
 
@@ -283,10 +283,10 @@ class RepnSignature extends RepnXML {
             sig = Signature.getInstance(sa);
             sig.initVerify(x509c.getPublicKey());
         } catch (NoSuchAlgorithmException nsae) {
-            addError(new VEOFailure(CLASSNAME, "verifySignature", 4, "Security package does not support the signature or message digest algorithm", nsae));
+            addError(new VEOFailure(CLASSNAME, "verifySignature", 4, id, "Security package does not support the signature or message digest algorithm", nsae));
             return false;
         } catch (InvalidKeyException ike) {
-            addError(new VEOFailure(CLASSNAME, "verifySignature", 5, "Security package reports that public key is invalid", ike));
+            addError(new VEOFailure(CLASSNAME, "verifySignature", 5, id, "Security package reports that public key is invalid", ike));
             return false;
         }
 
@@ -300,13 +300,13 @@ class RepnSignature extends RepnXML {
                 sig.update(b, 0, i);
             }
         } catch (SignatureException e) {
-            LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, "verifySignature", 6, "Failed updating the signature", e));
+            LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "verifySignature", 6, id, "Failed updating the signature", e));
             return false;
         } catch (FileNotFoundException e) {
-            addError(new VEOFailure(CLASSNAME, "verifySignature", 7, "File to verify ('" + sourceFile.toString() + "') was not found"));
+            addError(new VEOFailure(CLASSNAME, "verifySignature", 7, id, "File to verify ('" + sourceFile.toString() + "') was not found"));
             return false;
         } catch (IOException e) {
-            LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, "verifySignature", 8, "Failed reading file to sign", e));
+            LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "verifySignature", 8,  id,"Failed reading file to sign", e));
             return false;
         } finally {
             try {
@@ -317,18 +317,18 @@ class RepnSignature extends RepnXML {
                     fis.close();
                 }
             } catch (IOException e) {
-                LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, "verifySignature", 9, "Failed to close file being verified", e));
+                LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "verifySignature", 9, id, "Failed to close file being verified", e));
             }
         }
 
         // verify the signature
         try {
             if (!sig.verify(sigba)) {
-                addError(new VEOFailure(CLASSNAME, "verifySignature", 10, "Signature verification failed"));
+                addError(new VEOFailure(CLASSNAME, "verifySignature", 10, id, "Signature verification failed"));
                 return false;
             }
         } catch (SignatureException se) {
-            addError(new VEOFailure(CLASSNAME, "verifySignature", 11, "Signature verification failed", se));
+            addError(new VEOFailure(CLASSNAME, "verifySignature", 11, id, "Signature verification failed", se));
             return false;
         }
         return true;
@@ -349,13 +349,13 @@ class RepnSignature extends RepnXML {
         // get first certificate (to be verified)
         failed = false;
         if (certificates.size() < 1) {
-            addWarning(new VEOFailure(CLASSNAME, "verifyCertificateChain", 1, "No vers:Certificates found in signature"));
+            addWarning(new VEOFailure(CLASSNAME, "verifyCertificateChain", 1, id, "No vers:Certificates found in signature"));
             return false;
         }
         r1 = certificates.get(0);
         certToVerify = extractCertificate(r1);
         if (certToVerify == null) {
-            addWarning(new VEOFailure(CLASSNAME, "verifyCertificateChain", 2, "First certificate could not be extracted. Remaining certificates have not been checked."));
+            addWarning(new VEOFailure(CLASSNAME, "verifyCertificateChain", 2, id, "First certificate could not be extracted. Remaining certificates have not been checked."));
             return false;
         }
         subject = certToVerify.getSubjectX500Principal().getName();
@@ -368,19 +368,19 @@ class RepnSignature extends RepnXML {
             if (certOfSigner == null) {
                 switch (i) {
                     case 1:
-                        addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 3, "Could not decode the second vers:Certificate. Remaining certificates have not been checked."));
+                        addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 3, id, "Could not decode the second vers:Certificate. Remaining certificates have not been checked."));
                         break;
                     case 2:
-                        addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 4, "Could not decode the third vers:Certificate. Remaining certificates have not been checked."));
+                        addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 4, id, "Could not decode the third vers:Certificate. Remaining certificates have not been checked."));
                         break;
                     default:
-                        addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 5, "Could not decode the " + i + "th vers:Certificate. Remaining certificates have not been checked."));
+                        addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 5, id, "Could not decode the " + i + "th vers:Certificate. Remaining certificates have not been checked."));
                         break;
                 }
                 return false;
             }
             if (!verifyCertificate(certToVerify, certOfSigner, r1, r2)) {
-                addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 6, "Certificate " + (i - 1) + " failed verification. Subject of certificate is: " + subject + ". Issuer of certificate is: " + issuer));
+                addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 6, id, "Certificate " + (i - 1) + " failed verification. Subject of certificate is: " + subject + ". Issuer of certificate is: " + issuer));
                 failed = true;
             }
             certToVerify = certOfSigner;
@@ -390,9 +390,9 @@ class RepnSignature extends RepnXML {
         // final certificate should be self signed...
         if (!verifyCertificate(certToVerify, certToVerify, r1, r1)) {
             if (!subject.equals(issuer)) {
-                addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 7, "Final certificate failed verification. Certificate is not self signed.   Subject of final certificate is: " + subject + " Issuer of final certificate is: " + issuer));
+                addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 7, id, "Final certificate failed verification. Certificate is not self signed.   Subject of final certificate is: " + subject + " Issuer of final certificate is: " + issuer));
             } else {
-                addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 8, "Final certificate failed verification. Subject of final certificate is: " + subject + ". Issuer of final certificate is: " + issuer));
+                addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 8, id, "Final certificate failed verification. Subject of final certificate is: " + subject + ". Issuer of final certificate is: " + issuer));
             }
             // println(x509c.toString());
             failed = true;
@@ -415,19 +415,19 @@ class RepnSignature extends RepnXML {
         try {
             first.verify(second.getPublicKey());
         } catch (SignatureException e) {
-            riFirst.addError(new VEOFailure(CLASSNAME, "verifyCertificate", 1, "Signature failed to verify", e));
+            riFirst.addError(new VEOFailure(CLASSNAME, "verifyCertificate", 1, id, "Signature failed to verify", e));
             return false;
         } catch (CertificateException e) {
-            riFirst.addError(new VEOFailure(CLASSNAME, "verifyCertificate", 2, "Certificate problem", e));
+            riFirst.addError(new VEOFailure(CLASSNAME, "verifyCertificate", 2, id, "Certificate problem", e));
             return false;
         } catch (NoSuchAlgorithmException e) {
-            riFirst.addError(new VEOFailure(CLASSNAME, "verifyCertificate", 3, "No Such Algorithm", e));
+            riFirst.addError(new VEOFailure(CLASSNAME, "verifyCertificate", 3, id, "No Such Algorithm", e));
             return false;
         } catch (InvalidKeyException e) {
-            riSecond.addError(new VEOFailure(CLASSNAME, "verifyCertificate", 4, "Invalid public key in certificate", e));
+            riSecond.addError(new VEOFailure(CLASSNAME, "verifyCertificate", 4, id, "Invalid public key in certificate", e));
             return false;
         } catch (NoSuchProviderException e) {
-            riFirst.addError(new VEOFailure(CLASSNAME, "verifyCertificate", 5, "No such provider", e));
+            riFirst.addError(new VEOFailure(CLASSNAME, "verifyCertificate", 5, id, "No such provider", e));
             return false;
         }
         return true;
@@ -450,7 +450,7 @@ class RepnSignature extends RepnXML {
             b = Base64.getMimeDecoder().decode(certificate.getValue());
             // b = DatatypeConverter.parseBase64Binary(certificate.getValue());
         } catch (IllegalArgumentException e) {
-            certificate.addError(new VEOFailure(CLASSNAME, "extractCertificate", 1, "Converting Base64 encoded certificate failed", e));
+            certificate.addError(new VEOFailure(CLASSNAME, "extractCertificate", 1, id, "Converting Base64 encoded certificate failed", e));
             return null;
         }
         try {
@@ -459,7 +459,7 @@ class RepnSignature extends RepnXML {
             x509c = (X509Certificate) cf.generateCertificate(bais);
             bais.close();
         } catch (IOException | CertificateException e) {
-            certificate.addError(new VEOFailure(CLASSNAME, "extractCertificate", 2, "Error decoding certificate: " + e.getMessage() + "\n"));
+            certificate.addError(new VEOFailure(CLASSNAME, "extractCertificate", 2, id, "Error decoding certificate: " + e.getMessage() + "\n"));
             return null;
         }
         return x509c;
@@ -545,7 +545,7 @@ class RepnSignature extends RepnXML {
         sb.append(super.toString());
         if (contentsAvailable()) {
             sb.append(" VEOSignature (");
-            sb.append(getId());
+            sb.append(id);
             sb.append(")\n");
             sb.append(version.toString());
             sb.append(sigAlgorithm.toString());

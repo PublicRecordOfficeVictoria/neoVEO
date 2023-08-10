@@ -47,7 +47,7 @@ class RepnInformationPiece extends Repn {
         
         // vers:Label
         if (document.checkElement("vers:Label")) {
-            label = new RepnItem(getId(), "Information piece label", results);
+            label = new RepnItem(id, "Information piece label", results);
             label.setValue(document.getTextValue());
             document.gotoNextElement();
         } else {
@@ -58,7 +58,7 @@ class RepnInformationPiece extends Repn {
         while (!document.atEnd() && document.checkElement("vers:ContentFile")) {
             document.gotoNextElement();
             i++;
-            contents.add(new RepnContentFile(document, getId(), i, results));
+            contents.add(new RepnContentFile(document, id, i, results));
         }
         objectValid = true;
     }
@@ -118,7 +118,7 @@ class RepnInformationPiece extends Repn {
                 validLTPF |= rcf.isLTPF();
             }
             if (!validLTPF) {
-                addError(new VEOFailure(classname, "validate", 1, "Information piece did not have a valid long term preservation format"));
+                addError(new VEOFailure(classname, "validate", 1, id, "Information piece did not have a valid long term preservation format"));
             }
         }
     }

@@ -54,8 +54,8 @@ class RepnContent extends RepnXML {
         assert (contentFiles != null);
 
         infoObjs = new ArrayList<>();
-        version = new RepnItem(getId(), "Version", results);
-        hashAlgorithm = new RepnItem(getId(), "Hash algorithm", results);
+        version = new RepnItem(id, "Version", results);
+        hashAlgorithm = new RepnItem(id, "Hash algorithm", results);
         rdf = false;
 
         // parse the VEOContent.xml file against the VEOContent scheme
@@ -76,7 +76,7 @@ class RepnContent extends RepnXML {
                 case "http://www.w3.org/1999/02/22-rdf-syntax-ns":
                     break;
                 default:
-                    addError(new VEOFailure(CLASSNAME, 2, "vers:VEOContentFile element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#"));
+                    addError(new VEOFailure(CLASSNAME, 2, "VEOContent.xml", "VEOContentFile element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#"));
             }
             rdf = true;
         }
@@ -102,13 +102,13 @@ class RepnContent extends RepnXML {
                     case "http://www.w3.org/1999/02/22-rdf-syntax-ns":
                         break;
                     default:
-                        addError(new VEOFailure(CLASSNAME, 2, "vers:InformationObject element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#"));
+                        addError(new VEOFailure(CLASSNAME, 2, id, "vers:InformationObject("+(ioCnt+1)+") element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#"));
                 }
                 rdf = true;
             }
             gotoNextElement();
             ioCnt++;
-            io = new RepnInformationObject(this, getId(), ioCnt, rdf, results);
+            io = new RepnInformationObject(this, id, ioCnt, rdf, results);
             infoObjs.add(io);
 
             // build the tree of IOs
@@ -117,7 +117,7 @@ class RepnContent extends RepnXML {
                 // add this io as a child of the last io we saw at depth-1
                 if (io.getDepth() > 1) {
                     if (io.getDepth() - 2 >= lastIOatDepth.size()) {
-                        addError(new VEOFailure(CLASSNAME, 3, "IO has depth of " + io.getDepth() + " but deepest previous IO was " + lastIOatDepth.size()));
+                        addError(new VEOFailure(CLASSNAME, 3, id, "Information Object("+ioCnt+") has depth of " + io.getDepth() + " but deepest previous IO was " + lastIOatDepth.size()));
                         continue;
                     }
                     parentIO = lastIOatDepth.get(io.getDepth() - 2);
@@ -125,7 +125,7 @@ class RepnContent extends RepnXML {
                         parentIO.addChild(io);
                         io.setParent(parentIO);
                     } else {
-                        addError(new VEOFailure(CLASSNAME, 4, "Error detected:\n  Error (VEOContent.xml): IO has depth of " + io.getDepth() + " but last seen IO at depth-1 is null"));
+                        addError(new VEOFailure(CLASSNAME, 4, id, "Information Object("+ioCnt+") has depth of " + io.getDepth() + " but last seen IO at depth-1 is null"));
                         continue;
                     }
                 }
@@ -136,7 +136,7 @@ class RepnContent extends RepnXML {
                 } else if (io.getDepth() - 1 < lastIOatDepth.size()) {
                     lastIOatDepth.set(io.getDepth() - 1, io);
                 } else {
-                    addError(new VEOFailure(CLASSNAME, 5, "Error detected:\n  Error (VEOContent.xml): IO has depth of " + io.getDepth() + " which is more than one more than the maximum depth " + lastIOatDepth.size()));
+                    addError(new VEOFailure(CLASSNAME, 5, id, "Information Object("+ioCnt+") has depth of " + io.getDepth() + " which is more than one more than the maximum depth " + lastIOatDepth.size()));
                 }
             }
         }
@@ -194,13 +194,13 @@ class RepnContent extends RepnXML {
 
         // validate version...
         if (!version.getValue().equals("3.0")) {
-            version.addWarning(new VEOFailure(CLASSNAME, "validate", 1, "VEOVersion has a value of '" + version.getValue() + "' instead of '3.0'"));
+            version.addWarning(new VEOFailure(CLASSNAME, "validate", 1, id, "VEOVersion has a value of '" + version.getValue() + "' instead of '3.0'"));
         }
 
         // validate hash algorithm...
         s = hashAlgorithm.getValue();
         if (!s.equals("SHA-1") && !s.equals("SHA-256") && !s.equals("SHA-384") && !s.equals("SHA-512")) {
-            hashAlgorithm.addError(new VEOFailure(CLASSNAME, "validate", 2, "VEOHashFunctionAlgorithm has a value of '" + hashAlgorithm.getValue() + "' instead of 'SHA-1', 'SHA-256', 'SHA-384', or 'SHA-512'"));
+            hashAlgorithm.addError(new VEOFailure(CLASSNAME, "validate", 2, id, "VEOHashFunctionAlgorithm has a value of '" + hashAlgorithm.getValue() + "' instead of 'SHA-1', 'SHA-256', 'SHA-384', or 'SHA-512'"));
         }
 
         // validate information objects...

@@ -40,7 +40,7 @@ abstract class Repn {
     private final static Logger LOG = Logger.getLogger("VEOAnalysis.Repn");
     boolean objectValid;            // true if instantion suceeded, so information in object is valid
     boolean infoAvailable;          // true if information can be retrieved from this object
-    private final String id;        // identifier of this object for messages
+    protected final String id;        // identifier of this object for messages
     protected boolean hasErrors;    // true if this object (or its children) have errors
     protected ArrayList<VEOFailure> errors;   // list of errors that occurred
     protected boolean hasWarnings;  // true if this object (or its children) have warnings
@@ -99,7 +99,7 @@ abstract class Repn {
             }
             fos = null;
         } catch (IOException e) {
-            LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, "abandon", 1, "Failed to close HTML output file", e));
+            LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "abandon", 1, id, "Failed to close HTML output file", e));
         }
     }
 

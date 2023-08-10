@@ -109,17 +109,17 @@ abstract class RepnXML extends Repn implements ErrorHandler {
         assert (schemaFile != null);
         
         if (contentsAvailable) {
-            LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, "parse", 1, "Calling parse() twice"));
+            LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "parse", 1, id, "Calling parse() twice"));
             return false;
         }
 
         // check that the file exists and is an ordinary file
         if (!Files.exists(file)) {
-            addError(new VEOFailure(CLASSNAME, "parse", 3, "file '" + file.toString() + "' does not exist"));
+            addError(new VEOFailure(CLASSNAME, "parse", 3, id, "file '" + file.toString() + "' does not exist"));
             return false;
         }
         if (!Files.isRegularFile(file)) {
-            addError(new VEOFailure(CLASSNAME, "parse", 4, "file '" + file.toString() + "' is not a regular file"));
+            addError(new VEOFailure(CLASSNAME, "parse", 4, id, "file '" + file.toString() + "' is not a regular file"));
             return false;
         }
 
@@ -128,7 +128,7 @@ abstract class RepnXML extends Repn implements ErrorHandler {
         try {
             schema = sf.newSchema(schemaFile.toFile());
         } catch (SAXException e) {
-            addError(new VEOFailure(CLASSNAME, "parse", 5, "Failed to parse schema '" + schemaFile.toString() + "'", e));
+            addError(new VEOFailure(CLASSNAME, "parse", 5, id, "Failed to parse schema '" + schemaFile.toString() + "'", e));
             return false;
         }
         validator = schema.newValidator();
@@ -141,13 +141,13 @@ abstract class RepnXML extends Repn implements ErrorHandler {
             is.setEncoding("UTF-8");
             doc = parser.parse(is);
         } catch (SAXParseException e) {
-            addError(new VEOFailure(CLASSNAME, "parse", 6, "Parse error when parsing file" + e.getSystemId() + " (line " + e.getLineNumber() + " column " + e.getColumnNumber() + ")", e));
+            addError(new VEOFailure(CLASSNAME, "parse", 6, id, "Parse error when parsing file" + e.getSystemId() + " (line " + e.getLineNumber() + " column " + e.getColumnNumber() + ")", e));
             return false;
         } catch (SAXException e) {
-            addError(new VEOFailure(CLASSNAME, "parse", 7, "Problem when parsing file", e));
+            addError(new VEOFailure(CLASSNAME, "parse", 7, id, "Problem when parsing file", e));
             return false;
         } catch (IOException e) {
-            addError(new VEOFailure(CLASSNAME, "parse", 8, "System error when parsing file '" + file.toString() + "'", e));
+            addError(new VEOFailure(CLASSNAME, "parse", 8, id, "System error when parsing file '" + file.toString() + "'", e));
             return false;
         }
 
@@ -155,10 +155,10 @@ abstract class RepnXML extends Repn implements ErrorHandler {
         try {
             validator.validate(new DOMSource(doc));
         } catch (SAXException e) {
-            addError(new VEOFailure(CLASSNAME, "parse", 9, "Error when validating " + file.getFileName().toString() + " against schema '" + schemaFile.toString() + "'", e));
+            addError(new VEOFailure(CLASSNAME, "parse", 9, id, "Error when validating " + file.getFileName().toString() + " against schema '" + schemaFile.toString() + "'", e));
             return false;
         } catch (IOException e) {
-            addError(new VEOFailure(CLASSNAME, "parse", 10, "System error when validating XML", e));
+            addError(new VEOFailure(CLASSNAME, "parse", 10, id, "System error when validating XML", e));
             return false;
         }
 
@@ -178,7 +178,7 @@ abstract class RepnXML extends Repn implements ErrorHandler {
      */
     @Override
     public void warning(SAXParseException e) throws SAXException {
-        addWarning(new VEOFailure(CLASSNAME, "warning", 1, "Warning when parsing file", e));
+        addWarning(new VEOFailure(CLASSNAME, "warning", 1, id, "Warning when parsing file", e));
     }
 
     /**
@@ -189,7 +189,7 @@ abstract class RepnXML extends Repn implements ErrorHandler {
      */
     @Override
     public void error(SAXParseException e) throws SAXException {
-        addError(new VEOFailure(CLASSNAME, "error", 1, "Error when parsing file", e));
+        addError(new VEOFailure(CLASSNAME, "error", 1, id, "Error when parsing file", e));
     }
 
     /**

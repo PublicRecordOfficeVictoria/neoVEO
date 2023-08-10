@@ -16,6 +16,7 @@ import java.util.List;
  * The object represents a unit of data (typically a string)
  */
 final class RepnItem extends Repn {
+    private static final String CLASSNAME = "RepnItem";
     private String label; // label for the unit of data
     private String value; // the value of the data
 
@@ -52,8 +53,10 @@ final class RepnItem extends Repn {
      * @param s the value
      */
     public void setValue(String s) {
-        assert(s != null);
         
+        if (s == null || s.equals("") || s.trim().equals(" ")) {
+            s = null;
+        }
         value = s;
     }
 

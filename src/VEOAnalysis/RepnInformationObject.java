@@ -63,11 +63,11 @@ class RepnInformationObject extends Repn {
         IOid = seq;
 
         // vers:InformationObjectType
-        type = new RepnItem(getId(), "Information Object type", results);
+        type = new RepnItem(id, "Information Object type", results);
         type.setValue(document.getTextValue());
         document.gotoNextElement();
         // vers:InformationObjectDepth
-        depth = new RepnItem(getId(), "Information Object depth", results);
+        depth = new RepnItem(id, "Information Object depth", results);
         depth.setValue(document.getTextValue());
         document.gotoNextElement();
         i = 0;
@@ -80,20 +80,20 @@ class RepnInformationObject extends Repn {
                         rdf = true;
                         break;
                     default:
-                        addError(new VEOFailure(CLASSNAME, 1, "vers:MetadataPackage element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#"));
+                        addError(new VEOFailure(CLASSNAME, 1, id, "vers:MetadataPackage element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#"));
                         break;
                 }
             }
 
             document.gotoNextElement();
             i++;
-            metadata.add(new RepnMetadataPackage(document, getId(), i, rdf, results));
+            metadata.add(new RepnMetadataPackage(document, id, i, rdf, results));
         }
         i = 0;
         while (!document.atEnd() && document.checkElement("vers:InformationPiece")) {
             document.gotoNextElement();
             i++;
-            infoPieces.add(new RepnInformationPiece(document, getId(), i, results));
+            infoPieces.add(new RepnInformationPiece(document, id, i, results));
         }
         objectValid = true;
     }
@@ -191,30 +191,30 @@ class RepnInformationObject extends Repn {
         // first traversal
         if (oneLevel) {
             if (getDepth() != 0) {
-                depth.addError(new VEOFailure(CLASSNAME, "validate", 1, "First information object had a depth of 0 (indicating a flat list), but this information object has a depth > 0"));
+                depth.addError(new VEOFailure(CLASSNAME, "validate", 1, id, "First information object had a depth of 0 (indicating a flat list), but this information object has a depth > 0"));
             }
         } else {
             if (getDepth() == 0) {
-                depth.addError(new VEOFailure(CLASSNAME, "validate", 2, "First information object had a depth > 0 (indicating a tree structure), but this information object has a depth = 0"));
+                depth.addError(new VEOFailure(CLASSNAME, "validate", 2, id, "First information object had a depth > 0 (indicating a tree structure), but this information object has a depth = 0"));
             }
             if (firstIO && getDepth() > 1) {
-                depth.addError(new VEOFailure(CLASSNAME, "validate", 3, "First information object must have a depth of 0 or 1"));
+                depth.addError(new VEOFailure(CLASSNAME, "validate", 3, id, "First information object must have a depth of 0 or 1"));
             } else if (getDepth() - prevDepth > 1) {
-                depth.addError(new VEOFailure(CLASSNAME, "validate", 4, "Information object has a depth which is more than one greater than the previous depth (" + prevDepth + ")"));
+                depth.addError(new VEOFailure(CLASSNAME, "validate", 4, id, "Information object has a depth which is more than one greater than the previous depth (" + prevDepth + ")"));
             }
         }
 
         // do not need to validate depth, as XML schema checks it is non negative integer
         // if this is the first Information Object, must have at least one metadata package
         if (firstIO && metadata.isEmpty()) {
-            addError(new VEOFailure(CLASSNAME, "validate", 5, "The first information object must have at least one metadata package"));
+            addError(new VEOFailure(CLASSNAME, "validate", 5, id, "The first information object must have at least one metadata package"));
         }
         stdMetadata = false;
         for (i = 0; i < metadata.size(); i++) {
             stdMetadata |= metadata.get(i).validate(veoDir, noRec);
         }
         if (firstIO && !stdMetadata) {
-            addError(new VEOFailure(CLASSNAME, "validate", 6, "The first information object did not contain an AGLS or AGRKMS metadata package"));
+            addError(new VEOFailure(CLASSNAME, "validate", 6, id, "The first information object did not contain an AGLS or AGRKMS metadata package"));
         }
         for (i = 0; i < infoPieces.size(); i++) {
             infoPieces.get(i).validate(veoDir, hashAlgorithm, contentFiles, ltsfs, vpa);

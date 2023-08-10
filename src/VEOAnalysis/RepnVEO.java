@@ -86,7 +86,7 @@ class RepnVEO extends Repn {
         this.veo = veo;
         this.schemaDir = schemaDir;
         veoOutputDir = null;
-        readme = new RepnItem(getId() + "Readme.txt", "", results);
+        readme = new RepnItem(id + "Readme.txt", "", results);
         veoContent = null;
         veoHistory = null;
         veoContentSignatures = new ArrayList<>();
@@ -137,7 +137,8 @@ class RepnVEO extends Repn {
         p = schemaDir.resolve("log4j.properties");
         if (!Files.exists(p)) {
             throw new VEOFatal(CLASSNAME, 5, "Log4j properties file '" + p.toString() + "' does not exist");
-        }PropertyConfigurator.configure(p.toAbsolutePath().toString());
+        }
+        PropertyConfigurator.configure(p.toAbsolutePath().toString());
         
         objectValid = true;
     }
@@ -314,7 +315,7 @@ class RepnVEO extends Repn {
                 }
             }
         } catch (DirectoryIteratorException e) {
-            LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, "constRepn", 5, "Directory iterator failed", e));
+            LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "constRepn", 5, "Directory iterator failed", e));
         } catch (IOException e) {
             addError(new VEOFailure(CLASSNAME, "constRepn", 6, "Failed to open a file in the VEO for reading", e));
         } finally {
@@ -322,7 +323,7 @@ class RepnVEO extends Repn {
                 try {
                     ds.close();
                 } catch (IOException e) {
-                    LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, "constRepn", 7, "Closing directory stream failed", e));
+                    LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "constRepn", 7, "Closing directory stream failed", e));
                 }
             }
         }
@@ -507,7 +508,7 @@ class RepnVEO extends Repn {
                     zipFile.close();
                 }
             } catch (IOException e) {
-                LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, "unzip", 9, "IOException in closing Zip files", e));
+                LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "unzip", 9, "IOException in closing Zip files", e));
             }
         }
     }
@@ -758,10 +759,10 @@ class RepnVEO extends Repn {
             try {
                 Files.copy(cssSource, cssDest, StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e) {
-                LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, "genReport", 1, "Copying ReportStyle.css file to VEO directory failed", e));
+                LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "genReport", 1, "Copying ReportStyle.css file to VEO directory failed", e));
             }
         } else {
-            LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, "genReport", 2, "File: '" + cssSource.toAbsolutePath().toString() + "' doesn't exist"));
+            LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "genReport", 2, "File: '" + cssSource.toAbsolutePath().toString() + "' doesn't exist"));
         }
 
         // create index file

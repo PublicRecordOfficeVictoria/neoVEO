@@ -44,7 +44,7 @@ class RepnHistory extends RepnXML {
         assert(schemaDir != null);
 
         events = new ArrayList<>();
-        version = new RepnItem(getId(), "XML version", results);
+        version = new RepnItem(id, "XML version", results);
 
         // parse the VEOHistory.xml file against the VEOHistory scheme
         file = veoDir.resolve("VEOHistory.xml");
@@ -68,7 +68,7 @@ class RepnHistory extends RepnXML {
         while (checkElement("vers:Event")) {
             gotoNextElement();
             i++;
-            event = new RepnEvent(this, getId(), i, results);
+            event = new RepnEvent(this, id, i, results);
             events.add(event);
         }
         objectValid = true;
@@ -87,7 +87,7 @@ class RepnHistory extends RepnXML {
 
         // validate the version...
         if (!version.getValue().equals("3.0")) {
-            version.addWarning(new VEOFailure(CLASSNAME, "validate", 1, "VEOVersion has a value of '" + version.getValue() + "' instead of '3.0'"));
+            version.addWarning(new VEOFailure(CLASSNAME, "validate", 1, id, "VEOVersion has a value of '" + version.getValue() + "' instead of '3.0'"));
         }
 
         // validate the events...

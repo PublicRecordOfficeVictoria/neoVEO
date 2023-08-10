@@ -34,14 +34,13 @@ import java.util.List;
  */
 class RepnContentFile extends Repn {
     private static final String CLASSNAME = "RepnContentFile";
-    private final int id; // unique id for this content file
     private RepnFile rf; // representation of this file
     private RepnItem pathName;  // file name of the content file
     private RepnItem hashValue; // genHash value of the content file
     private boolean ltpf;       // true if this content file is a LTPF
     private final static Logger LOG = Logger.getLogger("VEOAnalysis.RepnContent");
 
-    static int idCnt; // counter to generate unique id (not thread safe)
+    // static int idCnt; // counter to generate unique id (not thread safe)
 
     /**
      * Construct a Content File from the XML document VEOContent.xml.
@@ -56,18 +55,15 @@ class RepnContentFile extends Repn {
         
         assert(document != null);
 
-        // allocate unique id
-        id = idCnt;
-        idCnt++;
         rf = null;
         ltpf = false;
 
         // vers:PathName
-        pathName = new RepnItem(getId() + ":pathName", "Path name of content file", results);
+        pathName = new RepnItem(id + ":pathName", "Path name of content file", results);
         pathName.setValue(document.getTextValue());
         document.gotoNextElement();
         // vers:HashValue
-        hashValue = new RepnItem(getId() + ":hashValue", "Hash value of content file", results);
+        hashValue = new RepnItem(id + ":hashValue", "Hash value of content file", results);
         hashValue.setValue(document.getTextValue());
         document.gotoNextElement();
         objectValid = true;
@@ -123,12 +119,12 @@ class RepnContentFile extends Repn {
 
         // check to see that vers:PathName element exists and has a non empty value
         if (pathName.getValue() == null) {
-            addError(new VEOFailure(CLASSNAME, "validate", 1, "vers:PathName element is not present or is empty"));
+            addError(new VEOFailure(CLASSNAME, "validate", 1, id, "vers:PathName element is not present or is empty"));
             return false;
         }
         s = pathName.getValue().trim();
         if (s.equals("") || s.equals(" ")) {
-            addError(new VEOFailure(CLASSNAME, "validate", 2, "vers:PathName element is blank"));
+            addError(new VEOFailure(CLASSNAME, "validate", 2, id, "vers:PathName element is blank"));
             return false;
         }
 
@@ -144,11 +140,11 @@ class RepnContentFile extends Repn {
         try {
             fileToHash = veoDir.resolve(safe);
         } catch (InvalidPathException ipe) {
-            addError(new VEOFailure(CLASSNAME, "validate", 3, "Referenced file '" + safe + "' is not a valid file name", ipe));
+            addError(new VEOFailure(CLASSNAME, "validate", 3, id, "Referenced file '" + safe + "' is not a valid file name", ipe));
             return false;
         }
         if (Files.notExists(fileToHash)) {
-            addError(new VEOFailure(CLASSNAME, "validate", 4, "Referenced file '" + safe + "' does not exist"));
+            addError(new VEOFailure(CLASSNAME, "validate", 4, id, "Referenced file '" + safe + "' does not exist"));
             return false;
         }
 
@@ -156,24 +152,24 @@ class RepnContentFile extends Repn {
         try {
             p = Paths.get(safe);
         } catch (InvalidPathException ipe) {
-            addError(new VEOFailure(CLASSNAME, "validate", 5, "Content file name '"+safe+"' is a valid file name"));
+            addError(new VEOFailure(CLASSNAME, "validate", 5, id, "Content file name '"+safe+"' is a valid file name"));
             return false;
         }
         if (contentFiles.containsKey(p)) {
             rf = contentFiles.get(p);
             rf.setContentFile(this);
         } else {
-            LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, "validate", 6, "VEOContent.xml referenced content file (" + pathName.getValue() + "), but it could not be found in the index"));
+            LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "validate", 6, id, "VEOContent.xml referenced content file (" + pathName.getValue() + "), but it could not be found in the index"));
         }
 
         // check to see that vers:HashVale element exists and has a non empty value
         if (hashValue.getValue() == null) {
-            addError(new VEOFailure(CLASSNAME, "validate", 7, "vers:HashValue element is not present or is empty"));
+            addError(new VEOFailure(CLASSNAME, "validate", 7, id, "vers:HashValue element is not present or is empty"));
             return false;
         }
         s = hashValue.getValue().trim();
         if (s.equals("") || s.equals(" ")) {
-            addError(new VEOFailure(CLASSNAME, "validate", 8, "vers:HashValue element is blank"));
+            addError(new VEOFailure(CLASSNAME, "validate", 8, id, "vers:HashValue element is blank"));
             return false;
         }
 
@@ -181,7 +177,7 @@ class RepnContentFile extends Repn {
         try {
             md = MessageDigest.getInstance(hashAlgorithm);
         } catch (NoSuchAlgorithmException e) {
-            addError(new VEOFailure(CLASSNAME, "validate", 9, "Hash algorithm '" + hashAlgorithm + "' not supported"));
+            addError(new VEOFailure(CLASSNAME, "validate", 9, id, "Hash algorithm '" + hashAlgorithm + "' not supported"));
             return false;
         }
 
@@ -189,7 +185,7 @@ class RepnContentFile extends Repn {
         try {
             fis = new FileInputStream(fileToHash.toString());
         } catch (FileNotFoundException e) {
-            LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, "validate", 10, "File to hash not found", e));
+            LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "validate", 10, id, "File to hash not found", e));
             return false;
         }
         bis = new BufferedInputStream(fis);
@@ -200,12 +196,12 @@ class RepnContentFile extends Repn {
                 md.update(b, 0, i);
             }
         } catch (IOException e) {
-            LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, "validate", 11, "Failed reading file to hash", e));
+            LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "validate", 11, id, "Failed reading file to hash", e));
         } finally {
             try {
                 bis.close();
             } catch (IOException e) {
-                LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, "validate", 12, "failed closing file to hash", e));
+                LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "validate", 12, id, "failed closing file to hash", e));
             }
         }
 
@@ -217,14 +213,14 @@ class RepnContentFile extends Repn {
         try {
             storedHash = Base64.getMimeDecoder().decode(hashValue.getValue());
         } catch (IllegalArgumentException e) {
-            hashValue.addError(new VEOFailure(CLASSNAME, "validate", 13, "Converting Base64 encoded hash failed", e));
+            hashValue.addError(new VEOFailure(CLASSNAME, "validate", 13, id, "Converting Base64 encoded hash failed", e));
         }
 
         // System.out.println("Hashing "+pathName);
         // System.out.println("Orig "+DatatypeConverter.printBase64Binary(hashValue));
         // System.out.println("Calc "+DatatypeConverter.printBase64Binary(genHash));
         if (storedHash != null && !MessageDigest.isEqual(genHash, storedHash)) {
-            addError(new VEOFailure(CLASSNAME, "validate", 14, "Integrity check of file '" + pathName.getValue() + "' failed as hash value has changed."));
+            addError(new VEOFailure(CLASSNAME, "validate", 14, id, "Integrity check of file '" + pathName.getValue() + "' failed as hash value has changed."));
             return false;
         }
 

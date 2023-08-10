@@ -30,7 +30,6 @@ import java.util.logging.Logger;
  */
 class RepnFile extends Repn {
     private static final String CLASSNAME = "RepnFile";
-    private int id;     // unique identifier of this RepnFile
     private RepnContentFile rcf; // representation of this file as a content file
     private Path file; // path of this file/directory relative to the VEO directory
     private FileTime lastModifiedTime; // date/time the file was last modified
@@ -66,8 +65,6 @@ class RepnFile extends Repn {
         assert (veoDir != null);
         assert (contentFiles != null);
 
-        // allocate a unique id for this RepnFile
-        id = idCnt;
         idCnt++;
 
         this.file = file;
@@ -76,7 +73,7 @@ class RepnFile extends Repn {
 
         // make sure file exists...
         if (!Files.exists(file)) {
-            addError(new VEOFailure(CLASSNAME, 1, "Content directory '" + file.toString() + "' does not exist"));
+            addError(new VEOFailure(CLASSNAME, 1, id, "Content directory '" + file.toString() + "' does not exist"));
             return;
         }
 
@@ -105,14 +102,14 @@ class RepnFile extends Repn {
                     children.add(new RepnFile(entry, veoDir, contentFiles, results));
                 }
             } catch (IOException e) {
-                LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, null, 3, "Failed stepping through directory of content", e));
+                LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, null, 3, id, "Failed stepping through directory of content", e));
             } finally {
                 try {
                     if (ds != null) {
                         ds.close();
                     }
                 } catch (IOException e) {
-                    LOG.log(Level.WARNING, VEOFailure.mesg(CLASSNAME, null, 4, "Failed closing directory of content", e));
+                    LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, null, 4, id, "Failed closing directory of content", e));
                 }
             }
 
@@ -155,7 +152,7 @@ class RepnFile extends Repn {
         // this file is referenced in the VEOContent.xml file...
         if (!isDirectory) {
             if (rcf == null) {
-                addWarning(new VEOFailure(CLASSNAME, "validate", 1, "This file is not referenced in the VEOContent.xml file"));
+                addWarning(new VEOFailure(CLASSNAME, "validate", 1, id, "This file is not referenced in the VEOContent.xml file"));
             }
 
             // otherwise, process children

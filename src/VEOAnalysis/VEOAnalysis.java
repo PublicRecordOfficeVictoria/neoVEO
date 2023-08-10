@@ -88,7 +88,7 @@ public class VEOAnalysis {
     private static final String CLASSNAME = "VEOAnalysis";
     private Config c;           // configuration of this run
     private String runDateTime; // run date/time
-    private Writer tsvReportW;  // not null if asked to produce a TSV report
+    private Writer csvReportW;  // not null if asked to produce a TSV report
     private int totalIOs;       // total IOs counted in VEO
     boolean hasErrors;          // true if VEO had errors
     private final static Logger LOG = Logger.getLogger("VEOAnalysis.VEOAnalysis");
@@ -141,10 +141,11 @@ public class VEOAnalysis {
      * 20230721 3.29 Added ability to classify VEOs in a shadow directory by error status
      * 20230725 3.30 Cleaned up top level VEOAnalysis code & added Config class
      * 20230802 3.31 Now captures as many errors as possible during parsing the VEO
+     * 20230811 3.32 Cleaned up the error/failure reporting to make it consistent
      * </pre>
      */
     static String version() {
-        return ("3.31");
+        return ("3.32");
     }
 
     static String copyright = "Copyright 2015, 2022, 2023 Public Record Office Victoria";
@@ -207,7 +208,7 @@ public class VEOAnalysis {
 
     /**
      * Instantiate an VEOAnalysis instance to be used as an API (Old version
-     * without tsvReport). In this mode, VEOAnalysis is called by another
+     * without csvReport). In this mode, VEOAnalysis is called by another
      * program to unpack and validate VEOs. Once an instance of a VEOAnalysis
      * class has been created it can be used to validate multiple VEOs.
      *
@@ -237,7 +238,7 @@ public class VEOAnalysis {
         c.genErrorReport = genErrorReport;
         c.genHTMLReport = genHTMLReport;
         c.genResultSummary = (results != null);
-        c.genTSVReport = false;
+        c.genCSVReport = false;
         c.help = false;
         c.ltsfs = ltsfs;
         c.norec = norec;
@@ -263,7 +264,7 @@ public class VEOAnalysis {
         int i;
 
         runDateTime = getISODateTime('-', ':', false);
-        tsvReportW = null;
+        csvReportW = null;
         totalIOs = 0;
         hasErrors = false;
 
@@ -287,8 +288,8 @@ public class VEOAnalysis {
         this.c = c;
 
         // check to see that user wants to do something
-        if (!c.genErrorReport && !c.genHTMLReport && !c.classifyVEOs && !c.unpack) {
-            throw new VEOFatal(CLASSNAME, 1, "Must request at least one of generate Error report, HTML report, classifyVEOs, and unpack (-e, -r, -c, and -u)");
+        if (!c.genErrorReport && !c.genHTMLReport && !c.genCSVReport && !c.classifyVEOs && !c.unpack) {
+            throw new VEOFatal(CLASSNAME, 1, "Must request at least one of generate error report, CSV report, HTML report, classifyVEOs, and unpack (-e, -csv, -r, -classerr, and -u)");
         }
         if (c.supportDir == null || !Files.isDirectory(c.supportDir)) {
             throw new VEOError(CLASSNAME, 2, "Specified schema directory is null or is not a directory");
@@ -328,7 +329,7 @@ public class VEOAnalysis {
     /**
      * Test the VEOs listed in the configuration. This call steps through the
      * list of VEOs and tests each VEO individually. If requested, the results
-     * are listed in the TSVReport.
+     * are listed in the CSVReport.
      *
      * @throws VEOFatal if a fatal error occurred
      */
@@ -340,18 +341,18 @@ public class VEOAnalysis {
         FileOutputStream fos;
         OutputStreamWriter osw;
 
-        // are we generating a TSV file?
+        // are we generating a CSV file?
         fos = null;
         osw = null;
-        if (c.genTSVReport) {
-            Path p = c.outputDir.resolve("Results-" + runDateTime.replaceAll(":", "-") + ".tsv");
+        if (c.genCSVReport) {
+            Path p = c.outputDir.resolve("Results-" + runDateTime.replaceAll(":", "-") + ".csv");
             try {
                 fos = new FileOutputStream(p.toFile());
             } catch (FileNotFoundException fnfe) {
                 throw new VEOFatal(CLASSNAME, 3, "Failed attempting to open the TSV report file: " + fnfe.getMessage());
             }
             osw = new OutputStreamWriter(fos, Charset.forName("UTF-8"));
-            tsvReportW = new BufferedWriter(osw);
+            csvReportW = new BufferedWriter(osw);
         }
 
         // go through the list of VEOs
@@ -375,8 +376,8 @@ public class VEOAnalysis {
 
         // close TSV report
         try {
-            if (tsvReportW != null) {
-                tsvReportW.close();
+            if (csvReportW != null) {
+                csvReportW.close();
             }
             if (osw != null) {
                 osw.close();
@@ -557,20 +558,20 @@ public class VEOAnalysis {
                 }
             }
 
-            // if producing a TSV file of the results, do so
-            if (tsvReportW != null) {
+            // if producing a CSV file of the results, do so
+            if (csvReportW != null) {
                 try {
                     if (errors.isEmpty() && warnings.isEmpty()) {
-                        writeTSVReportLine(veo, null, false);
+                        writeCSVReportLine(veo, null, false);
                     } else {
                         for (i = 0; i < errors.size(); i++) {
-                            writeTSVReportLine(veo, errors.get(i), true);
+                            writeCSVReportLine(veo, errors.get(i), true);
                         }
                         for (i = 0; i < warnings.size(); i++) {
-                            writeTSVReportLine(veo, warnings.get(i), false);
+                            writeCSVReportLine(veo, warnings.get(i), false);
                         }
                     }
-                    tsvReportW.flush();
+                    csvReportW.flush();
 
                 } catch (IOException ioe) {
                     LOG.log(Level.WARNING, "Failed writing to TSV report. Cause: {0}", ioe.getMessage());
@@ -668,24 +669,24 @@ public class VEOAnalysis {
      * @param ve the error/warning that occurred
      * @throws IOException
      */
-    private void writeTSVReportLine(Path veo, VEOFailure ve, boolean error) throws IOException {
-        tsvReportW.write(veo != null ? veo.getFileName().toString() : "");
-        tsvReportW.write('\t');
-        tsvReportW.write(veo != null ? veo.toString() : "");
-        tsvReportW.write('\t');
+    private void writeCSVReportLine(Path veo, VEOFailure ve, boolean error) throws IOException {
+        csvReportW.write(veo != null ? veo.getFileName().toString() : "");
+        csvReportW.write(',');
         if (ve != null) {
             if (error) {
-                tsvReportW.write("Error\t");
+                csvReportW.write("Error,");
             } else {
-                tsvReportW.write("Warning\t");
+                csvReportW.write("Warning,");
             }
-            tsvReportW.write(ve.getFailureId());
-            tsvReportW.write('\t');
-            tsvReportW.write(ve.getMessage());
+            csvReportW.write(ve.getFailureId());
+            csvReportW.write(',');
+            csvReportW.write(ve.getMessage());
         } else {
-            tsvReportW.write("OK\t\t");
+            csvReportW.write("OK,,");
         }
-        tsvReportW.write("\n");
+        csvReportW.write(',');
+        csvReportW.write(veo != null ? veo.toString() : "");
+        csvReportW.write("\n");
     }
 
     /**
