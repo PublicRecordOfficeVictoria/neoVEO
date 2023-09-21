@@ -142,10 +142,11 @@ public class VEOAnalysis {
      * 20230725 3.30 Cleaned up top level VEOAnalysis code & added Config class
      * 20230802 3.31 Now captures as many errors as possible during parsing the VEO
      * 20230811 3.32 Cleaned up the error/failure reporting to make it consistent
+     * 20230921 3.33 Added test for ZIP entry names that do not start with the VEO name
      * </pre>
      */
     static String version() {
-        return ("3.32");
+        return ("3.33");
     }
 
     static String copyright = "Copyright 2015, 2022, 2023 Public Record Office Victoria";

@@ -8,7 +8,6 @@ package VEOAnalysis;
 
 import VERSCommon.LTSF;
 import VERSCommon.ResultSummary;
-import VERSCommon.ResultSummary.Type;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFailure;
 import VERSCommon.VEOFatal;
@@ -125,21 +124,19 @@ class RepnVEO extends Repn {
         // Configure the logging used in the RDF validator. See the discussion
         // RepnMetadataPackage for which version you should use. Uncomment the
         // line for the version of log4j that you wish to use
-        
         // This is for log4j2 used with Jena 4
         // p = schemaDir.resolve("log4j2.properties");
         // if (!Files.exists(p)) {
         //     throw new VEOError(CLASSNAME, 5, "Log4j properties file '" + p.toString() + "' does not exist");
         // }
         // System.setProperty("log4j2.configurationFile", schemaDir.resolve("log4j2.properties").toAbsolutePath().toString());
-        
         // This is for log4j used with Jena 2
         p = schemaDir.resolve("log4j.properties");
         if (!Files.exists(p)) {
             throw new VEOFatal(CLASSNAME, 5, "Log4j properties file '" + p.toString() + "' does not exist");
         }
         PropertyConfigurator.configure(p.toAbsolutePath().toString());
-        
+
         objectValid = true;
     }
 
@@ -229,7 +226,7 @@ class RepnVEO extends Repn {
 
     /**
      * Construct an internal representation of the VEO ready for validation
-     * 
+     *
      * @throws VEOError If an error occurred in processing this VEO
      */
     // this array contains the valid lengths of the VEOReadMe.txt over time
@@ -244,15 +241,14 @@ class RepnVEO extends Repn {
 
         // check that the VEO directory has the correct files (and no others)
         // System.out.println("validating " + veoDir.toString());
-        
         // unzip the VEO into the VEO directory
         unzip(veo);
-        
+
         // did it unpack?
         if (!Files.exists(veoOutputDir)) {
             return false;
         }
-        
+
         // go through the VEO directory constructing the internal represententation
         ds = null;
         try {
@@ -329,7 +325,6 @@ class RepnVEO extends Repn {
         }
         return true;
     }
-    
 
     /**
      * Private function to unzip a VEO file. When unzipping, we follow the
@@ -411,7 +406,11 @@ class RepnVEO extends Repn {
                 // been renamed)
                 if (!veoName.equals(zipEntryPath.getName(0).toString())) {
                     if (!complainedOnceAlready) {
-                        addWarning(new VEOFailure(CLASSNAME, "unzip", 3, "The filename of the VEO (" + veoName + ") is different to that contained in the entries in the ZIP file (" + entry.getName() + ")"));
+                        if (zipEntryPath.getNameCount() == 1) {
+                            addError(new VEOFailure(CLASSNAME, "unzip", 3, "The names of the entries in the ZIP file (e.g. '" + entry.getName() + "') do not start with the name of the veo ('" + veoName + "')"));
+                        } else {
+                            addError(new VEOFailure(CLASSNAME, "unzip", 4, "The filename of the VEO (" + veoName + ") is different to that contained in the entries in the ZIP file (" + entry.getName() + ")"));
+                        }
                     }
                     complainedOnceAlready = true;
                 }
@@ -420,14 +419,12 @@ class RepnVEO extends Repn {
                 // be in a directory with the same name as the VEO filename
                 // (even if we have complained about this)
                 try {
-                    if (zipEntryPath.getNameCount() == 1) {
-                        p = veoOutputDir.getParent().resolve(veoName);
-                    } else {
+                    if (zipEntryPath.getNameCount() > 1) {
                         zipEntryPath = zipEntryPath.subpath(1, zipEntryPath.getNameCount());
-                        p = veoOutputDir.getParent().resolve(veoName).resolve(zipEntryPath);
                     }
+                    p = veoOutputDir.getParent().resolve(veoName).resolve(zipEntryPath);
                 } catch (InvalidPathException ipe) {
-                    addError(new VEOFailure(CLASSNAME, "unzip", 4, "File name '" + veoName + "' is invalid", ipe));
+                    addError(new VEOFailure(CLASSNAME, "unzip", 5, "File name '" + veoName + "' is invalid", ipe));
                     continue;
                 }
 
@@ -438,7 +435,7 @@ class RepnVEO extends Repn {
                 // shouldn't have any 'parent' ('..') elements in the file path
                 for (i = 0; i < vze.getNameCount(); i++) {
                     if (vze.getName(i).toString().equals("..")) {
-                        addError(new VEOFailure(CLASSNAME, "unzip", 5, "ZIP file contains a pathname that includes '..' elements: '" + zipEntryPath + "'"));
+                        addError(new VEOFailure(CLASSNAME, "unzip", 6, "ZIP file contains a pathname that includes '..' elements: '" + zipEntryPath + "'"));
                         secErr = true;
                     }
                 }
@@ -449,7 +446,7 @@ class RepnVEO extends Repn {
                 // just be cynical and check that the file name to be extracted
                 // from the ZIP file is actually in the VEO directory...
                 if (!vze.startsWith(veoOutputDir)) {
-                    addError(new VEOFailure(CLASSNAME, "unzip", 6, "ZIP entry in VEO '" + veoName + "' is attempting to create a file outside the VEO directory '" + vze.toString()));
+                    addError(new VEOFailure(CLASSNAME, "unzip", 7, "ZIP entry in VEO '" + veoName + "' is attempting to create a file outside the VEO directory '" + vze.toString()));
                     continue;
                 }
 
@@ -487,9 +484,9 @@ class RepnVEO extends Repn {
             }
             zipFile.close();
         } catch (ZipException e) {
-            addError(new VEOFailure(CLASSNAME, "unzip", 7, "ZIP format error in opening Zip file" + e.getMessage()));
+            addError(new VEOFailure(CLASSNAME, "unzip", 8, "ZIP format error in opening Zip file" + e.getMessage()));
         } catch (IOException e) {
-            addError(new VEOFailure(CLASSNAME, "unzip", 8, "IO error reading Zip file", e));
+            addError(new VEOFailure(CLASSNAME, "unzip", 9, "IO error reading Zip file", e));
         } finally {
             try {
                 if (bos != null) {
@@ -508,7 +505,7 @@ class RepnVEO extends Repn {
                     zipFile.close();
                 }
             } catch (IOException e) {
-                LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "unzip", 9, "IOException in closing Zip files", e));
+                LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "unzip", 10, "IOException in closing Zip files", e));
             }
         }
     }
@@ -535,10 +532,14 @@ class RepnVEO extends Repn {
         }
 
         // check to see that the required files are present
+        // is the VEOContent file present? If so validate it, and then the content files
         if (veoContent == null) {
-            addError(new VEOFailure(CLASSNAME, "validate", 3, "VEOContents.xml file is not present"));
+            addError(new VEOFailure(CLASSNAME, "validate", 3, "VEOContent.xml file is not present"));
         } else {
             veoContent.validate(veoOutputDir, contentFiles, ltsfs, noRec, vpa);
+            for (i = 0; i < contentDirs.size(); i++) {
+                contentDirs.get(i).validate();
+            }
         }
         if (veoHistory == null) {
             addError(new VEOFailure(CLASSNAME, "validate", 4, "VEOHistory.xml file is not present"));
@@ -550,20 +551,17 @@ class RepnVEO extends Repn {
         }
         if (veoContentSignatures.isEmpty()) {
             addError(new VEOFailure(CLASSNAME, "validate", 6, "No VEOContentSignature?.xml files are present"));
-        } else {
+        } else if (veoContent != null) {
             for (i = 0; i < veoContentSignatures.size(); i++) {
                 veoContentSignatures.get(i).validate();
             }
         }
         if (veoHistorySignatures.isEmpty()) {
             addError(new VEOFailure(CLASSNAME, "validate", 7, "No VEOHistorySignature?.xml files are present"));
-        } else {
+        } else if (veoHistory != null) {
             for (i = 0; i < veoHistorySignatures.size(); i++) {
                 veoHistorySignatures.get(i).validate();
             }
-        }
-        for (i = 0; i < contentDirs.size(); i++) {
-            contentDirs.get(i).validate();
         }
     }
 
