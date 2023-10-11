@@ -413,6 +413,7 @@ class RepnVEO extends Repn {
                         }
                     }
                     complainedOnceAlready = true;
+                    zipEntryPath = Paths.get(veoName).resolve(zipEntryPath);
                 }
 
                 // doesn't matter what the ZIP file says, force the extract to
