@@ -11,6 +11,7 @@ import VERSCommon.PFXUser;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFatal;
 import java.io.*;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -101,6 +102,7 @@ class CreateSignatureFile extends CreateXMLDoc {
         byte[] b = new byte[1000]; // buffer used to read input file
         Principal subject;      // subject in PFXUser
         String preamble;
+        // MessageDigest md;
 
         // general
         LOG.entering(classname, method, new Object[]{toSign, signer, algorithmId});
@@ -186,6 +188,7 @@ class CreateSignatureFile extends CreateXMLDoc {
             // md = MessageDigest.getInstance("SHA1");
             // md2 = MessageDigest.getInstance("MD2");
             // md5 = MessageDigest.getInstance("MD5");
+            // md = MessageDigest.getInstance("SHA-256");
             sig = Signature.getInstance(algorithmId);
             sig.initSign(signer.getPrivate());
         } catch (NoSuchAlgorithmException e) {
@@ -224,6 +227,14 @@ class CreateSignatureFile extends CreateXMLDoc {
                 }
             } catch (IOException e) { /* ignore */ }
         }
+        
+        // calculate the mesage digest
+        /*
+            byte[] ba;
+            ba = md.digest();
+            BigInteger bi = new BigInteger(1, ba);
+            System.out.println("Hash Value: "+String.format("%0" + (ba.length << 1) + "X", bi));
+        */
 
         // calculate the digital signature over the input file
         try {
