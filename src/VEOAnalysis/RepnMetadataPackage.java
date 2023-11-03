@@ -72,12 +72,11 @@ class RepnMetadataPackage extends Repn {
     private ArrayList<Element> metadata; // list of metadata roots
     private boolean rdf;        // true if the metadata package is RDF
     private Model rdfModel;     // RDF model
-    private String metadataType; // type of package (AGLS or ANZS5478
     private String resourceURI; // URL identifying RDF resource
-    private String dcNameSpace; // URL for dublin core namespace actually used
-    private String aglsNameSpace; // URL for AGLS namespace actually used
-    private String versNameSpace; // URL for VERS namespace actually used
-    private String anzs5478NameSpace; // URL for ANZS5478 namespace actually used
+    private Namespace dcNameSpace; // URL for dublin core namespace actually used
+    private Namespace aglsNameSpace; // URL for AGLS namespace actually used
+    private Namespace versNameSpace; // URL for VERS namespace actually used
+    private Namespace anzs5478NameSpace; // URL for ANZS5478 namespace actually used
     private final static java.util.logging.Logger LOG = java.util.logging.Logger.getLogger("VEOAnalysis.RepnMetadatPackage");
 
     /**
@@ -87,6 +86,19 @@ class RepnMetadataPackage extends Repn {
         Unknown, // we don't know
         AGLS, // AGLS metadata
         ANZS5478    // ASNZS5478
+    }
+    
+    /**
+     * Namespace information
+     */
+    private class Namespace {
+        String handle;  // the short identifier used in the XML
+        String value;   // the actual URL of this namespace used in the document
+        
+        Namespace(String handle, String value) {
+            this.handle = handle;
+            this.value = value;
+        }
     }
 
     // These are the accepted URLs for the namespaces used in the standard VERS
@@ -134,7 +146,6 @@ class RepnMetadataPackage extends Repn {
         metadata = new ArrayList<>();
         this.rdf = rdf;
         rdfModel = null;
-        metadataType = null;
         resourceURI = null;
         dcNameSpace = null;
         aglsNameSpace = null;
@@ -204,7 +215,6 @@ class RepnMetadataPackage extends Repn {
                 addError(new VEOFailure(CLASSNAME, "validate", 5, id, "ANZS-5478 metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'"));
                 return false;
             }
-            metadataType = "ANZS5478";
 
             // we've seen the rdf:RDF definition, and the RDF parsing succeeded..
             if (rdf && parseRDF(MetadataPackage.ANZS5478)) {
@@ -221,7 +231,6 @@ class RepnMetadataPackage extends Repn {
                 addError(new VEOFailure(CLASSNAME, "validate", 6, id, "AGLS metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'"));
                 return false;
             }
-            metadataType = "AGLS";
 
             // we've seen the rdf:RDF definition, and the RDF parsing succeeded..
             if (rdf && parseRDF(MetadataPackage.AGLS)) {
@@ -323,12 +332,13 @@ class RepnMetadataPackage extends Repn {
                 // check the namespace declarations
                 switch (mp) {
                     case AGLS:
-                        dcNameSpace = setNameSpace(e, DC_TERMS, DC_TERMS_NS);
-                        aglsNameSpace = setNameSpace(e, AGLS_TERMS, AGLS_TERMS_NS);
-                        versNameSpace = setNameSpace(e, VERS_TERMS, VERS_TERMS_NS);
+                        dcNameSpace = setNameSpace(e, DC_TERMS, DC_TERMS_NS, false);
+                        aglsNameSpace = setNameSpace(e, AGLS_TERMS, AGLS_TERMS_NS, false);
+                        versNameSpace = setNameSpace(e, VERS_TERMS, VERS_TERMS_NS, false);
                         break;
                     case ANZS5478:
-                        anzs5478NameSpace = setNameSpace(e, ANZS5478_TERMS, ANZS5478_TERMS_NS);
+                        anzs5478NameSpace = setNameSpace(e, ANZS5478_TERMS, ANZS5478_TERMS_NS, false);
+                        versNameSpace = setNameSpace(e, VERS_TERMS, VERS_TERMS_NS, true);
                         break;
                     default:
                         break;
@@ -386,15 +396,16 @@ class RepnMetadataPackage extends Repn {
      *
      * @param e the RDF element
      * @param namespace the namespace we are looking for
-     * @param properValue the proper value of the namespace
-     * @return the value of the namespace attribute actually used in the VEO
+     * @param properValues the proper values of the namespace
+     * @param optional this namespace might not appear
+     * @return the values of the namespace attribute actually used in the VEO
      */
-    private String setNameSpace(Element e, String namespace, String[] properValue) {
+    private Namespace setNameSpace(Element e, String namespace, String[] properValues, boolean optional) {
         Attr a;
         String v;
         int i;
 
-        if ((a = e.getAttributeNode("xmlns:" + namespace)) == null) {
+        if ((a = e.getAttributeNode("xmlns:" + namespace)) == null && !optional) {
             addWarning(new VEOFailure(CLASSNAME, "parseRDF", 1, id, "Namespace declaration for xmlns:" + namespace + " missing from rdf:RDF element"));
             return null;
         }
@@ -402,15 +413,15 @@ class RepnMetadataPackage extends Repn {
         rdfModel.setNsPrefix(namespace, v);
 
         // check that the namespace definition is the correct one
-        for (i = 0; i < properValue.length; i++) {
-            if (v.equals(properValue[i])) {
+        for (i = 0; i < properValues.length; i++) {
+            if (v.equals(properValues[i])) {
                 break;
             }
         }
-        if (i == properValue.length) {
-            addError(new VEOFailure(CLASSNAME, "parseRDF", 2, id, "Namespace declaration for xmlns:" + namespace + " is '" + v + "' instead of '" + properValue[0] + "'"));
+        if (i == properValues.length) {
+            addError(new VEOFailure(CLASSNAME, "parseRDF", 2, id, "Namespace declaration for xmlns:" + namespace + " is '" + v + "' instead of '" + properValues[0] + "'"));
         }
-        return v;
+        return new Namespace(namespace, v);
     }
 
     /**
@@ -441,22 +452,21 @@ class RepnMetadataPackage extends Repn {
      */
     private void checkANZSProperties(boolean noRec) {
         ResIterator ri;
-        Resource r1, r2;
-        boolean foundRecord;
+        Resource r1;
+        int entitiesFound;
         String lid;
 
         System.out.println(rdfModel2String());
-
         // get all resources
         ri = rdfModel.listSubjects();
         if (!ri.hasNext()) {
-            addError(new VEOFailure(CLASSNAME, "checkANZSProperties", 1, id, "metadata contained no rdf:Description elements, or only empty rdf:Description elements"));
+            addError(new VEOFailure(CLASSNAME, "checkANZSProperties", 1, id, "ANZS5478 metadata package contained no rdf:Description, or only an empty rdf:Description"));
             return;
         }
 
         // step through the resources that have subjects. We are only interested
         // in the named resources (that have an rdf:about attribute)
-        foundRecord = false;
+        entitiesFound = 0;
         while (ri.hasNext()) {
             r1 = ri.nextResource();
             resourceURI = r1.getURI();
@@ -465,117 +475,206 @@ class RepnMetadataPackage extends Repn {
             }
             lid = resourceURI;
 
-            // a named resource containing a record...
-            if ((r2 = testNonLeafProperty(r1, anzs5478NameSpace, "Record")) != null) {
-                lid = lid+"/anzs5478:Record";
-                if (foundRecord) {
-                    addWarning(new VEOFailure(CLASSNAME, "checkANZSProperties", 2, id, "found more than one named ANZS5478 record in metadata package (" + resourceURI + ")"));
-                }
-                foundRecord = true;
-                checkEntityType(lid, r2, "Record");
-                checkCategory(lid, r2, "Record");
-                checkIdentifier(lid, r2, "Record");
-                checkName(lid, r2, "Record");
-                checkDateRange(lid, r2, "Record");
-                checkDisposal(lid, r2, "Record");
-                // format is not checked as it has no use in VERS V3 VEOs
-                checkExtent(lid, r2, "Record");
-                checkRelationship(lid, r2, "Record");
-                continue;
+            // what entity is it?
+            if (checkRecord(lid, r1)) {
+                entitiesFound += 16;
             }
-
-            // a named resource containing an agent. Note this will only
-            // occur in a multi-entity representation.
-            if ((r2 = testNonLeafProperty(r1, anzs5478NameSpace, "Agent")) != null) {
-                lid = lid+"/anzs5478:Agent";
-                checkAgentEntity(lid, r2);
-                continue;
+            if (checkAgent(lid, r1)) {
+                entitiesFound += 8;
             }
-
-            // a named resource containing an business. Note this will only
-            // occur in a multi-entity representation.
-            if ((r2 = testNonLeafProperty(r1, anzs5478NameSpace, "Business")) != null) {
-                lid = lid+"/anzs5478:Business";
-                checkBusinessEntity(lid, r2);
-                continue;
+            if (checkBusiness(lid, r1)) {
+                entitiesFound += 4;
             }
-
-            // a named resource containing a mandate. Note this will only
-            // occur in a multi-entity representation.
-            if ((r2 = testNonLeafProperty(r1, anzs5478NameSpace, "Mandate")) != null) {
-                lid = lid+"/anzs5478:Mandate";
-                checkMandateEntity(lid, r2);
-                continue;
+            if (checkMandate(lid, r1)) {
+                entitiesFound += 2;
             }
-
-            // a named resource containing a relationship. Note this will only
-            // occur in a multi-entity representation.
-            if ((r2 = testNonLeafProperty(r1, anzs5478NameSpace, "Relationship")) != null) {
-                lid = lid+"/anzs5478:Relationship";
-                checkRelationshipEntity(lid, r2, true);
-                continue;
+            if (checkRelationship(lid, r1, true)) {
+                entitiesFound += 1;
             }
 
             // found a named object that is not one of the ANZS5478 entities...
-            addWarning(new VEOFailure(CLASSNAME, "checkANZSProperties", 3, id, "ANZS5478 metadata package has a named resource that is not an ANZS5478 entity (" + lid + ")"));
+            if (entitiesFound == 0) {
+                addWarning(new VEOFailure(CLASSNAME, "checkANZSProperties", 3, id, lid + ": has no named resource that is an anzs5478:Record, anzs5478:Agent, anzs5478:Business, anzs5478:Mandate, or anzs5478:Relationship entity"));
+            }
+        }
+        // found a named object that is not one of the ANZS5478 entities...
+        if (entitiesFound < 16) {
+            addError(new VEOFailure(CLASSNAME, "checkANZSProperties", 4, id, "Metadata package does not contain an anzs5478:Record"));
+        }
 
-        }
-        if (!foundRecord) {
-            addError(new VEOFailure(CLASSNAME, "checkANZSProperties", 4, id, "ANZS5478 metadata package does not have an anzs5478:Record element with an rdf:about attribute within agls5478:Description element"));
-        }
         ri.close();
     }
 
     /**
-     * Check an Agent...
+     * Check if an anzs5478:Record element exists exists in a resource
      *
-     * @param r
+     * @param lid the local identifier of the resource (used for error mesgs)
+     * @param r1 the resource
      */
-    private void checkAgentEntity(String lid, Resource r) {
-        checkEntityType(lid, r, "Agent");
-        checkCategory(lid, r, "Agent");
-        checkIdentifier(lid, r, "Agent");
-        checkName(lid, r, "Agent");
-        checkDateRange(lid, r, "Agent");
-    }
+    private boolean checkRecord(String lid, Resource r1) {
+        StmtIterator si;
+        Resource r2;
+        int count;
+        String nlid;
 
-    /**
-     * Check a Business entity
-     *
-     * @param r
-     */
-    private void checkBusinessEntity(String lid, Resource r) {
-        checkEntityType(lid, r, "Business");
-        checkCategory(lid, r, "Business");
-        checkIdentifier(lid, r, "Business");
-        checkName(lid, r, "Business");
-        checkDateRange(lid, r, "Business");
-    }
-
-    /**
-     * Check a Mandate entity
-     *
-     * @param r
-     */
-    private void checkMandateEntity(String lid, Resource r) {
-        checkEntityType(lid, r, "Mandate");
-        checkCategory(lid, r, "Mandate");
-        checkIdentifier(lid, r, "Mandate");
-        checkName(lid, r, "Mandate");
-        checkDateRange(lid, r, "Mandate");
-    }
-
-    private void checkRelationshipEntity(String lid, Resource r, boolean multientity) {
-        checkEntityType(lid, r, "Relationship");
-        checkCategory(lid, r, "Relationship");
-        checkIdentifier(lid, r, "Relationship");
-        checkName(lid, r, "Relationship");
-        checkDateRange(lid, r, "Relationship");
-        if (multientity) {
-            checkRelatedEntityMultiEntity(lid, r, "Relationship");
-        } else {
-            checkRelatedEntityOneEntity(lid, r, "Relationship");
+        nlid = lid + "/anzs5478:Record";
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Record"));
+        count = 0;
+        while (si.hasNext()) {
+            if ((r2 = getResource(si)) == null) {
+                addError("checkRecord", 1, nlid + " is empty or blank");
+                continue;
+            }
+            count++;
+            checkEntityType(nlid, r2, "Record");
+            checkCategory(nlid, r2);
+            checkIdentifier(nlid, r2);
+            checkName(nlid, r2);
+            checkDateRange(nlid, r2);
+            checkDisposal(nlid, r2);
+            // format is not checked as it has no use in VERS V3 VEOs
+            checkExtent(nlid, r2);
+            checkRelationship(nlid, r2, false);
+            checkContextPath(nlid, r2);
         }
+        if (count > 1) {
+            addError("checkRecord", 3, lid + "/rdf:Description contains multiple anzs5478:Record elements");
+        }
+        return count > 0;
+    }
+
+    /**
+     * Check if anzs5478:Agent element exists exists in a resource
+     *
+     * @param lid the local identifier of the resource (used for error mesgs)
+     * @param r1 the resource
+     */
+    private boolean checkAgent(String lid, Resource r1) {
+        StmtIterator si;
+        Resource r2;
+        int count;
+        String nlid;
+
+        nlid = lid + "/anzs5478:Agent";
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Agent"));
+        count = 0;
+        while (si.hasNext()) {
+            if ((r2 = getResource(si)) == null) {
+                addError("checkAgent", 1, nlid + " is empty or blank");
+                continue;
+            }
+            count++;
+            checkEntityType(nlid, r2, "Agent");
+            checkCategory(nlid, r2);
+            checkIdentifier(nlid, r2);
+            checkName(nlid, r2);
+            checkDateRange(nlid, r2);
+        }
+        if (count > 1) {
+            addError("checkAgent", 2, lid + " contains multiple anzs5478:Agent elements");
+        }
+        return count > 0;
+    }
+
+    /**
+     * Check if anzs5478:Business element exists exists in a resource
+     *
+     * @param lid the local identifier of the resource (used for error mesgs)
+     * @param r1 the resource
+     */
+    private boolean checkBusiness(String lid, Resource r1) {
+        StmtIterator si;
+        Resource r2;
+        int count;
+        String nlid;
+
+        nlid = lid + "/anzs5478:Business";
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Business"));
+        count = 0;
+        while (si.hasNext()) {
+            if ((r2 = getResource(si)) == null) {
+                addError("checkBusiness", 1, nlid + " is empty or blank");
+                continue;
+            }
+            count++;
+            checkEntityType(nlid, r2, "Business");
+            checkCategory(nlid, r2);
+            checkIdentifier(nlid, r2);
+            checkName(nlid, r2);
+            checkDateRange(nlid, r2);
+        }
+        if (count > 1) {
+            addError("checkBusiness", 2, lid + " contains multiple anzs5478:Business elements");
+        }
+        return count > 0;
+    }
+
+    /**
+     * Check if anzs5478:Mandate element exists exists in a resource
+     *
+     * @param lid the local identifier of the resource (used for error mesgs)
+     * @param r1 the resource
+     */
+    private boolean checkMandate(String lid, Resource r1) {
+        StmtIterator si;
+        Resource r2;
+        int count;
+        String nlid;
+
+        nlid = lid + "/anzs5478:Mandate";
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Mandate"));
+        count = 0;
+        while (si.hasNext()) {
+            if ((r2 = getResource(si)) == null) {
+                addError("checkMandate", 1, nlid + " is empty or blank");
+                continue;
+            }
+            count++;
+            checkEntityType(nlid, r2, "Mandate");
+            checkCategory(nlid, r2);
+            checkIdentifier(nlid, r2);
+            checkName(nlid, r2);
+            checkDateRange(nlid, r2);
+        }
+        if (count > 1) {
+            addError("checkMandate", 2, lid + " contains multiple anzs5478:Mandate elements");
+        }
+        return count > 0;
+    }
+
+    /**
+     * Check if anzs5478:Relationship element exists in a resource
+     *
+     * @param lid the local identifier of the resource (used for error mesgs)
+     * @param r1 the resource
+     */
+    private boolean checkRelationship(String lid, Resource r1, boolean multientity) {
+        StmtIterator si;
+        Resource r2;
+        int count;
+        String nlid;
+
+        nlid = lid + "/anzs5478:Relationship";
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Relationship"));
+        count = 0;
+        while (si.hasNext()) {
+            if ((r2 = getResource(si)) == null) {
+                addError("checkRelationship", 1, nlid + " is empty or blank");
+                continue;
+            }
+            count++;
+            checkEntityType(nlid, r2, "Relationship");
+            checkCategory(nlid, r2);
+            checkIdentifier(nlid, r2);
+            checkName(nlid, r2);
+            checkDateRange(nlid, r2);
+            if (multientity) {
+                checkRelatedEntityMultiEntity(nlid, r2);
+            } else {
+                checkRelatedEntityOneEntity(nlid, r2);
+            }
+        }
+        return count > 0;
     }
 
     /**
@@ -586,7 +685,12 @@ class RepnMetadataPackage extends Repn {
      * @param entityType entityType being looked for
      */
     private void checkEntityType(String lid, Resource r, String entityType) {
-        checkExactlyOneValue(r, entityType, null, "EntityType", entityType);
+        if (checkLeafProperty(r, anzs5478NameSpace, "EntityType", 1, 1, "checkEntityType", lid) == null) {
+            return;
+        }
+        if (!checkExactValue(r, anzs5478NameSpace, "EntityType", entityType)) {
+            addError("checkEntityType", 1, lid + "/anzs5478:EntityType must have value '" + entityType + "'");
+        }
     }
 
     /**
@@ -595,8 +699,8 @@ class RepnMetadataPackage extends Repn {
      * @param r resource
      * @param entityType entityType being looked for
      */
-    private void checkCategory(String lid, Resource r, String entityType) {
-        checkExactlyOne(r, entityType, null, "Category");
+    private void checkCategory(String lid, Resource r) {
+        checkLeafProperty(r, anzs5478NameSpace, "Category", 1, 1, "checkCategory", lid);
     }
 
     /**
@@ -606,23 +710,25 @@ class RepnMetadataPackage extends Repn {
      * @param r1 resource
      * @param entityType entityType being looked for
      */
-    private void checkIdentifier(String lid, Resource r1, String entityType) {
+    private void checkIdentifier(String lid, Resource r1) {
         StmtIterator si;
         Resource r2;
         boolean found;
+        String nlid;
 
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace, "Identifier"));
+        nlid = lid + "/anzs5478:Identifier";
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Identifier"));
         found = false;
         while (si.hasNext()) {
             if ((r2 = getResource(si)) == null) {
-                addError("checkIdentifier", 2, "anzs5478:Identifier (in " + "anzs5478:" + entityType + ") was empty or blank");
+                addError("checkIdentifier", 2, nlid + " was empty or blank");
                 continue;
             }
             found = true;
-            checkExactlyOne(r2, entityType, "Identifier", "IdentifierString");
+            checkLeafProperty(r2, anzs5478NameSpace, "IdentifierString", 1, 1, "checkIdentifier", nlid);
         }
         if (!found) {
-            addError("checkIdentifier", 3, "anzs5478:" + entityType + " element must contain an anzs5478:Identifier element");
+            addError("checkIdentifier", 3, lid + " must contain an anzs5478:Identifier");
         }
     }
 
@@ -633,23 +739,25 @@ class RepnMetadataPackage extends Repn {
      * @param r1 resource
      * @param entityType entityType being looked for
      */
-    private void checkName(String lid, Resource r1, String entityType) {
+    private void checkName(String lid, Resource r1) {
         StmtIterator si;
         Resource r2;
         boolean found;
+        String nlid;
 
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace, "Name"));
+        nlid = lid + "/anzs5478:Name";
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Name"));
         found = false;
         while (si.hasNext()) {
             if ((r2 = getResource(si)) == null) {
-                addError("checkName", 2, "anzs5478:Name (in " + "anzs5478:" + entityType + ") was empty or blank");
+                addError("checkName", 2, nlid + " is empty or blank");
                 continue;
             }
             found = true;
-            checkExactlyOne(r2, entityType, "Name", "NameWords");
+            checkLeafProperty(r2, anzs5478NameSpace, "NameWords", 1, 1, "checkName", nlid);
         }
         if (!found) {
-            addError("checkName", 3, "anzs5478:" + entityType + " element must contain an anzs5478:Name element");
+            addError("checkName", 3, lid + " must contain an anzs5478:Name");
         }
     }
 
@@ -660,26 +768,28 @@ class RepnMetadataPackage extends Repn {
      * @param r1 resource
      * @param entityType entityType being looked for
      */
-    private void checkDateRange(String lid, Resource r1, String entityType) {
+    private void checkDateRange(String lid, Resource r1) {
         StmtIterator si;
         Resource r2;
         boolean found;
+        String nlid;
 
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace, "DateRange"));
+        nlid = lid + "/anzs5478:DateRange";
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "DateRange"));
         found = false;
         while (si.hasNext()) {
             if (found) {
-                addError("checkDateRange", 1, "multiple anzs5478:DateRange elements found in anzs5478:" + entityType + " element");
+                addError("checkDateRange", 1, lid + " contains multiple anzs5478:DateRanges");
             }
             if ((r2 = getResource(si)) == null) {
-                addError("checkDateRange", 2, "anzs5478:DateRange (in " + "anzs5478:" + entityType + ") was empty or blank");
+                addError("checkDateRange", 2, nlid + " is empty or blank");
                 continue;
             }
             found = true;
-            checkExactlyOne(r2, entityType, "DateRange", "StartDate");
+            checkLeafProperty(r2, anzs5478NameSpace, "StartDate", 1, 1, "checkDateRange", nlid);
         }
         if (!found) {
-            addError("checkDateRange", 3, "anzs5478:" + entityType + " element must contain an anzs5478:DateRange element");
+            addError("checkDateRange", 3, lid + " must contain an anzs5478:DateRange");
         }
     }
 
@@ -691,32 +801,39 @@ class RepnMetadataPackage extends Repn {
      * @param r1 resource
      * @param entityType entityType being looked for
      */
-    private void checkDisposal(String lid, Resource r1, String entityType) {
+    private void checkDisposal(String lid, Resource r1) {
         StmtIterator si;
         Resource r2;
         boolean found;
-        String s;
+        String s, nlid;
 
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace, "Disposal"));
+        nlid = lid + "/anzs5478:Disposal";
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Disposal"));
         found = false;
         while (si.hasNext()) {
             if (found) {
-                addError("checkDisposal", 1, "multiple anzs5478:Disposal elements found in anzs5478:" + entityType + " element");
+                addError("checkDisposal", 1, lid + " contains multiple anzs5478:Disposal");
             }
             if ((r2 = getResource(si)) == null) {
-                addError("checkDisposal", 2, "anzs5478:Disposal (in " + "anzs5478:" + entityType + ") was empty or blank");
+                addError("checkDisposal", 2, nlid + " is empty or blank");
                 continue;
             }
             found = true;
-            s = checkExactlyOne(r2, entityType, "Disposal", "RecordsAuthority");
+            // for some reason, V3S5 lists 'RetentionAndDisposalAuthority'
+            // instead of 'RecordsAuthority'. Accept both.
+            if ((s = checkLeafProperty(r2, anzs5478NameSpace, "RecordsAuthority", 0, 1, "checkDisposal", nlid)) == null) {
+                if ((s = checkLeafProperty(r2, anzs5478NameSpace, "RetentionAndDisposalAuthority", 0, 1, "checkDisposal", nlid)) == null) {
+                    addError("checkDisposal", 3, lid + " must contain an anzs5478:RecordsAuthority (or anzs5478:RetentionAndDisposalAuthority)");
+                }
+            }
             if (s != null && !s.equals("No Disposal Coverage")) {
-                checkExactlyOne(r2, entityType, "Disposal", "DisposalClassID");
-                checkExactlyOne(r2, entityType, "Disposal", "DisposalAction");
+                checkLeafProperty(r2, anzs5478NameSpace, "DisposalClassID", 1, 1, "checkDisposal", nlid);
+                checkLeafProperty(r2, anzs5478NameSpace, "DisposalAction", 1, 1, "checkDisposal", nlid);
                 // technically, should check DisposalTriggerDate, and DisposalActionDue, but these are messy and have little value
             }
         }
         if (!found) {
-            addError("checkDisposal", 3, "anzs5478:" + entityType + " element must contain an anzs5478:DateRange element");
+            addError("checkDisposal", 4, lid + " must contain one anzs5478:Disposal");
         }
     }
 
@@ -728,47 +845,28 @@ class RepnMetadataPackage extends Repn {
      * @param r1 resource
      * @param entityType entityType being looked for
      */
-    private void checkExtent(String lid, Resource r1, String entityType) {
+    private void checkExtent(String lid, Resource r1) {
         StmtIterator si;
         Resource r2;
         boolean found;
+        String nlid;
 
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace, "Extent"));
+        nlid = lid + "/anzs5478:Extent";
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Extent"));
         found = false;
         while (si.hasNext()) {
             if ((r2 = getResource(si)) == null) {
-                addError("checkExtent", 2, "anzs5478:Extent (in " + "anzs5478:" + entityType + ") was empty or blank");
+                addError("checkExtent", 2, nlid + " is empty or blank");
                 continue;
             }
             found = true;
-            checkZero(r2, entityType, "Extent", "PhysicalDimensions");
-            checkExactlyOne(r2, entityType, "Extent", "LogicalSize");
-            checkZero(r2, entityType, "Extent", "Quantity");
-            checkExactlyOne(r2, entityType, "Extent", "Units");
+            checkLeafProperty(r2, anzs5478NameSpace, "PhysicalDimensions", 0, 0, "checkExtent", nlid);
+            checkLeafProperty(r2, anzs5478NameSpace, "LogicalSize", 1, 1, "checkExtent", nlid);
+            checkLeafProperty(r2, anzs5478NameSpace, "Quantity", 0, 0, "checkExtent", nlid);
+            checkLeafProperty(r2, anzs5478NameSpace, "Units", 1, 1, "checkExtent", nlid);
         }
         if (!found) {
-            addError("checkExtent", 3, "anzs5478:" + entityType + " element must contain an anzs5478:Name element");
-        }
-    }
-
-    /**
-     * Check any one anzs5478:Relationship elements present (within a single
-     * entity model)
-     *
-     * @param r1 resource
-     * @param entityType entityType being looked for
-     */
-    private void checkRelationship(String lid, Resource r1, String entityType) {
-        StmtIterator si;
-        Resource r2;
-
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace, "Relationship"));
-        while (si.hasNext()) {
-            if ((r2 = getResource(si)) == null) {
-                addError("checkRelationship", 2, "anzs5478:Relationship (in " + "anzs5478:" + entityType + ") was empty or blank");
-                continue;
-            }
-            checkRelationshipEntity(lid, r2, false);
+            addError("checkExtent", 3, lid + " must contain at least one anzs5478:Extent");
         }
     }
 
@@ -779,39 +877,51 @@ class RepnMetadataPackage extends Repn {
      * @param r1 resource
      * @param entityType entityType being looked for
      */
-    private void checkRelatedEntityOneEntity(String lid, Resource r1, String entityType) {
+    private void checkRelatedEntityOneEntity(String lid, Resource r1) {
         StmtIterator si;
         Resource r2;
         boolean found;
+        int count;
+        String nlid;
 
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace, "RelatedEntity"));
+        nlid = lid + "/anzs5478:RelatedEntity";
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "RelatedEntity"));
         found = false;
         while (si.hasNext()) {
             if (found) {
-                addError("checkRelatedEntity", 1, "multiple anzs5478:RelatedEntity elements found in anzs5478:" + entityType + " element");
+                addError("checkRelatedEntity", 1, lid + ": contains multiple anzs5478:RelatedEntity elements");
             }
             if ((r2 = getResource(si)) == null) {
-                addError("checkRelatedEntity", 2, "anzs5478:RelatedEntity (in " + "anzs5478:" + entityType + ") was empty or blank");
+                addError("checkRelatedEntity", 2, nlid + " is empty or blank");
                 continue;
             }
             found = true;
-            if (exists(r2, "AssignedEntityID")) {
-                checkExactlyOne(r2, entityType, "RelatedEntity", "AssignedEntityID");
-            } else if (exists(r2, "Agent")) {
-                checkExactlyOne(r2, entityType, "RelatedEntity", "Agent");
-            } else if (exists(r2, "Business")) {
-                checkExactlyOne(r2, entityType, "RelatedEntity", "Business");
-                checkBusinessEntity(lid, r2);
-            } else if (exists(r2, "Mandate")) {
-                checkExactlyOne(r2, entityType, "RelatedEntity", "Mandate");
-                checkMandateEntity(lid, r2);
-            } else {
-                addError("checkRelatedEntity", 3, "anzs5478:RelatedEntity (in " + "anzs5478:" + entityType + ") did not contain a anzs5478:AssignedEntityID, anzs5478:Agent, anzs5478:Business, or anzs5478:Mandate entity");
+            count = 0;
+            if (checkPropertyExists(r2, anzs5478NameSpace, "AssignedEntityID")) {
+                count++;
+                checkLeafProperty(r2, anzs5478NameSpace, "AssignedEntityID", 1, 1, "checkRelatedEntityOneEntity", nlid);
             }
-            checkExactlyOneValue(r2, entityType, "RelatedEntity", "RelationshipRole", "2");
+            if (checkAgent(nlid, r2)) {
+                count++;
+            }
+            if (checkBusiness(nlid, r2)) {
+                count++;
+            }
+            if (checkMandate(nlid, r2)) {
+                count++;
+            }
+            if (count == 0) {
+                addError("checkRelatedEntity", 3, nlid + " must contain an anzs5478:AssignedEntityID, anzs5478:Agent, anzs5478:Business, or anzs5478:Mandate (or the content of the element was empty)");
+            }
+            if (count > 1) {
+                addError("checkRelatedEntity", 4, nlid + " contains multiple anzs5478:AssignedEntityID, anzs5478:Agent, anzs5478:Business, or anzs5478:Mandate");
+            }
+            if (!checkExactValue(r2, anzs5478NameSpace, "RelationshipRole", "2")) {
+                addError("checkRelatedEntity", 5, nlid + "/anzs5478:RelationshipRole must have value '2'");
+            }
         }
         if (!found) {
-            addError("checkRelatedEntity", 4, "anzs5478:" + entityType + " element must contain an anzs5478:RelatedEntity element");
+            addError("checkRelatedEntity", 6, "ANZS5478 metadata package " + lid + " must contain one anzs5478:RelatedEntity");
         }
     }
 
@@ -822,218 +932,70 @@ class RepnMetadataPackage extends Repn {
      * @param r1 resource
      * @param entityType entityType being looked for
      */
-    private void checkRelatedEntityMultiEntity(String lid, Resource r1, String entityType) {
+    private void checkRelatedEntityMultiEntity(String lid, Resource r1) {
         StmtIterator si;
         Resource r2;
         boolean fromFound, toFound;
         String s;
+        String nlid;
 
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace, "RelatedEntity"));
+        nlid = lid + "/anzs5478:RelatedEntity";
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "RelatedEntity"));
         fromFound = false;
         toFound = false;
         while (si.hasNext()) {
             if ((r2 = getResource(si)) == null) {
-                addError("checkRelatedEntityMultiEntity", 1, "anzs5478:RelatedEntity (in " + "anzs5478:" + entityType + ") was empty or blank");
+                addError("checkRelatedEntityMultiEntity", 1, lid + " is empty or blank");
                 continue;
             }
-            s = checkExactlyOne(r2, entityType, "RelatedEntity", "RelationshipRole");
+            s = checkLeafProperty(r2, anzs5478NameSpace, "RelationshipRole", 1, 1, "checkRelatedEntityMultiEntity", nlid);
             switch (s) {
                 case "1":
                     if (toFound) {
-                        addError("checkRelatedEntityMultiEntity", 2, "anzs5478:RelatedEntity (in " + "anzs5478:" + entityType + ") had multiple RelationshipRole elements with value '1'");
+                        addError("checkRelatedEntityMultiEntity", 2, nlid + " has multiple RelationshipRole with the value '1'");
                     }
                     toFound = true;
                     break;
                 case "2":
                     if (fromFound) {
-                        addError("checkRelatedEntityMultiEntity", 3, "anzs5478:RelatedEntity (in " + "anzs5478:" + entityType + ") had multiple RelationshipRole elements with value '2'");
+                        addError("checkRelatedEntityMultiEntity", 3, nlid + " has multiple RelationshipRole with the value '2'");
                     }
                     fromFound = true;
                     break;
                 default:
-                    addError("checkRelatedEntityMultiEntity", 4, "anzs5478:RelatedEntity (in " + "anzs5478:" + entityType + ") has a RelationshipRole element with value '" + s + "'");
+                    addError("checkRelatedEntityMultiEntity", 4, nlid + "/anzs5478:RelationshipRole has an invalid value '" + s + "'");
                     break;
             }
         }
-        if (!toFound || !fromFound) {
-            addError("checkRelatedEntityMultiEntity", 5, "anzs5478:" + entityType + " element must contain a from and a to anzs5478:RelatedEntitye element");
+        if (!toFound) {
+            addError("checkRelatedEntityMultiEntity", 5, lid + " does not contain an anzs5478:RelatedEntity with a anzs5478:RelationshipRole with a value '2'");
+        }
+        if (!fromFound) {
+            addError("checkRelatedEntityMultiEntity", 5, lid + " does not contain an anzs5478:RelatedEntity with a anzs5478:RelationshipRole with a value '1'");
         }
     }
 
     /**
-     * Check that exactly one anzs5478:element of the given type elements exists
-     * in the parent
+     * If a vers:contextPath exists, check that it has...
      *
      * @param r1 resource
-     * @param entityType the parent entity type
-     * @param parent the parent entity found (null if immediately below root)
-     * @param element the element being looked for
-     * @param value the value to be contained (test ignored if null)
-     * @return the value actually found
+     * @param entityType entityType being looked for
      */
-    private String checkExactlyOne(Resource r1, String entityType, String parent, String element) {
+    private void checkContextPath(String lid, Resource r1) {
         StmtIterator si;
-        String s;
-        String location;
-        boolean found;
+        Resource r2;
+        String nlid;
 
-        if (parent == null) {
-            location = "anzs5478:" + entityType;
-        } else {
-            location = "anzs5478:" + entityType + "/anzs5478:" + parent;
-        }
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace, element));
-        found = false;
-        s = null;
+        nlid = lid + "/versterms:contextPath";
+        si = r1.listProperties(ResourceFactory.createProperty(versNameSpace.value, "contextPath"));
         while (si.hasNext()) {
-            if (found) {
-                addError("checkExactlyOne", 1, "multiple anzs5478:" + element + " elements found in " + location + " element");
+            if ((r2 = getResource(si)) == null) {
+                addError("checkContextPath", 2, nlid + " is empty or blank");
+                continue;
             }
-            found = true;
-            if ((s = getValue(si)) == null) {
-                addError("checkExactlyOne", 2, "anzs5478:" + element + " (in " + location + ") was empty or blank");
-            }
+            checkLeafProperty(r2, versNameSpace, "ContextPathDomain", 1, 1, "checkContextPath", nlid);
+            checkLeafProperty(r2, versNameSpace, "ContextPathValue", 1, 1, "checkContextPath", nlid);
         }
-        if (!found) {
-            addError("checkExactlyOne", 4, location + " element must contain an anzs5478:" + element + " element");
-        }
-        return s;
-    }
-
-    /**
-     * Check that exactly one anzs5478:element of the given type elements and
-     * value exists in the parent element
-     *
-     * @param r1 resource
-     * @param entityType the parent entity type
-     * @param parent the parent entity found (null if immediately below root)
-     * @param element the element being looked for
-     * @param value the value to be contained (test ignored if null)
-     * @return the value actually found
-     */
-    private String checkExactlyOneValue(Resource r1, String entityType, String parent, String element, String value) {
-        StmtIterator si;
-        String s;
-        String location;
-        boolean found;
-
-        if (parent == null) {
-            location = "anzs5478:" + entityType;
-        } else {
-            location = "anzs5478:" + entityType + "/anzs5478:" + parent;
-        }
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace, element));
-        found = false;
-        s = null;
-        while (si.hasNext()) {
-            s = getValue(si);
-            if (s != null && s.equals(value)) {
-                if (found) {
-                    addError("checkExactlyOneValue", 1, "multiple anzs5478:" + element + " elements with value '" + value + "' found in " + location + " element");
-                    return s;
-                }
-                found = true;
-            }
-        }
-        if (!found) {
-            addError("checkExactlyOneValue", 4, location + " element must contain an anzs5478:" + element + " element with value '" + value + "'");
-        }
-        return s;
-    }
-
-    /**
-     * Check if a anzs5478:element of the given type elements exists in the
-     * parent
-     *
-     * @param r1 resource
-     * @param entityType the parent entity type
-     * @param parent the parent entity found (null if immediately below root)
-     * @param element the element being looked for
-     * @param value the value to be contained (test ignored if null)
-     * @return if it was found
-     */
-    private boolean exists(Resource r1, String element) {
-        StmtIterator si;
-
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace, element));
-        return si.hasNext();
-    }
-
-    /**
-     * Check that an anzs5478:element of the given type elements does not exist
-     * in the parent
-     *
-     * @param r1 resource
-     * @param entityType the parent entity type
-     * @param parent the parent entity found (null if immediately below root)
-     * @param element the element being looked for
-     * @return the value actually found
-     */
-    private void checkZero(Resource r1, String entityType, String parent, String element) {
-        StmtIterator si;
-        String location;
-
-        if (parent == null) {
-            location = "anzs5478:" + entityType;
-        } else {
-            location = "anzs5478:" + entityType + "/anzs5478:" + parent;
-        }
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace, element));
-        if (si.hasNext()) {
-            addError("checkZero", 1, "anzs5478:" + element + " elements must not exist in " + location + " element");
-        }
-    }
-
-    /**
-     * Get the current value of the statement iterator
-     *
-     * @param si
-     * @return string value
-     */
-    private String getValue(StmtIterator si) {
-        Statement stmt;
-        String s;
-
-        try {
-            stmt = si.nextStatement();
-            s = stmt.getString();
-            if (s == null || s.trim().equals("")) {
-                return null;
-            }
-        } catch (NoSuchElementException nsee) {
-            return null;
-        } catch (Exception e) { // grrr. getString() just says 'exception' if not literal
-            return null;
-        }
-        return s;
-    }
-
-    /**
-     * Get the current resource of the statement iterator
-     *
-     * @param si
-     * @return string value
-     */
-    private Resource getResource(StmtIterator si) {
-        Statement stmt;
-        Resource r;
-
-        try {
-            stmt = si.nextStatement();
-            r = stmt.getResource();
-            if (r == null) {
-                return r;
-            }
-        } catch (NoSuchElementException nsee) {
-            return null;
-        } catch (Exception e) { // grrr. getString() just says 'exception' if not literal
-            return null;
-        }
-        return r;
-    }
-
-    private void addError(String method, int errorNo, String message) {
-        addError(new VEOFailure(CLASSNAME, method, errorNo, id, message));
     }
 
     /**
@@ -1058,7 +1020,7 @@ class RepnMetadataPackage extends Repn {
         // get all resources
         ri = rdfModel.listSubjects();
         if (!ri.hasNext()) {
-            addError(new VEOFailure(CLASSNAME, "checkAGLSProperties", 1, id, "metadata contained no rdf:Description elements, or only empty rdf:Description elements"));
+            addError(new VEOFailure(CLASSNAME, "checkAGLSProperties", 1, id, "metadata contained no rdf:Description, or only empty rdf:Description"));
             return;
         }
 
@@ -1074,7 +1036,7 @@ class RepnMetadataPackage extends Repn {
 
             // were there two named resources in the metadata package?
             if (foundRecord) {
-                addError(new VEOFailure(CLASSNAME, "checkAGLSProperties", 16, id, "AGLS metadata package has two (or more) rdf:Description elements containing different rdf:about attributes"));
+                addError(new VEOFailure(CLASSNAME, "checkAGLSProperties", 16, id, "AGLS metadata package has two (or more) rdf:Description containing different rdf:about attributes"));
             }
             foundRecord = true;
 
@@ -1087,7 +1049,7 @@ class RepnMetadataPackage extends Repn {
             }
              */
             // DC_TERMS:creator
-            testLeafProperty(r, "rdf:Description", "dcterms", dcNameSpace, "creator", "checkAGLSProperties", 2, null, WhatToDo.errorIfMissing);
+            testLeafProperty(r, "rdf:Description", dcNameSpace, "creator", "checkAGLSProperties", 2, WhatToDo.errorIfMissing);
 
             // DC_TERMS:date m format YYYY-MM-DD (available, created, dateCopyrighted, dateLicensed, issued, modified, valid) see AGLS Usage Guide for valid schemas and formats.
             if (!containsLeafProperty(r, dcNameSpace, "date", true)
@@ -1099,7 +1061,7 @@ class RepnMetadataPackage extends Repn {
                     && !containsLeafProperty(r, dcNameSpace, "issued", true)
                     && !containsLeafProperty(r, dcNameSpace, "modified", true)
                     && !containsLeafProperty(r, dcNameSpace, "valid", true)) {
-                addError(new VEOFailure(CLASSNAME, "checkAGLSProperties", 3, id, "AGLS metadata package does not contain the mandatory dcterms:date element or its subelements (dcterms:available, dcterms:created, dcterms:dateCopyrighted, aglsterms:dateLicensed, dcterms:issued, dcterms:modified, or dcterms:valid) or the element was empty"));
+                addError(new VEOFailure(CLASSNAME, "checkAGLSProperties", 3, id, "AGLS metadata package does not contain the mandatory dcterms:date or its subelements (dcterms:available, dcterms:created, dcterms:dateCopyrighted, aglsterms:dateLicensed, dcterms:issued, dcterms:modified, or dcterms:valid) or the element was empty"));
             }
 
             // This was an error in the VERSV3 spec, DateLicensed has the wrong namespace. Warn about it, but not mark it as an error
@@ -1108,17 +1070,17 @@ class RepnMetadataPackage extends Repn {
             }
 
             // DC_TERMS:title m
-            testLeafProperty(r, "rdf:Description", "dcterms", dcNameSpace, "title", "checkAGLSProperties", 5, null, WhatToDo.errorIfMissing);
+            testLeafProperty(r, "rdf:Description", dcNameSpace, "title", "checkAGLSProperties", 5, WhatToDo.errorIfMissing);
 
             // DC_TERMS:availability m for offline resources (can't test conditional)
             // DC_TERMS:identifier m for online resources (can't test conditional)
-            testLeafProperty(r, "rdf:Description", "dcterms", dcNameSpace, "identifier", "checkAGLSProperties", 2, null, WhatToDo.errorIfMissing);
+            testLeafProperty(r, "rdf:Description", dcNameSpace, "identifier", "checkAGLSProperties", 2, WhatToDo.errorIfMissing);
 
             // DC_TERMS:publisher m for information resources  (can't test conditional)
-            testLeafProperty(r, "rdf:Description", "dcterms", dcNameSpace, "publisher", "checkAGLSProperties", 2, null, WhatToDo.errorIfMissing);
+            testLeafProperty(r, "rdf:Description", dcNameSpace, "publisher", "checkAGLSProperties", 2, WhatToDo.errorIfMissing);
 
             // DC_TERMS:description r
-            testLeafProperty(r, "rdf:Description", "dcterms", dcNameSpace, "description", "checkAGLSProperties", 6, null, WhatToDo.warningIfMissing);
+            testLeafProperty(r, "rdf:Description", dcNameSpace, "description", "checkAGLSProperties", 6, WhatToDo.warningIfMissing);
 
             // DC_TERMS:function r
             // DC_TERMS:subject r if function not present
@@ -1165,123 +1127,6 @@ class RepnMetadataPackage extends Repn {
         }
     }
 
-    // check a value as a date, but this is too tedious
-    /*
-     seenDate = true;
-     ResIterator iter;
-     iter = rdfModel.listSubjectsWithProperty(CREATED);
-     while (iter.hasNext()) {
-     s = iter.nextResource().getProperty(CREATED).getString();
-     try {
-     RepnItem.testValueAsDate(s);
-     } catch (IllegalArgumentException iae) {
-     addError(errMesg(classname, method, "invalid DC_TERMS:created metadata", iae));
-     }
-     }
-     }
-     */
-    private String testLeafExactlyOne(Resource r, String nameSpaceURI, String element) {
-        StmtIterator si;
-        Statement stmt;
-        String s;
-
-        si = r.listProperties(ResourceFactory.createProperty(nameSpaceURI, element));
-        if (!si.hasNext()) {
-            return null;
-        }
-        stmt = si.nextStatement();
-        if (stmt == null) {
-            return null;
-        }
-        s = stmt.getString();
-        if (s.trim().equals("")) {
-            return null;
-        }
-        return s.trim();
-
-    }
-
-    private enum WhatToDo {
-        errorIfMissing, // report an error if property is missing or empty
-        warningIfMissing, // report a warning if property is missing or empty
-        justReturnNull      // just return null if property is missing or empty
-    }
-
-    /**
-     * Test for a non leaf property in the metadata, and returning the resources
-     * in the property. This method does not complain if the property is missing
-     * or empty, so should only be used to test for the presence (& value) of
-     * the property. If the property doesn't exist or is empty, a null is
-     * returned.
-     *
-     * @param r the RDF resource that should contain the property
-     * @param nameSpaceURI the URI of the namespace
-     * @param element the property (element) name within the namespace
-     * @param method the method testing the property (used to make a unique id)
-     * @return the resources in the property (null if not present or empty)
-     */
-    private Resource testNonLeafProperty(Resource r, String nameSpaceURI, String element) {
-        Statement stmt;
-        StmtIterator si;
-        Resource r1;
-
-        //si = r.listProperties(ResourceFactory.createProperty(nameSpaceURI, element));
-        // if (!si.hasNext())
-        stmt = r.getProperty(ResourceFactory.createProperty(nameSpaceURI, element));
-        // System.out.println("Stmt: " + ((stmt == null) ? "<null>" : stmt.toString()));
-        if (stmt == null) {
-            return null;
-        }
-        try {
-            r1 = stmt.getResource();
-        } catch (ResourceRequiredException e) {
-            System.out.println("Failed getting resource: " + e.getMessage());
-            return null;
-        }
-        return r1;
-    }
-
-    /**
-     * Test for a leaf property in the metadata, and return its value. A
-     * VEOFailure is created if the property doesn't exist, or is empty. If the
-     * property is mandatory, this VEOFailure is recorded as an error, otherwise
-     * it is recorded as a warning. If the property doesn't exist or is empty, a
-     * null is returned.
-     *
-     * @param r the RDF resource that should contain the property
-     * @param parent the element name of the parent (for error messages)
-     * @param nameSpace the namespace the property exists within
-     * @param element the property (element) name within the namespace
-     * @param method the method testing the property (used to make a unique id)
-     * @param errno the error number assigned by the method (must be less than
-     * 50)
-     * @param entity the type of metadata entity (may be null)
-     * @param wtd what to do if property is missing or empty
-     * @return the resources in the property (null if not present or empty)
-     */
-    private Resource testNonLeafProperty(Resource r, String parent, String nameSpace, String nameSpaceURI, String element, String method, int errno, String entity, WhatToDo wtd) {
-        Statement stmt;
-        Resource r1;
-
-        assert errno < 50;
-        stmt = r.getProperty(ResourceFactory.createProperty(nameSpaceURI, element));
-        if (stmt == null) {
-            createMesg(method, errno, parent, false, nameSpace + ":" + element, wtd);
-            return null;
-        }
-        try {
-            r1 = stmt.getResource();
-        } catch (ResourceRequiredException e) {
-            addError(new VEOFailure(CLASSNAME, method, errno + 100, id, nameSpace + " metadata package for " + entity + " '" + id + "' contains malformed " + nameSpace + ":" + element + " element"));
-            return null;
-        }
-        if (r1 == null) {
-            createMesg(method, errno + 50, parent, true, nameSpace + ":" + element, wtd);
-            return null;
-        }
-        return r1;
-    }
-
     /**
      * Test for a leaf property in the metadata. If test value is true, the
      * value of the property has to be non empty as well
@@ -1292,52 +1137,19 @@ class RepnMetadataPackage extends Repn {
      * @param notEmpty true if the value has to be non-empty
      * @return whether the property exists
      */
-    private boolean containsLeafProperty(Resource r, String nameSpaceURI, String element, boolean notEmpty) {
-        return !(testLeafProperty(r, nameSpaceURI, element, notEmpty) == null);
-    }
-
-    /**
-     * Test for a leaf property in the metadata, and return its value. This
-     * method does not complain if the property is missing or empty, so should
-     * only be used to test for the presence (& value) of the property. If the
-     * property doesn't exist or is empty, a null is returned.
-     *
-     * @param r the RDF resource that should contain the property
-     * @param nameSpace the namespace the property exists within
-     * @param element the property (element) name within the namespace
-     * @return the string value of the property (null if not present or empty)
-     */
-    private String testLeafProperty(Resource r, String nameSpaceURI, String element) {
-        return testLeafProperty(r, nameSpaceURI, element, true);
-    }
-
-    /**
-     * Test for a leaf property in the metadata. If test value is true, the
-     * value of the property has to be non empty as well. The value is trimmed
-     * of leading and trailing whitespace if present.
-     *
-     * @param r the RDF resource that should contain the property
-     * @param nameSpace the namespace the property exists within
-     * @param element the property (element) name within the namespace
-     * @param notEmpty true if the value has to be non-empty
-     * @return the value of the property or null if not present.
-     */
-    private String testLeafProperty(Resource r, String nameSpaceURI, String element, boolean notEmpty) {
+    private boolean containsLeafProperty(Resource r, Namespace nameSpace, String element, boolean notEmpty) {
         Statement stmt;
-        String s;
 
-        stmt = r.getProperty(ResourceFactory.createProperty(nameSpaceURI, element));
+        stmt = r.getProperty(ResourceFactory.createProperty(nameSpace.value, element));
         if (stmt == null) {
-            return null;
+            return false;
         }
-        s = null;
         if (notEmpty) {
-            s = stmt.getString();
-            if (s.trim().equals("")) {
-                s = null;
+            if (stmt.getString().trim().equals("")) {
+                return false;
             }
         }
-        return s.trim();
+        return true;
     }
 
     /**
@@ -1350,7 +1162,6 @@ class RepnMetadataPackage extends Repn {
      * @param r the RDF resource that should contain the property
      * @parem parent the element name of the parent
      * @param nameSpace the namespace the property exists within
-     * @param nameSpaceURI the namespace the property exists within
      * @param element the property (element) name within the namespace
      * @param method the method testing the property (used to make a unique id)
      * @param errno the error number assigned by the method (must be less than
@@ -1359,24 +1170,160 @@ class RepnMetadataPackage extends Repn {
      * @param wtd what to do if property is missing or empty
      * @return the string value of the property (null if not present or empty)
      */
-    private String testLeafProperty(Resource r, String parent, String nameSpace, String nameSpaceURI, String element, String method, int errno, String entity, WhatToDo wtd) {
+    private enum WhatToDo {
+        errorIfMissing, // report an error if property is missing or empty
+        warningIfMissing, // report a warning if property is missing or empty
+        justReturnNull      // just return null if property is missing or empty
+    }
+
+    private String testLeafProperty(Resource r, String parent, Namespace nameSpace, String element, String method, int errno, WhatToDo wtd) {
         Statement stmt;
         String s;
 
         assert errno < 50;
         // System.out.print("Testing for "+p.toString());
-        stmt = r.getProperty(ResourceFactory.createProperty(nameSpaceURI, element));
+        stmt = r.getProperty(ResourceFactory.createProperty(nameSpace.value, element));
         if (stmt == null) {
             // System.out.println("- Didn't find it");
-            createMesg(method, errno, parent, false, nameSpace + ":" + element, wtd);
+            createMesg(method, errno, parent, false, nameSpace.handle + ":" + element, wtd);
             return null;
         }
         s = stmt.getString();
         if (s.trim().equals("")) {
-            createMesg(method, errno + 50, parent, true, nameSpace + ":" + element, wtd);
+            createMesg(method, errno + 50, parent, true, nameSpace.handle + ":" + element, wtd);
             return null;
         }
         return s.trim();
+    }
+
+    /**
+     * Check whether the required number of specified elements exist in a
+     * resource. The value of the last instance is returned, or null if the last
+     * element was empty or blank.
+     *
+     * @param method the calling method (for error messages)
+     * @param r1 resource
+     * @param lid the id of the parent element (for error messages)
+     * @param element the element being looked for
+     * @param min the minimum number of elements that must be present
+     * @param max the maximum number of elements that is allowed
+     * @return the value actually found
+     */
+    private String checkLeafProperty(Resource r1, Namespace namespace, String element, int min, int max, String method, String lid) {
+        StmtIterator si;
+        String s;
+        int numFound;
+
+        si = r1.listProperties(ResourceFactory.createProperty(namespace.value, element));
+        numFound = 0;
+        s = null;
+        while (si.hasNext()) {
+            numFound++;
+            if ((s = getValue(si)) == null) {
+                addError(method, 11, lid + "/" + namespace.handle + ":" + element + " is empty or blank");
+            }
+        }
+        if (numFound > 0 && min == 0 && max == 0) {
+            addError(method, 12, lid + " contains an " + namespace.handle + ":" + element);
+        }
+        if (numFound == 0 && min == 1) {
+            if (max == 1) {
+                addError(method, 13, lid + " must contain an " + namespace.handle + ":" + element);
+            } else {
+                addError(method, 13, lid + " must contain at least one " + namespace.handle + ":" + element);
+            }
+        }
+        if (numFound > 1 && max == 1) {
+            addError(method, 14, lid + ":  contains more than one " + namespace.handle + ":" + element);
+        }
+        return s;
+    }
+
+    /**
+     * Check whether the required number of specified anzs5478 elements exist in
+     * the resource.
+     *
+     * @param r1 resource
+     * @param element the element being looked for
+     * @return true if the property exists in the resource
+     */
+    private boolean checkPropertyExists(Resource r1, Namespace namespace, String element) {
+        StmtIterator si;
+
+        si = r1.listProperties(ResourceFactory.createProperty(namespace.value, element));
+        return si.hasNext();
+    }
+
+    /**
+     * Check that exactly one anzs5478:element of the given element type and
+     * value exists in the parent element
+     *
+     * @param r1 resource
+     * @param element the element being looked for
+     * @param value the value being looked for
+     * @return true if the element with the specified value exists
+     */
+    private boolean checkExactValue(Resource r1, Namespace namespace, String element, String value) {
+        StmtIterator si;
+        String s;
+
+        si = r1.listProperties(ResourceFactory.createProperty(namespace.value, element));
+        while (si.hasNext()) {
+            s = getValue(si);
+            if (s != null && s.equals(value)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get the current value of the statement iterator
+     *
+     * @param si
+     * @return string value
+     */
+    private String getValue(StmtIterator si) {
+        Statement stmt;
+        String s;
+
+        try {
+            stmt = si.nextStatement();
+            s = stmt.getString();
+            if (s == null || s.trim().equals("")) {
+                return null;
+            }
+        } catch (NoSuchElementException nsee) {
+            return null;
+        } catch (Exception e) { // grrr. getString() just says 'exception' if not literal
+            return null;
+        }
+        return s;
+    }
+
+    /**
+     * Get the current resource of the statement iterator
+     *
+     * @param si
+     * @return string value
+     */
+    private Resource getResource(StmtIterator si) {
+        Statement stmt;
+        Resource r;
+
+        try {
+            stmt = si.nextStatement();
+            r = stmt.getResource();
+        } catch (NoSuchElementException nsee) {
+            return null;
+        } catch (Exception e) { // grrr. getString() just says 'exception' if not literal
+            return null;
+        }
+        return r;
+    }
+
+    private void addError(String method, int errorNo, String message) {
+        addError(new VEOFailure(CLASSNAME, method, errorNo, id, message));
     }
 
     /**

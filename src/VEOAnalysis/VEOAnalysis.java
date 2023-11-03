@@ -144,10 +144,11 @@ public class VEOAnalysis {
      * 20230811 3.32 Cleaned up the error/failure reporting to make it consistent
      * 20230921 3.33 Added test for ZIP entry names that do not start with the VEO name
      * 20231011 3.34 Fixed bug with 3.33
+     * 20231101 4.00 Completely rewrote AGLS and AS5478 metadata elements tests
      * </pre>
      */
     static String version() {
-        return ("3.34");
+        return ("4.00");
     }
 
     static String copyright = "Copyright 2015, 2022, 2023 Public Record Office Victoria";
