@@ -103,6 +103,8 @@ abstract class RepnXML extends Repn implements ErrorHandler {
         SchemaFactory sf;
         Schema schema;
         Validator validator;
+        Element e;
+        String av;
 
         // sanity check...
         assert (file != null);
@@ -127,8 +129,8 @@ abstract class RepnXML extends Repn implements ErrorHandler {
         sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
         try {
             schema = sf.newSchema(schemaFile.toFile());
-        } catch (SAXException e) {
-            addError(new VEOFailure(CLASSNAME, "parse", 5, id, "Failed to parse schema '" + schemaFile.toString() + "'", e));
+        } catch (SAXException se) {
+            addError(new VEOFailure(CLASSNAME, "parse", 5, id, "Failed to parse schema '" + schemaFile.toString() + "'", se));
             return false;
         }
         validator = schema.newValidator();
@@ -140,25 +142,57 @@ abstract class RepnXML extends Repn implements ErrorHandler {
             InputSource is = new InputSource(new FileInputStream(file.toFile()));
             is.setEncoding("UTF-8");
             doc = parser.parse(is);
-        } catch (SAXParseException e) {
-            addError(new VEOFailure(CLASSNAME, "parse", 6, id, "Parse error when parsing file" + e.getSystemId() + " (line " + e.getLineNumber() + " column " + e.getColumnNumber() + ")", e));
+        } catch (SAXParseException spe) {
+            addError(new VEOFailure(CLASSNAME, "parse", 6, id, "Parse error when parsing file" + spe.getSystemId() + " (line " + spe.getLineNumber() + " column " + spe.getColumnNumber() + ")", spe));
             return false;
-        } catch (SAXException e) {
-            addError(new VEOFailure(CLASSNAME, "parse", 7, id, "Problem when parsing file", e));
+        } catch (SAXException se) {
+            addError(new VEOFailure(CLASSNAME, "parse", 7, id, "Problem when parsing file", se));
             return false;
-        } catch (IOException e) {
-            addError(new VEOFailure(CLASSNAME, "parse", 8, id, "System error when parsing file '" + file.toString() + "'", e));
+        } catch (IOException ioe) {
+            addError(new VEOFailure(CLASSNAME, "parse", 8, id, "System error when parsing file '" + file.toString() + "'", ioe));
             return false;
+        }
+        
+        // check the overall properties of the XML file. These warnings are
+        // unlikely to occur; the XML prolog (?xml version="1.0 encoding="UTF-8"?>
+        // is optional. If not present, or only partially present, the defaults
+        // are 1.0 and UTF-8, so these tests will almost always be false. If the
+        // version is anything other than 1.0, the parser will complain (and not
+        // get to this test). The tests are just for completeness.
+        if (!doc.getXmlVersion().equals("1.0")) {
+            addWarning(new VEOFailure(CLASSNAME, "parse", 9, id, "Problem in reading XML file. xml version must be '1.0' not "+doc.getXmlVersion()));
+        }
+        if (!doc.getInputEncoding().equals("UTF-8")) {
+            addWarning(new VEOFailure(CLASSNAME, "parse", 10, id, "Problem in reading XML file. Encoding must be 'UTF-8' not "+doc.getInputEncoding()));
+        }
+        
+        // check that the root (document) element contains the necessary
+        // namespace declarations.
+        e = doc.getDocumentElement();
+        if ((av = e.getAttribute("xmlns:xsd")).equals("")) {
+            addError(new VEOFailure(CLASSNAME, "parse", 11, id, "Root element does not contain attribute definition 'xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\""));
+        } else if (!av.equals("http://www.w3.org/2001/XMLSchema")) {
+            addError(new VEOFailure(CLASSNAME, "parse", 12, id, "Root element defines attribute xmlns:xsd as '"+av+"' not \"http://www.w3.org/2001/XMLSchema\""));
+        }
+        if ((av = e.getAttribute("xmlns:xsi")).equals("")) {
+            addError(new VEOFailure(CLASSNAME, "parse", 13, id, "Root element does not contain attribute definition 'xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\""));
+        } else if (!av.equals("http://www.w3.org/2001/XMLSchema-instance")) {
+            addError(new VEOFailure(CLASSNAME, "parse", 14, id, "Root element defines attribute xmlns:xsi as '"+av+"' not \"http://www.w3.org/2001/XMLSchema-instance\""));
+        }
+        if ((av = e.getAttribute("xmlns:vers")).equals("")) {
+            addError(new VEOFailure(CLASSNAME, "parse", 15, id, "Root element does not contain attribute definition 'xmlns:vers=\"http://www.prov.vic.gov.au/VERS\""));
+        } else if (!av.equals("http://www.prov.vic.gov.au/VERS")) {
+            addError(new VEOFailure(CLASSNAME, "parse", 16, id, "Root element defines attribute xmlns:xsi as '"+av+"' not \"http://www.prov.vic.gov.au/VERS\""));
         }
 
         // validate the DOM tree against the schema
         try {
             validator.validate(new DOMSource(doc));
-        } catch (SAXException e) {
-            addError(new VEOFailure(CLASSNAME, "parse", 9, id, "Error when validating " + file.getFileName().toString() + " against schema '" + schemaFile.toString() + "'", e));
+        } catch (SAXException se) {
+            addError(new VEOFailure(CLASSNAME, "parse", 17, id, "Error when validating " + file.getFileName().toString() + " against schema '" + schemaFile.toString() + "'", se));
             return false;
-        } catch (IOException e) {
-            addError(new VEOFailure(CLASSNAME, "parse", 10, id, "System error when validating XML", e));
+        } catch (IOException ioe) {
+            addError(new VEOFailure(CLASSNAME, "parse", 18, id, "System error when validating XML", ioe));
             return false;
         }
 
