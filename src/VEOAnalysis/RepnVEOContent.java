@@ -22,9 +22,9 @@ import java.util.List;
  *
  * @author Andrew Waugh
  */
-class RepnContent extends RepnXML {
+class RepnVEOContent extends RepnXML {
 
-    private final static String CLASSNAME = "RepnContent";
+    private final static String CLASSNAME = "RepnVEOContent";
     private RepnItem version; // version identifier of this VEOContent.xml file
     private RepnItem hashAlgorithm; // identifier of the hash function used
     private ArrayList<RepnInformationObject> infoObjs;    // list of events associated with this history
@@ -40,7 +40,7 @@ class RepnContent extends RepnXML {
      * @param results the results summary to build
      * @throws VEOError if a fatal error occurred
      */
-    public RepnContent(Path veoDir, Path schemaDir, HashMap<Path, RepnFile> contentFiles, ResultSummary results) throws VEOError {
+    public RepnVEOContent(Path veoDir, Path schemaDir, HashMap<Path, RepnFile> contentFiles, ResultSummary results) throws VEOError {
         super("VEOContent.xml", results);
 
         RepnInformationObject io, parentIO;
@@ -144,7 +144,7 @@ class RepnContent extends RepnXML {
     }
 
     /**
-     * Free resources associated with this RepnContent object.
+     * Free resources associated with this RepnVEOContent object.
      */
     @Override
     public void abandon() {
@@ -374,14 +374,14 @@ class RepnContent extends RepnXML {
      * @param args command line arguments
      */
     public static void main(String args[]) {
-        RepnContent rc;
+        RepnVEOContent rc;
         Path veoDir;
         Path schemaDir;
 
         veoDir = Paths.get("..", "neoVEOOutput", "Demo", "BadVEO1.veo");
         schemaDir = Paths.get("Test", "Demo", "Schemas");
         try {
-            rc = new RepnContent(veoDir, schemaDir, null, null);
+            rc = new RepnVEOContent(veoDir, schemaDir, null, null);
             System.out.println(rc.dumpDOM());
             rc.genReport(false, veoDir, "1.0", "Copyright");
             // System.out.println(rc.toString());

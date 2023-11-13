@@ -182,7 +182,7 @@ class RepnMetadataPackage extends Repn {
      * @param veoDir the directory containing the contents of the VEO.
      * @param noRec true if not to complain about missing recommended metadata
      * elements
-     * @return true if the metadata package is AGLS or AGRKMS
+     * @return true if the metadata package is AGLS or AGRKMS (even if the contents are not valid)
      */
     public boolean validate(Path veoDir, boolean noRec) {
 
@@ -211,9 +211,11 @@ class RepnMetadataPackage extends Repn {
         // if ANZS5478 check to see if the required properties are present and valid
         if (schemaId.getValue().endsWith("ANZS5478")
                 || schemaId.getValue().equals("http://www.prov.vic.gov.au/VERS-as5478")) {
+            
+            // correct syntax?
             if (!syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
                 addError(new VEOFailure(CLASSNAME, "validate", 5, id, "ANZS-5478 metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'"));
-                return false;
+                return true;
             }
 
             // we've seen the rdf:RDF definition, and the RDF parsing succeeded..
@@ -221,15 +223,17 @@ class RepnMetadataPackage extends Repn {
                 checkANZSProperties(noRec);
                 return true;
             }
-            return false;
+            return true;
         }
 
         // if AGLS check to see if the required properties are present and valid
         if (schemaId.getValue().endsWith("AGLS")
                 || schemaId.getValue().equals("http://www.vic.gov.au/blog/wp-content/uploads/2013/11/AGLS-Victoria-2011-V4-Final-2011.pdf")) {
+            
+            // correct syntax?
             if (!syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
                 addError(new VEOFailure(CLASSNAME, "validate", 6, id, "AGLS metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'"));
-                return false;
+                return true;
             }
 
             // we've seen the rdf:RDF definition, and the RDF parsing succeeded..
@@ -237,9 +241,9 @@ class RepnMetadataPackage extends Repn {
                 checkAGLSProperties(noRec);
                 return true;
             }
-            return false;
+            return true;
         }
-        return true;
+        return false;
     }
 
     /**

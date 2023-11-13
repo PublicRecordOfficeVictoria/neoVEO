@@ -49,7 +49,7 @@ class RepnVEO extends Repn {
     private Path schemaDir;         // directory in which XML schemas are to be found
     private Path veoOutputDir;      // directory in which the VEO components can be examined
     private RepnItem readme;        // issues with the VEOReadme.txt file
-    private RepnContent veoContent; // The representation of the VEOContent.xml file
+    private RepnVEOContent veoContent; // The representation of the VEOContent.xml file
     private RepnHistory veoHistory; // The representation of the VEOHistory.xml file
     private ArrayList<RepnSignature> veoContentSignatures; // The representation of the signature files
     private ArrayList<RepnSignature> veoHistorySignatures; // The representation of the signature files
@@ -264,7 +264,7 @@ class RepnVEO extends Repn {
                     case "..":
                         break;
                     case "VEOContent.xml":
-                        veoContent = new RepnContent(veoOutputDir, schemaDir, contentFiles, results);
+                        veoContent = new RepnVEOContent(veoOutputDir, schemaDir, contentFiles, results);
                         break;
                     case "VEOHistory.xml":
                         veoHistory = new RepnHistory(veoOutputDir, schemaDir, results);
