@@ -5,14 +5,14 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.AnalysisReportCSV;
+import VERSCommon.AnalysisClassifyVEOs;
 import VERSCommon.LTSF;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFailure;
 import VERSCommon.VEOFatal;
 import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
@@ -88,12 +88,12 @@ public class VEOAnalysis {
     private static final String CLASSNAME = "VEOAnalysis";
     private Config c;           // configuration of this run
     private String runDateTime; // run date/time
-    private Writer csvReportW;  // not null if asked to produce a TSV report
     private int totalIOs;       // total IOs counted in VEO
     boolean hasErrors;          // true if VEO had errors
     private final static Logger LOG = Logger.getLogger("VEOAnalysis.VEOAnalysis");
+    private AnalysisReportCSV arCSV; // class to handle construction of a CSV report
     private ResultSummary resultSummary;  // summary of the errors & warnings
-    private Path classifyVEOsDir; // directory in which to classify the VEOs
+    private AnalysisClassifyVEOs classifyVEOs; // directory in which to classify the VEOs
 
     /**
      * Report on version...
@@ -145,10 +145,13 @@ public class VEOAnalysis {
      * 20230921 3.33 Added test for ZIP entry names that do not start with the VEO name
      * 20231011 3.34 Fixed bug with 3.33
      * 20231101 4.00 Completely rewrote AGLS and AS5478 metadata elements tests
+     * 20231110 4.01 Added tests to ensure that the xsd, xsi, & vers namespaces were defined correctly
+     * 20231113 4.02 Fixed test checking if an IO had an AGLS or ANZS5478 MP & removed the xsd & xsi namespaces
+     * 20231115 4.03 Moved the VEO result classification & CSV generation code to VERSCommon
      * </pre>
      */
     static String version() {
-        return ("4.00");
+        return ("4.03");
     }
 
     static String copyright = "Copyright 2015, 2022, 2023 Public Record Office Victoria";
@@ -267,7 +270,7 @@ public class VEOAnalysis {
         int i;
 
         runDateTime = getISODateTime('-', ':', false);
-        csvReportW = null;
+        arCSV = null;
         totalIOs = 0;
         hasErrors = false;
 
@@ -306,15 +309,22 @@ public class VEOAnalysis {
             c.ltsfs = new LTSF(c.supportDir.resolve("validLTSF.txt"));
         }
 
-        if (c.classifyVEOs) {
-            classifyVEOsDir = c.outputDir.resolve("Run-" + runDateTime.replaceAll(":", "-"));
+        arCSV = null;
+        if (c.genCSVReport) {
             try {
-                Files.createDirectory(classifyVEOsDir);
+                arCSV = new AnalysisReportCSV(c.outputDir, runDateTime);
             } catch (IOException ioe) {
-                throw new VEOError(CLASSNAME, 4, "Failed to create VEO classification directory '" + classifyVEOsDir.toString() + "': " + ioe.getMessage());
+                throw new VEOError(CLASSNAME, 4, ioe.getMessage());
             }
-        } else {
-            classifyVEOsDir = null;
+        }
+        
+        classifyVEOs = null;
+        if (c.classifyVEOs) {
+            try {
+                classifyVEOs = new AnalysisClassifyVEOs(c.outputDir, runDateTime);
+            } catch (IOException ioe) {
+                throw new VEOError(CLASSNAME, 5, ioe.getMessage());
+            }
         }
         if (c.genResultSummary) {
             resultSummary = new ResultSummary();
@@ -338,25 +348,8 @@ public class VEOAnalysis {
      */
     public void testVEOs() throws VEOFatal {
         int i;
-        String veo, s;
-        DirectoryStream<Path> ds, ds1;
+        String veo;
         Path veoFile;
-        FileOutputStream fos;
-        OutputStreamWriter osw;
-
-        // are we generating a CSV file?
-        fos = null;
-        osw = null;
-        if (c.genCSVReport) {
-            Path p = c.outputDir.resolve("Results-" + runDateTime.replaceAll(":", "-") + ".csv");
-            try {
-                fos = new FileOutputStream(p.toFile());
-            } catch (FileNotFoundException fnfe) {
-                throw new VEOFatal(CLASSNAME, 3, "Failed attempting to open the TSV report file: " + fnfe.getMessage());
-            }
-            osw = new OutputStreamWriter(fos, Charset.forName("UTF-8"));
-            csvReportW = new BufferedWriter(osw);
-        }
 
         // go through the list of VEOs
         for (i = 0; i < c.veos.size(); i++) {
@@ -378,46 +371,20 @@ public class VEOAnalysis {
         }
 
         // close TSV report
-        try {
-            if (csvReportW != null) {
-                csvReportW.close();
+        if (arCSV != null) {
+            try {
+                arCSV.close();
+            } catch (IOException ioe) {
+                LOG.log(Level.WARNING, "Failed to close the TSV report: {0}", ioe.getMessage());
             }
-            if (osw != null) {
-                osw.close();
-            }
-            if (fos != null) {
-                fos.close();
-            }
-        } catch (IOException ioe) {
-            LOG.log(Level.WARNING, "Failed to close the TSV report: {0}", ioe.getMessage());
         }
 
         // go through classErr directory and rename directories to include count of instances
-        if (c.classifyVEOs) {
+        if (classifyVEOs != null) {
             try {
-                ds = Files.newDirectoryStream(classifyVEOsDir);
-                for (Path entry : ds) {
-                    ds1 = Files.newDirectoryStream(entry);
-                    i = 0;
-                    for (Path v : ds1) {
-                        if (v.getFileName().toString().toLowerCase().endsWith(".veo.zip")) {
-                            i++;
-                        }
-                    }
-                    s = entry.getFileName().toString();
-                    if (s.startsWith("E-")) {
-                        s = "E-" + i + "-" + s.substring(2);
-                        Files.move(entry, classifyVEOsDir.resolve(s));
-                    } else if (s.startsWith("W-")) {
-                        s = "W-" + i + "-" + s.substring(2);
-                        Files.move(entry, classifyVEOsDir.resolve(s));
-                    } else if (s.startsWith("OK")) {
-                        s = "OK-" + i;
-                        Files.move(entry, classifyVEOsDir.resolve(s));
-                    }
-                }
+                classifyVEOs.includeCount();
             } catch (IOException ioe) {
-                LOG.log(Level.WARNING, "Failed renaming a classification directory: {0}", ioe.getMessage());
+                LOG.log(Level.WARNING, ioe.getMessage());
             }
         }
 
@@ -543,41 +510,16 @@ public class VEOAnalysis {
             }
 
             // if classifying the VEOs by error category, do so
-            if (classifyVEOsDir != null) {
-
-                // if no errors or warnings, put in 'NoProblems' directory
-                if (errors.isEmpty() && warnings.isEmpty()) {
-                    linkVEOinto(veo, classifyVEOsDir, "OK-NoProblems", null);
-                }
-
-                // go through errors
-                for (i = 0; i < errors.size(); i++) {
-                    linkVEOinto(veo, classifyVEOsDir, "E-" + errors.get(i).getFailureId(), errors.get(i).getMessage());
-                }
-
-                // go through warnings
-                for (i = 0; i < warnings.size(); i++) {
-                    linkVEOinto(veo, classifyVEOsDir, "W-" + warnings.get(i).getFailureId(), warnings.get(i).getMessage());
-                }
+            if (classifyVEOs != null) {
+                classifyVEOs.classifyVEO(veo, errors, warnings);
             }
 
             // if producing a CSV file of the results, do so
-            if (csvReportW != null) {
+            if (arCSV != null) {
                 try {
-                    if (errors.isEmpty() && warnings.isEmpty()) {
-                        writeCSVReportLine(veo, null, false);
-                    } else {
-                        for (i = 0; i < errors.size(); i++) {
-                            writeCSVReportLine(veo, errors.get(i), true);
-                        }
-                        for (i = 0; i < warnings.size(); i++) {
-                            writeCSVReportLine(veo, warnings.get(i), false);
-                        }
-                    }
-                    csvReportW.flush();
-
+                    arCSV.write(veo, errors, warnings);
                 } catch (IOException ioe) {
-                    LOG.log(Level.WARNING, "Failed writing to TSV report. Cause: {0}", ioe.getMessage());
+                    LOG.log(Level.WARNING, ioe.getMessage());
                 }
             }
 
@@ -596,100 +538,6 @@ public class VEOAnalysis {
             rv.abandon();
         }
         return tvr;
-    }
-
-    /**
-     * Hard link the given VEO into the specified classDir directory in the
-     * outputDir directory.
-     *
-     * @param veo the path of the VEO being tested
-     * @param outputDir the directory in which to build the classification
-     * @param classDir the error identification that occurred
-     * @param mesg a text description of this error
-     */
-    private void linkVEOinto(Path veo, Path outputDir, String classDir, String mesg) {
-        Path pd, source;
-        FileOutputStream fos;
-        OutputStreamWriter osw;
-        BufferedWriter bw;
-
-        // get class directory, creating if necessary & add the description of the error
-        pd = outputDir.resolve(classDir);
-        if (!Files.exists(pd)) {
-            try {
-                Files.createDirectories(pd);
-            } catch (IOException ioe) {
-                LOG.log(Level.WARNING, "Failed creating class directory ''{0}'': {1}", new Object[]{pd.toString(), ioe.getMessage()});
-                return;
-            }
-            if (mesg != null) {
-                try {
-                    fos = new FileOutputStream(pd.resolve("ErrorMessage.txt").toFile());
-                    osw = new OutputStreamWriter(fos, "UTF-8");
-                    bw = new BufferedWriter(osw);
-                    bw.write("A typical message for this class of error/warning is: \n\n");
-                    bw.write(mesg);
-                    bw.close();
-                    osw.close();
-                    fos.close();
-                } catch (IOException ioe) {
-                    LOG.log(Level.WARNING, "Failed creating description of error: {0}", ioe.getMessage());
-                    return;
-                }
-            }
-        }
-        if (!Files.isDirectory(pd)) {
-            LOG.log(Level.WARNING, "Class directory ''{0}'' exists, but is not a directory", pd.toString());
-            return;
-        }
-
-        source = pd.resolve(veo.getFileName());
-
-        // test to see if link already exists
-        if (Files.exists(source)) {
-            return;
-        }
-
-        // hard link VEO into class directory
-        try {
-            Files.createLink(source, veo);
-        } catch (IOException | UnsupportedOperationException ioe) {
-            if (ioe.getMessage().trim().endsWith("Incorrect function.")) {
-                LOG.log(Level.WARNING, "Failed linking ''{0}'' to ''{1}'': Might be because the file system containing the output directory is not NTSF", new Object[]{pd.resolve(veo.getFileName()), veo.toString()});
-            } else if (ioe.getMessage().trim().endsWith("different disk drive.")) {
-                LOG.log(Level.WARNING, "Failed linking ''{0}'' to ''{1}'': Might be because the VEOs and the output directory are on different file systems", new Object[]{pd.resolve(veo.getFileName()), veo.toString()});
-            } else {
-                LOG.log(Level.WARNING, "Failed linking ''{0}'' to ''{1}'': {2}", new Object[]{pd.resolve(veo.getFileName()), veo.toString(), ioe.getMessage()});
-            }
-        }
-    }
-
-    /**
-     * Write a line in the TSV Report
-     *
-     * @param veo the VEO being reported on
-     * @param error true if an error occurred, false if it is a warning
-     * @param ve the error/warning that occurred
-     * @throws IOException
-     */
-    private void writeCSVReportLine(Path veo, VEOFailure ve, boolean error) throws IOException {
-        csvReportW.write(veo != null ? veo.getFileName().toString() : "");
-        csvReportW.write(',');
-        if (ve != null) {
-            if (error) {
-                csvReportW.write("Error,");
-            } else {
-                csvReportW.write("Warning,");
-            }
-            csvReportW.write(ve.getFailureId());
-            csvReportW.write(',');
-            csvReportW.write(ve.getMessage());
-        } else {
-            csvReportW.write("OK,,");
-        }
-        csvReportW.write(',');
-        csvReportW.write(veo != null ? veo.toString() : "");
-        csvReportW.write("\n");
     }
 
     /**

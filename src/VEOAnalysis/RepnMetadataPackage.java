@@ -87,14 +87,15 @@ class RepnMetadataPackage extends Repn {
         AGLS, // AGLS metadata
         ANZS5478    // ASNZS5478
     }
-    
+
     /**
      * Namespace information
      */
     private class Namespace {
+
         String handle;  // the short identifier used in the XML
         String value;   // the actual URL of this namespace used in the document
-        
+
         Namespace(String handle, String value) {
             this.handle = handle;
             this.value = value;
@@ -182,38 +183,43 @@ class RepnMetadataPackage extends Repn {
      * @param veoDir the directory containing the contents of the VEO.
      * @param noRec true if not to complain about missing recommended metadata
      * elements
-     * @return true if the metadata package is AGLS or AGRKMS (even if the contents are not valid)
+     * @return true if the metadata package is AGLS or AGRKMS (even if the
+     * contents are not valid)
      */
     public boolean validate(Path veoDir, boolean noRec) {
+        String schema, syntax;
 
         assert (veoDir != null);
 
         // confirm that there is a non empty vers:MetadataSchemaIdentifier element
-        if (schemaId.getValue() == null) {
+        schema = schemaId.getValue();
+        if (schema == null) {
             addError(new VEOFailure(CLASSNAME, "validate", 1, id, "vers:MetadataSchemaIdentifier element is missing or has a null value"));
             return false;
         }
-        if (schemaId.getValue().trim().equals("") || schemaId.getValue().trim().equals(" ")) {
+        schema = schema.trim();
+        if (schema.equals("") || schema.equals(" ")) {
             addError(new VEOFailure(CLASSNAME, "validate", 2, id, "vers:MetadataSchemaIdentifier element is empty"));
             return false;
         }
 
         // confirm that there is a non empty vers:MetadataSyntaxIdentifier element
-        if (syntaxId.getValue() == null) {
+        syntax = syntaxId.getValue();
+        if (syntax == null) {
             addError(new VEOFailure(CLASSNAME, "validate", 3, id, "vers:MetadataSyntaxIdentifier element is missing or has a null value"));
             return false;
         }
-        if (syntaxId.getValue().trim().equals("") || schemaId.getValue().trim().equals(" ")) {
+        syntax = syntax.trim();
+        if (syntax.equals("") || syntax.equals(" ")) {
             addError(new VEOFailure(CLASSNAME, "validate", 4, id, "vers:MetadataSyntaxIdentifier element is empty"));
             return false;
         }
 
         // if ANZS5478 check to see if the required properties are present and valid
-        if (schemaId.getValue().endsWith("ANZS5478")
-                || schemaId.getValue().equals("http://www.prov.vic.gov.au/VERS-as5478")) {
-            
+        if (schema.endsWith("ANZS5478") || schema.equals("http://www.prov.vic.gov.au/VERS-as5478")) {
+
             // correct syntax?
-            if (!syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
+            if (!syntax.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
                 addError(new VEOFailure(CLASSNAME, "validate", 5, id, "ANZS-5478 metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'"));
                 return true;
             }
@@ -227,11 +233,10 @@ class RepnMetadataPackage extends Repn {
         }
 
         // if AGLS check to see if the required properties are present and valid
-        if (schemaId.getValue().endsWith("AGLS")
-                || schemaId.getValue().equals("http://www.vic.gov.au/blog/wp-content/uploads/2013/11/AGLS-Victoria-2011-V4-Final-2011.pdf")) {
-            
+        if (schema.endsWith("AGLS") || schema.equals("http://www.vic.gov.au/blog/wp-content/uploads/2013/11/AGLS-Victoria-2011-V4-Final-2011.pdf")) {
+
             // correct syntax?
-            if (!syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
+            if (!syntax.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
                 addError(new VEOFailure(CLASSNAME, "validate", 6, id, "AGLS metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'"));
                 return true;
             }
@@ -409,11 +414,14 @@ class RepnMetadataPackage extends Repn {
         String v;
         int i;
 
-        if ((a = e.getAttributeNode("xmlns:" + namespace)) == null && !optional) {
-            addWarning(new VEOFailure(CLASSNAME, "parseRDF", 1, id, "Namespace declaration for xmlns:" + namespace + " missing from rdf:RDF element"));
-            return null;
+        if ((a = e.getAttributeNode("xmlns:" + namespace)) == null) {
+            if (!optional) {
+                addWarning(new VEOFailure(CLASSNAME, "parseRDF", 1, id, "Namespace declaration for xmlns:" + namespace + " missing from rdf:RDF element"));
+            }
+            v = properValues[0]; // hack - if namespace is not specified, set it to the default so testing doesn't fail later
+        } else {
+            v = a.getValue().trim();
         }
-        v = a.getValue().trim();
         rdfModel.setNsPrefix(namespace, v);
 
         // check that the namespace definition is the correct one
@@ -537,7 +545,7 @@ class RepnMetadataPackage extends Repn {
             checkDateRange(nlid, r2);
             checkDisposal(nlid, r2);
             // format is not checked as it has no use in VERS V3 VEOs
-            checkExtent(nlid, r2);
+            // checkExtent(nlid, r2); // this is not useful in VERS
             checkRelationship(nlid, r2, false);
             checkContextPath(nlid, r2);
         }
@@ -1223,8 +1231,11 @@ class RepnMetadataPackage extends Repn {
         s = null;
         while (si.hasNext()) {
             numFound++;
-            if ((s = getValue(si)) == null) {
+            s = getValue(si);
+            if (s == null) {
                 addError(method, 11, lid + "/" + namespace.handle + ":" + element + " is empty or blank");
+            } else {
+                s = s.trim();
             }
         }
         if (numFound > 0 && min == 0 && max == 0) {
@@ -1274,7 +1285,7 @@ class RepnMetadataPackage extends Repn {
         si = r1.listProperties(ResourceFactory.createProperty(namespace.value, element));
         while (si.hasNext()) {
             s = getValue(si);
-            if (s != null && s.equals(value)) {
+            if (s != null && s.trim().equals(value)) {
                 return true;
             }
         }

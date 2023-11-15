@@ -169,6 +169,7 @@ abstract class RepnXML extends Repn implements ErrorHandler {
         // check that the root (document) element contains the necessary
         // namespace declarations.
         e = doc.getDocumentElement();
+        /*
         if ((av = e.getAttribute("xmlns:xsd")).equals("")) {
             addError(new VEOFailure(CLASSNAME, "parse", 11, id, "Root element does not contain attribute definition 'xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\""));
         } else if (!av.equals("http://www.w3.org/2001/XMLSchema")) {
@@ -179,6 +180,7 @@ abstract class RepnXML extends Repn implements ErrorHandler {
         } else if (!av.equals("http://www.w3.org/2001/XMLSchema-instance")) {
             addError(new VEOFailure(CLASSNAME, "parse", 14, id, "Root element defines attribute xmlns:xsi as '"+av+"' not \"http://www.w3.org/2001/XMLSchema-instance\""));
         }
+        */
         if ((av = e.getAttribute("xmlns:vers")).equals("")) {
             addError(new VEOFailure(CLASSNAME, "parse", 15, id, "Root element does not contain attribute definition 'xmlns:vers=\"http://www.prov.vic.gov.au/VERS\""));
         } else if (!av.equals("http://www.prov.vic.gov.au/VERS")) {
