@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.AnalysisBase;
 import VERSCommon.LTSF;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
@@ -21,8 +22,8 @@ import java.util.List;
  *
  * @author Andrew Waugh
  */
-class RepnInformationPiece extends Repn {
-    private static String classname = "RepnInformatioPiece";
+class RepnInformationPiece extends AnalysisBase {
+    private final static String CLASSNAME = "RepnInformatioPiece";
     private RepnItem label;  // label of the piece
     private ArrayList<RepnContentFile> contents;  // list of metadata packages
 
@@ -118,7 +119,7 @@ class RepnInformationPiece extends Repn {
                 validLTPF |= rcf.isLTPF();
             }
             if (!validLTPF) {
-                addError(new VEOFailure(classname, "validate", 1, id, "Information piece did not have a valid long term preservation format"));
+                addError(new VEOFailure(CLASSNAME, "validate", 1, id, "Information piece did not have a valid long term preservation format"));
             }
         }
     }
@@ -131,7 +132,9 @@ class RepnInformationPiece extends Repn {
     @Override
     public boolean hasErrors() {
         int i;
+        boolean hasErrors;
 
+        hasErrors = false;
         for (i = 0; i < contents.size(); i++) {
             hasErrors |= contents.get(i).hasErrors();
         }
@@ -164,7 +167,9 @@ class RepnInformationPiece extends Repn {
     @Override
     public boolean hasWarnings() {
         int i;
+        boolean hasWarnings;
 
+        hasWarnings = false;
         for (i = 0; i < contents.size(); i++) {
             hasWarnings |= contents.get(i).hasWarnings();
         }
@@ -217,7 +222,7 @@ class RepnInformationPiece extends Repn {
             addString(" <no label>");
         }
         addString("\n");
-        if (hasErrors || hasWarnings) {
+        if (hasErrors() || hasWarnings()) {
             addTag("<ul>\n");
             listIssues();
             addTag("</ul>\n");

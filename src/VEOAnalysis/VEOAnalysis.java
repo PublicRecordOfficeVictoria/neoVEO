@@ -148,6 +148,7 @@ public class VEOAnalysis {
      * 20231110 4.01 Added tests to ensure that the xsd, xsi, & vers namespaces were defined correctly
      * 20231113 4.02 Fixed test checking if an IO had an AGLS or ANZS5478 MP & removed the xsd & xsi namespaces
      * 20231115 4.03 Moved the VEO result classification & CSV generation code to VERSCommon
+     * 20231120 4.04 Fixed bug in errors and warnings
      * </pre>
      */
     static String version() {

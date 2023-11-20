@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.AnalysisBase;
 import VERSCommon.LTSF;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
@@ -20,7 +21,7 @@ import java.util.List;
  *
  * @author Andrew Waugh
  */
-class RepnInformationObject extends Repn {
+class RepnInformationObject extends AnalysisBase {
 
     private static final String CLASSNAME = "RepnInformationObject";
     private int IOid;       // integer used to distinguish this IO from all other IOs in the VEO
@@ -235,8 +236,9 @@ class RepnInformationObject extends Repn {
     @Override
     public boolean hasErrors() {
         int i;
+        boolean hasErrors;
 
-        hasErrors |= type.hasErrors() | depth.hasErrors();
+        hasErrors = type.hasErrors() | depth.hasErrors();
         for (i = 0; i < metadata.size(); i++) {
             hasErrors |= metadata.get(i).hasErrors();
         }
@@ -278,8 +280,9 @@ class RepnInformationObject extends Repn {
     @Override
     public boolean hasWarnings() {
         int i;
+        boolean hasWarnings;
 
-        hasWarnings |= type.hasWarnings() | depth.hasWarnings();
+        hasWarnings = type.hasWarnings() | depth.hasWarnings();
         for (i = 0; i < metadata.size(); i++) {
             hasWarnings |= metadata.get(i).hasWarnings();
         }
@@ -354,7 +357,7 @@ class RepnInformationObject extends Repn {
         addString("VEO root");
         addTag("</a>");
 
-        if (hasErrors || hasWarnings) {
+        if (hasErrors() || hasWarnings()) {
             addTag("<ul>\n");
             listIssues();
             addTag("</ul>\n");

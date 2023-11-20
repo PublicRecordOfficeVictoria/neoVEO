@@ -236,8 +236,9 @@ class RepnVEOContent extends RepnXML {
     @Override
     public boolean hasErrors() {
         int i;
+        boolean hasErrors;
 
-        hasErrors |= version.hasErrors() | hashAlgorithm.hasErrors();
+        hasErrors = version.hasErrors() | hashAlgorithm.hasErrors();
         for (i = 0; i < infoObjs.size(); i++) {
             hasErrors |= infoObjs.get(i).hasErrors();
         }
@@ -252,8 +253,9 @@ class RepnVEOContent extends RepnXML {
     @Override
     public boolean hasWarnings() {
         int i;
+        boolean hasWarnings;
 
-        hasWarnings |= version.hasWarnings() | hashAlgorithm.hasWarnings();
+        hasWarnings = version.hasWarnings() | hashAlgorithm.hasWarnings();
         for (i = 0; i < infoObjs.size(); i++) {
             hasWarnings |= infoObjs.get(i).hasWarnings();
         }
@@ -328,7 +330,7 @@ class RepnVEOContent extends RepnXML {
         createReport(veoDir, "Report-VEOContent.html", "Report for 'VEOContent.xml'", pVersion, copyright);
         startDiv("xml", null);
         addLabel("XML Document");
-        if (hasErrors || hasWarnings) {
+        if (hasErrors() || hasWarnings()) {
             addTag("<ul>\n");
             listIssues();
             addTag("</ul>\n");

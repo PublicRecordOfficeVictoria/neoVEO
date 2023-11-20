@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.AnalysisBase;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFailure;
@@ -28,7 +29,7 @@ import java.util.logging.Logger;
  *
  * @author Andrew Waugh
  */
-class RepnFile extends Repn {
+class RepnFile extends AnalysisBase {
     private static final String CLASSNAME = "RepnFile";
     private RepnContentFile rcf; // representation of this file as a content file
     private Path file; // path of this file/directory relative to the VEO directory
@@ -203,7 +204,9 @@ class RepnFile extends Repn {
     @Override
     public boolean hasErrors() {
         int i;
+        boolean hasErrors;
 
+        hasErrors = false;
         for (i = 0; i < children.size(); i++) {
             hasErrors |= children.get(i).hasErrors();
         }
@@ -236,7 +239,9 @@ class RepnFile extends Repn {
     @Override
     public boolean hasWarnings() {
         int i;
+        boolean hasWarnings;
 
+        hasWarnings = false;
         for (i = 0; i < children.size(); i++) {
             hasWarnings |= children.get(i).hasWarnings();
         }
@@ -333,7 +338,7 @@ class RepnFile extends Repn {
         if (creationTime != null) {
             addString("created on: " + creationTime.toString());
         }
-        if (hasErrors || hasWarnings) {
+        if (hasErrors() || hasWarnings()) {
             addTag("<ul>\n");
             listIssues();
             addTag("</ul>\n");

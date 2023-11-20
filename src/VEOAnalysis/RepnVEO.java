@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.AnalysisBase;
 import VERSCommon.LTSF;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
@@ -42,7 +43,7 @@ import org.apache.log4j.PropertyConfigurator;
  *
  * @author Andrew Waugh
  */
-class RepnVEO extends Repn {
+class RepnVEO extends AnalysisBase {
 
     private static final String CLASSNAME = "RepnVEO";
     private Path veo;               // VEO to process
@@ -605,6 +606,7 @@ class RepnVEO extends Repn {
     @Override
     public boolean hasErrors() {
         int i;
+        boolean hasErrors = false;
 
         if (readme != null) {
             hasErrors |= readme.hasErrors();
@@ -635,6 +637,7 @@ class RepnVEO extends Repn {
     @Override
     public boolean hasWarnings() {
         int i;
+        boolean hasWarnings = false;
 
         if (readme != null) {
             hasWarnings |= readme.hasWarnings();
@@ -774,7 +777,7 @@ class RepnVEO extends Repn {
         // generate the report
         startDiv("VEO", null);
         addLabel("VEO");
-        if (hasErrors || hasWarnings) {
+        if (hasErrors() || hasWarnings()) {
             addTag("<ul>\n");
             listIssues();
             addTag("</ul>\n");
@@ -840,7 +843,7 @@ class RepnVEO extends Repn {
             addString("VEOReadme.txt");
             addTag("</a>");
             addString(" file\n");
-            if (readme.hasErrors || readme.hasWarnings) {
+            if (readme.hasErrors() || readme.hasWarnings()) {
                 addTag("<ul>\n");
                 readme.genReport(verbose, w);
                 addTag("</ul>\n");

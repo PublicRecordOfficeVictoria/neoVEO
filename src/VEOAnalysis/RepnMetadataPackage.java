@@ -5,6 +5,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.AnalysisBase;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFailure;
@@ -64,7 +65,7 @@ import org.w3c.dom.Attr;
  *
  * @author Andrew Waugh
  */
-class RepnMetadataPackage extends Repn {
+class RepnMetadataPackage extends AnalysisBase {
 
     private final static String CLASSNAME = "RepnMetadataPackage";
     private RepnItem schemaId;  // schema identifier
@@ -1393,8 +1394,7 @@ class RepnMetadataPackage extends Repn {
      */
     @Override
     public boolean hasErrors() {
-        hasErrors |= schemaId.hasErrors() | syntaxId.hasErrors();
-        return hasErrors;
+        return schemaId.hasErrors() | syntaxId.hasErrors();
     }
 
     /**
@@ -1417,8 +1417,7 @@ class RepnMetadataPackage extends Repn {
      */
     @Override
     public boolean hasWarnings() {
-        hasWarnings |= schemaId.hasWarnings() | syntaxId.hasWarnings();
-        return hasWarnings;
+        return schemaId.hasWarnings() | syntaxId.hasWarnings();
     }
 
     /**
@@ -1459,7 +1458,7 @@ class RepnMetadataPackage extends Repn {
         addString(" (Schema: '" + schemaId.getValue() + "',");
         addString(" Syntax: '" + syntaxId.getValue() + "')");
         addString("\n");
-        if (hasErrors || hasWarnings) {
+        if (hasErrors() || hasWarnings()) {
             addTag("<ul>\n");
             listIssues();
             schemaId.genReport(verbose, w);

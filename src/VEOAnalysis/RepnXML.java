@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.AnalysisBase;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFailure;
@@ -41,7 +42,7 @@ import org.xml.sax.SAXParseException;
  *
  * @author Andrew Waugh
  */
-abstract class RepnXML extends Repn implements ErrorHandler {
+abstract class RepnXML extends AnalysisBase implements ErrorHandler {
     private static final String CLASSNAME = "RepnXML";
     private Document doc;    // internal DOM representation of XML document
     private DocumentBuilder parser; // parser

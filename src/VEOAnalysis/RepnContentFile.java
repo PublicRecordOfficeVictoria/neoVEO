@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.AnalysisBase;
 import VERSCommon.LTSF;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
@@ -32,7 +33,7 @@ import java.util.List;
  *
  * @author Andrew Waugh
  */
-class RepnContentFile extends Repn {
+class RepnContentFile extends AnalysisBase {
     private static final String CLASSNAME = "RepnContentFile";
     private RepnFile rf; // representation of this file
     private RepnItem pathName;  // file name of the content file
@@ -253,8 +254,7 @@ class RepnContentFile extends Repn {
      */
     @Override
     public boolean hasErrors() {
-        hasErrors |= pathName.hasErrors() | hashValue.hasErrors();
-        return hasErrors;
+        return pathName.hasErrors() | hashValue.hasErrors();
     }
 
     /**
@@ -278,8 +278,7 @@ class RepnContentFile extends Repn {
      */
     @Override
     public boolean hasWarnings() {
-        hasWarnings |= pathName.hasWarnings() | hashValue.hasWarnings();
-        return hasWarnings;
+        return pathName.hasWarnings() | hashValue.hasWarnings();
     }
 
     /**
@@ -322,7 +321,7 @@ class RepnContentFile extends Repn {
             addTag("</a> ");
         }
         addString(" Hash value: '" + hashValue.getValue() + "'");
-        if (hasErrors || hasWarnings) {
+        if (hasErrors() || hasWarnings()) {
             addTag("<ul>\n");
             listIssues();
             pathName.genReport(verbose, w);

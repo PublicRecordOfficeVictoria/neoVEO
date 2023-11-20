@@ -482,8 +482,9 @@ class RepnSignature extends RepnXML {
     @Override
     public boolean hasErrors() {
         int i;
+        boolean hasErrors;
 
-        hasErrors |= version.hasErrors() | sigAlgorithm.hasErrors();
+        hasErrors = version.hasErrors() | sigAlgorithm.hasErrors();
         hasErrors |= sigDateTime.hasErrors() | signer.hasErrors() | signature.hasErrors();
         for (i = 0; i < certificates.size(); i++) {
             hasErrors |= certificates.get(i).hasErrors();
@@ -522,8 +523,9 @@ class RepnSignature extends RepnXML {
     @Override
     public boolean hasWarnings() {
         int i;
+        boolean hasWarnings;
 
-        hasWarnings |= version.hasWarnings() | sigAlgorithm.hasWarnings();
+        hasWarnings = version.hasWarnings() | sigAlgorithm.hasWarnings();
         hasWarnings |= sigDateTime.hasWarnings() | signer.hasWarnings() | signature.hasWarnings();
         for (i = 0; i < certificates.size(); i++) {
             hasWarnings |= certificates.get(i).hasWarnings();
@@ -593,7 +595,7 @@ class RepnSignature extends RepnXML {
         createReport(veoDir, reportName, "Signature Report for '" + fileName + "'", pVersion, copyright);
         startDiv("xml", null);
         addLabel("XML Document");
-        if (hasErrors || hasWarnings) {
+        if (hasErrors() || hasWarnings()) {
             addTag("<ul>\n");
             listIssues();
             addTag("</ul>\n");
@@ -611,7 +613,7 @@ class RepnSignature extends RepnXML {
                     certificates.get(i).genReport(verbose, mesg, w);
                 }
             }
-            if (hasErrors || hasWarnings) {
+            if (hasErrors() || hasWarnings()) {
                 addTag("<ul>\n");
                 listIssues();
                 addTag("</ul>\n");

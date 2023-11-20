@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.AnalysisBase;
 import VERSCommon.ResultSummary;
 import VERSCommon.VEOFailure;
 import java.io.Writer;
@@ -15,7 +16,7 @@ import java.util.List;
 /**
  * The object represents a unit of data (typically a string)
  */
-final class RepnItem extends Repn {
+final class RepnItem extends AnalysisBase {
     private static final String CLASSNAME = "RepnItem";
     private String label; // label for the unit of data
     private String value; // the value of the data
@@ -149,7 +150,7 @@ final class RepnItem extends Repn {
                 addTag("</pre>\n");
             }
         }
-        if (hasErrors || hasWarnings) {
+        if (hasErrors() || hasWarnings()) {
             addTag("<ul>\n");
             listIssues();
             addTag("</ul>\n");

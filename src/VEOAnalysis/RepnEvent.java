@@ -6,6 +6,7 @@
  */
 package VEOAnalysis;
 
+import VERSCommon.AnalysisBase;
 import VERSCommon.ResultSummary;
 import VERSCommon.VERSDate;
 import VERSCommon.VEOFailure;
@@ -19,7 +20,7 @@ import java.util.List;
  * textual descriptions of the event, and an array of errors that occurred
  * during the event.
  */
-class RepnEvent extends Repn {
+class RepnEvent extends AnalysisBase {
     private static final String CLASSNAME = "RepnEvent";
     private RepnItem dateTime;   // date and time of the event
     private RepnItem eventType;  // event type
@@ -110,7 +111,6 @@ class RepnEvent extends Repn {
             VERSDate.testValueAsDate(dateTime.getValue());
         } catch (IllegalArgumentException e) {
             dateTime.addError(new VEOFailure(CLASSNAME, "validate", 1, id, "Date in event is invalid", e));
-            hasErrors = true;
         }
     }
 
@@ -122,8 +122,9 @@ class RepnEvent extends Repn {
     @Override
     public boolean hasErrors() {
         int i;
+        boolean hasErrors;
 
-        hasErrors |= dateTime.hasErrors() | eventType.hasErrors() | initiator.hasErrors();
+        hasErrors = dateTime.hasErrors() | eventType.hasErrors() | initiator.hasErrors();
         for (i = 0; i < descriptions.size(); i++) {
             hasErrors |= descriptions.get(i).hasErrors();
         }
@@ -164,8 +165,9 @@ class RepnEvent extends Repn {
     @Override
     public boolean hasWarnings() {
         int i;
+        boolean hasWarnings;
 
-        hasWarnings |= dateTime.hasWarnings() | eventType.hasWarnings() | initiator.hasWarnings();
+        hasWarnings = dateTime.hasWarnings() | eventType.hasWarnings() | initiator.hasWarnings();
         for (i = 0; i < descriptions.size(); i++) {
             hasWarnings |= descriptions.get(i).hasWarnings();
         }
@@ -219,7 +221,7 @@ class RepnEvent extends Repn {
         this.w = w;
         startDiv("Event", null);
         addLabel(eventType.getValue()+"Event");
-        if (hasErrors || hasWarnings) {
+        if (hasErrors() || hasWarnings()) {
             addTag("<ul>\n");
             listIssues();
             addTag("</ul>\n");

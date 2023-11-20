@@ -88,7 +88,7 @@ public class Config {
                         break;
 
                     // classify VEOs by error status
-                    case "-classerr":
+                    case "-class":
                         classifyVEOs = true;
                         // classErrDir = outputDir.resolve("Run-" + runDateTime.replaceAll(":", "-"));
                         i++;

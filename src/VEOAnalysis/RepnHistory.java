@@ -121,8 +121,9 @@ class RepnHistory extends RepnXML {
     @Override
     public boolean hasErrors() {
         int i;
+        boolean hasErrors;
 
-        hasErrors |= version.hasErrors();
+        hasErrors = version.hasErrors();
         for (i = 0; i < events.size(); i++) {
             hasErrors |= events.get(i).hasErrors();
         }
@@ -156,8 +157,9 @@ class RepnHistory extends RepnXML {
     @Override
     public boolean hasWarnings() {
         int i;
+        boolean hasWarnings;
 
-        hasWarnings |= version.hasWarnings();
+        hasWarnings = version.hasWarnings();
         for (i = 0; i < events.size(); i++) {
             hasWarnings |= events.get(i).hasWarnings();
         }
@@ -209,7 +211,7 @@ class RepnHistory extends RepnXML {
         createReport(veoDir, "Report-VEOHistory.html", "Report for 'VEOHistory.xml'", pVersion, copyright);
         startDiv("xml", null);
         addLabel("XML Document");
-        if (hasErrors || hasWarnings) {
+        if (hasErrors() || hasWarnings()) {
             addTag("<ul>\n");
             listIssues();
             addTag("</ul>\n");
