@@ -25,7 +25,7 @@ public class Config {
     private final static String CLASSNAME = "Config";
 
     private String USAGE
-            = "AnalyseVEOs [-help] [-e] [-sr] [-csv] [-classify] [-r|-u] [-v] [-d] [-c] [-iocnt] [-norec] [-vpa] -s supportDir [-o outputDir] [files*]";
+            = "AnalyseVEOs [-help] [-e] [-sr] [-csv] [-class] [-r|-u] [-v] [-d] [-c] [-iocnt] [-norec] [-vpa] -s supportDir [-o outputDir] [files*]";
 
     public Path supportDir;    // directory in which XML schemas are to be found
     public LTSF ltsfs;         // long term sustainable formats (if null, will be read from supportDir/validLTSF.txt)
@@ -314,9 +314,9 @@ public class Config {
         }
 
         LOG.info("Configuration:");
-        LOG.info(" Output directory: " + outputDir.toString());
+        LOG.log(Level.INFO, " Output directory: {0}", outputDir.toString());
         if (supportDir != null) {
-            LOG.info(" Support directory: " + supportDir.toString());
+            LOG.log(Level.INFO, " Support directory: {0}", supportDir.toString());
         } else {
             LOG.info(" Support directory is not set");
         }

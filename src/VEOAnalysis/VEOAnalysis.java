@@ -149,10 +149,11 @@ public class VEOAnalysis {
      * 20231113 4.02 Fixed test checking if an IO had an AGLS or ANZS5478 MP & removed the xsd & xsi namespaces
      * 20231115 4.03 Moved the VEO result classification & CSV generation code to VERSCommon
      * 20231120 4.04 Fixed bug in errors and warnings
+     * 20231129 4.05 Fixed bug when VEO name differed from zip entry names
      * </pre>
      */
     static String version() {
-        return ("4.03");
+        return ("4.05");
     }
 
     static String copyright = "Copyright 2015, 2022, 2023 Public Record Office Victoria";
