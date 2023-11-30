@@ -151,10 +151,11 @@ public class VEOAnalysis {
      * 20231120 4.04 Fixed bug in errors and warnings
      * 20231129 4.05 Fixed bug when VEO name differed from zip entry names
      * 20231130 4.06 Added test to check that an RDF MP had an rdf:Description element with an rdf:about attribute
+     * 20231130 4.07 Deleted Repn.java (replaced by AnalysisBase.java in VERSCommon)
      * </pre>
      */
     static String version() {
-        return ("4.05");
+        return ("4.07");
     }
 
     static String copyright = "Copyright 2015, 2022, 2023 Public Record Office Victoria";
