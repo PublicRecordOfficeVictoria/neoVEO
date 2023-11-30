@@ -47,13 +47,13 @@ import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.ResIterator;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.ResourceFactory;
-import com.hp.hpl.jena.rdf.model.ResourceRequiredException;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.rdfxml.xmlinput.DOM2Model;
 import com.hp.hpl.jena.shared.BadURIException;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.logging.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.WriterAppender;
@@ -299,6 +299,9 @@ class RepnMetadataPackage extends AnalysisBase {
         StringWriter parseErrs;     // place where parse errors can be captured
         int i;
         Element e;
+        Node n;
+        String elementName;
+        boolean foundRdfDescription;
 
         // create a place to put the RDF metadata (if any)
         rdfModel = ModelFactory.createDefaultModel();
@@ -354,6 +357,37 @@ class RepnMetadataPackage extends AnalysisBase {
                         break;
                 }
 
+                // check that the rdf:RDF has at least one rdf:Description element,
+                // and that the rdf:Description element contains an rdf:About
+                // attribute. If it doesn't contain an rdf:Description element,
+                // try parsing it anyway as it might contain RDF that can be
+                // checked.
+                n = e.getFirstChild();
+                foundRdfDescription = false;
+                while (n != null) {
+                    if (n.getNodeType() == Node.ELEMENT_NODE) {
+                        elementName = n.getNodeName();
+                        if (!elementName.equals("rdf:Description")) {
+                            addError(new VEOFailure(CLASSNAME, "parseRDF", 1, id, "rdf:RDF element has a child (" + elementName + ")that is not an rdf:Description element"));
+                        } else {
+                            foundRdfDescription = true;
+                            NamedNodeMap nnm = n.getAttributes();
+                            if (nnm == null) {
+                                LOG.log(Level.SEVERE, VEOFailure.getMessage(CLASSNAME, "parseRDF", 2, id, "rdf:Description element has no attributes (must have an rdf:about attribute)"));
+                            } else {
+                                Node a = nnm.getNamedItem("rdf:about");
+                                if (a == null) {
+                                    addError(new VEOFailure(CLASSNAME, "parseRDF", 3, id, "rdf:Description element does not contain an rdf:about attribute"));
+                                }
+                            }
+                        }
+                    }
+                    n = n.getNextSibling();
+                }
+                if (!foundRdfDescription) {
+                    addError(new VEOFailure(CLASSNAME, "parseRDF", 4, id, "rdf:RDF element did not contain an rdf:Description element"));
+                }
+
                 // clear any previous errors in the RDF logging facility
                 parseErrs.getBuffer().setLength(0);
 
@@ -365,13 +399,12 @@ class RepnMetadataPackage extends AnalysisBase {
                 try {
                     d2m = DOM2Model.createD2M(null, m);
                 } catch (SAXParseException spe) {
-                    LOG.log(java.util.logging.Level.WARNING, VEOFailure.getMessage(CLASSNAME, "parseRDF", 1, id, "Failed to initialise Jena to parse RDF", spe));
+                    LOG.log(java.util.logging.Level.WARNING, VEOFailure.getMessage(CLASSNAME, "parseRDF", 5, id, "Failed to initialise Jena to parse RDF", spe));
                     return false;
                 }
                 // d2m.setErrorHandler(errHandler);
                 d2m.load(e);
                 d2m.close();
-                d2m = null;
 
                 // merge the newly passed model into the bigger one
                 rdfModel = rdfModel.union(m);
@@ -380,7 +413,7 @@ class RepnMetadataPackage extends AnalysisBase {
                 // rdfModel.write(System.out);
                 // if errors occurred, remember them
                 if (parseErrs.getBuffer().length() > 0) {
-                    addError(new VEOFailure(CLASSNAME, "parseRDF", 2, id, parseErrs.toString().trim()));
+                    addError(new VEOFailure(CLASSNAME, "parseRDF", 6, id, parseErrs.toString().trim()));
                 }
                 parseErrs.getBuffer().setLength(0);
             }
@@ -392,7 +425,7 @@ class RepnMetadataPackage extends AnalysisBase {
         try {
             parseErrs.close();
         } catch (IOException ioe) {
-            LOG.log(java.util.logging.Level.WARNING, VEOFailure.getMessage(CLASSNAME, "parseRDF", 3, id, "Failed to close StringWriter used to capture parse errors", ioe));
+            LOG.log(java.util.logging.Level.WARNING, VEOFailure.getMessage(CLASSNAME, "parseRDF", 7, id, "Failed to close StringWriter used to capture parse errors", ioe));
         }
         return true;
     }
@@ -469,13 +502,9 @@ class RepnMetadataPackage extends AnalysisBase {
         int entitiesFound;
         String lid;
 
-        System.out.println(rdfModel2String());
+        // System.out.println(rdfModel2String());
         // get all resources
         ri = rdfModel.listSubjects();
-        if (!ri.hasNext()) {
-            addError(new VEOFailure(CLASSNAME, "checkANZSProperties", 1, id, "ANZS5478 metadata package contained no rdf:Description, or only an empty rdf:Description"));
-            return;
-        }
 
         // step through the resources that have subjects. We are only interested
         // in the named resources (that have an rdf:about attribute)
@@ -507,12 +536,15 @@ class RepnMetadataPackage extends AnalysisBase {
 
             // found a named object that is not one of the ANZS5478 entities...
             if (entitiesFound == 0) {
-                addWarning(new VEOFailure(CLASSNAME, "checkANZSProperties", 3, id, lid + ": has no named resource that is an anzs5478:Record, anzs5478:Agent, anzs5478:Business, anzs5478:Mandate, or anzs5478:Relationship entity"));
+                addWarning(new VEOFailure(CLASSNAME, "checkANZSProperties", 1, id, lid + ": has no named resource that is an anzs5478:Record, anzs5478:Agent, anzs5478:Business, anzs5478:Mandate, or anzs5478:Relationship entity"));
             }
         }
+        // found no named objects...
+        if (entitiesFound == 0) {
+            addError(new VEOFailure(CLASSNAME, "checkANZSProperties", 2, id, "Metadata package does not contain a named resource (normally the rdf:Description element doesn't contain an rdf:about attribute)"));
+        } else if (entitiesFound < 16) {
         // found a named object that is not one of the ANZS5478 entities...
-        if (entitiesFound < 16) {
-            addError(new VEOFailure(CLASSNAME, "checkANZSProperties", 4, id, "Metadata package does not contain an anzs5478:Record"));
+            addError(new VEOFailure(CLASSNAME, "checkANZSProperties", 3, id, "Metadata package does not contain an anzs5478:Record"));
         }
 
         ri.close();

@@ -150,6 +150,7 @@ public class VEOAnalysis {
      * 20231115 4.03 Moved the VEO result classification & CSV generation code to VERSCommon
      * 20231120 4.04 Fixed bug in errors and warnings
      * 20231129 4.05 Fixed bug when VEO name differed from zip entry names
+     * 20231130 4.06 Added test to check that an RDF MP had an rdf:Description element with an rdf:about attribute
      * </pre>
      */
     static String version() {
