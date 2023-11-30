@@ -70,6 +70,7 @@ class RepnMetadataPackage extends AnalysisBase {
     private final static String CLASSNAME = "RepnMetadataPackage";
     private RepnItem schemaId;  // schema identifier
     private RepnItem syntaxId;  // syntax identifier
+    private RepnItem canUseFor;    // use this metadata package for...
     private ArrayList<Element> metadata; // list of metadata roots
     private boolean rdf;        // true if the metadata package is RDF
     private Model rdfModel;     // RDF model
@@ -170,12 +171,22 @@ class RepnMetadataPackage extends AnalysisBase {
         }
         document.gotoNextElement();
 
+        // vers:UseFor
+        canUseFor = null;
+        if (document.checkElement("vers:CanUseFor")) {
+            canUseFor = new RepnItem(id, "Can use metadata for:", results);
+            canUseFor.setValue(document.getTextValue());
+            document.gotoNextElement();
+        }
+
         // remember the roots of the metadata subtrees
         do {
             metadata.add(document.getCurrentElement());
         } while (document.gotoSibling());
         document.gotoParentSibling();
         objectValid = true;
+        
+        System.out.println(toString());
     }
 
     /**
@@ -543,7 +554,7 @@ class RepnMetadataPackage extends AnalysisBase {
         if (entitiesFound == 0) {
             addError(new VEOFailure(CLASSNAME, "checkANZSProperties", 2, id, "Metadata package does not contain a named resource (normally the rdf:Description element doesn't contain an rdf:about attribute)"));
         } else if (entitiesFound < 16) {
-        // found a named object that is not one of the ANZS5478 entities...
+            // found a named object that is not one of the ANZS5478 entities...
             addError(new VEOFailure(CLASSNAME, "checkANZSProperties", 3, id, "Metadata package does not contain an anzs5478:Record"));
         }
 
@@ -1468,6 +1479,10 @@ class RepnMetadataPackage extends AnalysisBase {
         sb.append(" Syntax:");
         sb.append(syntaxId);
         sb.append("\n");
+        if (canUseFor != null) {
+            sb.append("   Use for: ");
+            sb.append(canUseFor.toString());
+        }
         for (i = 0; i < metadata.size(); i++) {
             sb.append(RepnXML.prettyPrintNode(metadata.get(i), 4));
         }

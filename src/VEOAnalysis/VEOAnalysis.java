@@ -152,6 +152,7 @@ public class VEOAnalysis {
      * 20231129 4.05 Fixed bug when VEO name differed from zip entry names
      * 20231130 4.06 Added test to check that an RDF MP had an rdf:Description element with an rdf:about attribute
      * 20231130 4.07 Deleted Repn.java (replaced by AnalysisBase.java in VERSCommon)
+     * 20231130 4.08 Added support for vers:CanUseFor element in a metadata package
      * </pre>
      */
     static String version() {
