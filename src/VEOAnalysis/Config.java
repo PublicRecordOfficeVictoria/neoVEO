@@ -25,7 +25,7 @@ public class Config {
     private final static String CLASSNAME = "Config";
 
     private String USAGE
-            = "AnalyseVEOs [-help] [-e] [-sr] [-csv] [-class] [-r|-u] [-v] [-d] [-c] [-iocnt] [-norec] [-vpa] -s supportDir [-o outputDir] [files*]";
+            = "AnalyseVEOs [-help] -s supportDir [-o outputDir] [-all] [-e|-sr|-csv] [-r|-u] [-class] [-iocnt] [-v] [-d] [-c] [-norec] [-vpa] files*";
 
     public Path supportDir;    // directory in which XML schemas are to be found
     public LTSF ltsfs;         // long term sustainable formats (if null, will be read from supportDir/validLTSF.txt)
@@ -34,6 +34,7 @@ public class Config {
     public boolean genHTMLReport; // if true produce HTML reports about each VEO (default false)
     public boolean genCSVReport; // if true generate a TSV report about analysis of each VEO (default false)
     public boolean genResultSummary; // if true summarise the results at the end of the run (default false)
+    public boolean onlyVEOs;   // if true (default) only process files ending in '.veo.zip'
     public boolean unpack;     // if true leave the unpacked VEOs after analysis (default false)
     public boolean norec;      // if true asked to not complain about missing recommended metadata elements (default false)
     public boolean classifyVEOs; // if true classify the VEOs according to the analysis results in a shadown directory (default false)
@@ -63,6 +64,7 @@ public class Config {
         vpa = false;
         help = false;
         veos = new ArrayList<>();
+        onlyVEOs = true;
     }
 
     /**
@@ -81,72 +83,66 @@ public class Config {
         try {
             while (i < args.length) {
                 switch (args[i].toLowerCase()) {
-                    // if chatty mode...
-                    case "-c":
+                    case "-all": // report on all files found
+                        onlyVEOs = false;
+                        i++;
+                        break;
+
+                    case "-c": // report on each file started
                         chatty = true;
                         i++;
                         break;
 
-                    // classify VEOs by error status
-                    case "-class":
+                    case "-class": // classify VEOs by result
                         classifyVEOs = true;
                         // classErrDir = outputDir.resolve("Run-" + runDateTime.replaceAll(":", "-"));
                         i++;
                         break;
-                        
-                    // get output directory
-                    case "-csv":
+
+                    case "-csv": // generate a CSV report on results
                         genCSVReport = true;
                         i++;
                         break;
 
-                    // if debugging...
-                    case "-d":
+                    case "-d": // produce debugging information
                         debug = true;
                         i++;
                         LOG.getParent().setLevel(Level.FINE);
                         break;
 
-                    // produce report containing errors and warnings
-                    case "-e":
+                    case "-e": // report on errors and warnings found
                         genErrorReport = true;
                         i++;
                         break;
 
-                    // write a summary of the command line options to the std out
-                    case "-help":
+                    case "-help": // write a summary of the command line options to the std out
                         help = true;
                         i++;
                         break;
 
-                    // report on number of IOs in VEO
-                    case "-iocnt":
+                    case "-iocnt": // report on number of IOs found in VEOs
                         reportIOcnt = true;
                         i++;
                         break;
 
-                    // do not complain about missing recommended metadata elements
-                    case "-norec":
+                    case "-norec": // do not complain about missing recommended metadata elements
                         norec = true;
                         i++;
                         break;
 
-                    // get output directory
-                    case "-o":
+                    case "-o": // set output directory
                         i++;
                         outputDir = checkFile("output directory", args[i], true);
                         outputDir = outputDir.toAbsolutePath();
                         i++;
                         break;
 
-                    // produce HMTL report for each VEO
-                    case "-r":
+                    case "-r": // produce HMTL report for each VEO
                         genHTMLReport = true;
                         i++;
                         break;
 
-                    // get support directory
-                    case "-s":
+                    case "-s": // set support directory
                         i++;
                         supportDir = checkFile("support directory", args[i], true);
                         i++;
@@ -159,21 +155,18 @@ public class Config {
                         i++;
                         break;
 
-                    // leave unpacked VEOs after the run
-                    case "-u":
+                    case "-u": // leave unpacked VEOs after the run
                         unpack = true;
                         i++;
                         break;
 
-                    // if verbose...
-                    case "-v":
+                    case "-v": // include more information in the report
                         verbose = true;
                         i++;
                         LOG.getParent().setLevel(Level.INFO);
                         break;
 
-                    // run in VPA mode
-                    case "-vpa":
+                    case "-vpa": // run in VPA mode
                         vpa = true;
                         i++;
                         break;
@@ -235,16 +228,17 @@ public class Config {
         LOG.info("  -s <support directory>: file path to where the support files are located");
         LOG.info("");
         LOG.info(" Optional:");
-        LOG.info("  -e: generate a list of errors and warnings as each VEO is processed");
-        LOG.info("  -sr: as for -e, but also generate a summary report of all the unique errors and warnings");
-        LOG.info("  -tsv <file>: as for -sr, but also generate a TSV file with of all the errors and warnings");
-        LOG.info("  -classErr: classify the VEOs according to error status in the output directory");
-        LOG.info("  -r: generate a HTML report describing each VEO (implies '-u')");
-        LOG.info("  -u: leave the unpacked VEOs in the file system at the end of the run");
+        LOG.info("  -e: generate a list of errors and warnings on the screen as each VEO is processed");
+        LOG.info("  -sr: as for -e, but also summarise all the unique errors and warnings");
+        LOG.info("  -csv <file>: generate a CSV file in the output directory with of all the errors and warnings");
+        LOG.info("  -class: classify the VEOs in the output directory according to error status");
+        LOG.info("  -u: leave the unpacked VEOs in the output directory at the end of the run");
+        LOG.info("  -r: as for -u, but also generate a HTML report describing each VEO in the unpacked VEO");
         LOG.info("  -norec: do not warn about missing recommended metadata elements");
+        LOG.info("  -all: process all files found (default is to only process files ending in '.veo.zip'");
         LOG.info("  -vpa: back off on some of the tests (being called from VPA)");
-        LOG.info("  -o <directory>: the directory in which the VEOs are unpacked");
-        LOG.info("  -iocnt: report on the number of IOs in VEO");
+        LOG.info("  -o <directory>: the directory in which the VEOs are unpacked, classified, and CSV file placed (default is current directory)");
+        LOG.info("  -iocnt: report on the number of IOs found in the VEOs");
         LOG.info("");
         LOG.info("  -c: chatty mode: report when starting a new VEO when using -r or -u");
         LOG.info("  -v: verbose mode: give more details about processing");
@@ -252,21 +246,31 @@ public class Config {
         LOG.info("  -help: print this listing");
         LOG.info("");
     }
-    
+
     public void reportConfig() {
         LOG.info("Output mode:");
         if (genErrorReport) {
-            LOG.info(" Report on each VEO processed, including any errors or warnings (-e, -sr, or -tsv set)");
+            LOG.info(" Report on each VEO processed, including any errors or warnings (-e or -sr set)");
             if (norec) {
                 LOG.info(" Do not warn about missing recommended metadata elements (-norec set)");
             } else {
                 LOG.info(" Warn about missing recommended metadata elements");
             }
         } else {
-            LOG.info(" Do not list VEOs as they are processed, nor on any errors and warnings (-e not set)");
+            LOG.info(" Do not list VEOs as they are processed, nor on any errors and warnings (-e or -sr not set)");
+        }
+        if (genCSVReport) {
+            LOG.info(" Record results in a CSV file in the output directory (-csv set)");
+        } else {
+            LOG.info(" Do not generate a CSV file (-csv not set)");
+        }
+        if (classifyVEOs) {
+            LOG.info(" Classify the VEOs by result in the output directory (-class set)");
+        } else {
+            LOG.info(" Do not classify the VEOs by result (-class not set)");
         }
         if (genHTMLReport) {
-            LOG.info(" Unpack each VEO and produce a HTML report for each VEO processed (-r set)");
+            LOG.info(" Unpack each VEO and produce a HTML report for each VEO processed (-r set) in the output directory");
             if (!genErrorReport) {
                 if (norec) {
                     LOG.info(" Do not warn about missing recommended metadata elements (-norec set)");
@@ -280,7 +284,7 @@ public class Config {
                 }
             }
         } else if (unpack) {
-            LOG.info(" Leave an unpacked copy of each VEO processed (-u set)");
+            LOG.info(" Leave an unpacked copy of each VEO processed (-u set) in the output directory");
             if (!genErrorReport) {
                 if (chatty) {
                     LOG.info(" Report processing each VEO (-c set)");
@@ -291,23 +295,23 @@ public class Config {
         } else {
             LOG.info(" Do not unpack or produce a final HTML report for each VEO processed (neither -u or -r set)");
         }
-        if (classifyVEOs) {
-            LOG.info(" Classify the VEOs by error status in the output directory (-classErr set)");
-        } else {
-            LOG.info(" Do not classify the VEOs by error status (-classErr not set)");
-        }
         if (reportIOcnt) {
             LOG.info(" Report on number of IOs in VEO (-iocnt set)");
         }
         if (genResultSummary) {
-            LOG.info(" Produce a summary report of errors and warnings at the end (-sr or -tsv set)");
+            LOG.info(" Produce a summary report of errors and warnings at the end (-sr set)");
         } else {
-            LOG.info(" Do not produce a summary report of errors and warnings at the end (-sr and -tsv not set)");
+            LOG.info(" Do not produce a summary report of errors and warnings at the end (-sr not set)");
         }
         if (genCSVReport) {
-            LOG.info(" Produce a TSV report of errors and warnings at the end (-tsv set)");
+            LOG.info(" Produce a CSV report of errors and warnings at the end (-csv set)");
         } else {
-            LOG.info(" Do not produce a TSV report of errors and warnings at the end (-tsv not set)");
+            LOG.info(" Do not produce a CSV report of errors and warnings at the end (-csv not set)");
+        }
+        if (onlyVEOs) {
+            LOG.info(" Only process files ending in '.veo.zip' (VEO files)");
+        } else {
+            LOG.info(" Process all files found irrespective of their file type");
         }
         if (vpa) {
             LOG.info(" Run in VPA mode. Do not carry out testing for valid LTSF.");

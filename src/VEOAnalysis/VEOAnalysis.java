@@ -153,10 +153,11 @@ public class VEOAnalysis {
      * 20231130 4.06 Added test to check that an RDF MP had an rdf:Description element with an rdf:about attribute
      * 20231130 4.07 Deleted Repn.java (replaced by AnalysisBase.java in VERSCommon)
      * 20231130 4.08 Added support for vers:CanUseFor element in a metadata package
+     * 20231215 4.09 Cleaned up command line options & make default to only process VEOs
      * </pre>
      */
     static String version() {
-        return ("4.07");
+        return ("4.09");
     }
 
     static String copyright = "Copyright 2015, 2022, 2023 Public Record Office Victoria";
@@ -275,7 +276,6 @@ public class VEOAnalysis {
         int i;
 
         runDateTime = getISODateTime('-', ':', false);
-        arCSV = null;
         totalIOs = 0;
         hasErrors = false;
 
@@ -322,7 +322,7 @@ public class VEOAnalysis {
                 throw new VEOError(CLASSNAME, 4, ioe.getMessage());
             }
         }
-        
+
         classifyVEOs = null;
         if (c.classifyVEOs) {
             try {
@@ -375,7 +375,7 @@ public class VEOAnalysis {
             processFileOrDir(veoFile);
         }
 
-        // close TSV report
+        // close CSV report
         if (arCSV != null) {
             try {
                 arCSV.close();
@@ -419,6 +419,12 @@ public class VEOAnalysis {
                 LOG.log(Level.WARNING, "Failed to process directory ''{0}'': {1}", new Object[]{p.toString(), e.getMessage()});
             }
         } else {
+            
+            // ignore files that don't end in '.veo.zip'
+            if (c.onlyVEOs && !p.getFileName().toString().toLowerCase().endsWith(".veo.zip")) {
+                return;
+            }
+            
             try {
                 testVEO(p);
             } catch (VEOError ve) {
@@ -455,7 +461,6 @@ public class VEOAnalysis {
         ArrayList<VEOFailure> errors = new ArrayList<>();
         ArrayList<VEOFailure> warnings = new ArrayList<>();
         String result;
-        int i;
 
         if (veo == null) {
             throw new VEOFatal(CLASSNAME, "testVEO", 1, "VEO path is null");
@@ -495,7 +500,7 @@ public class VEOAnalysis {
             if (rv.constructRepn()) {
 
                 // if validating, do so...
-                if (c.genErrorReport || c.genHTMLReport) {
+                if (c.genErrorReport || c.genHTMLReport || c.genCSVReport || c.classifyVEOs) {
                     rv.validate(c.ltsfs, c.norec, c.vpa); // note originally this was rv.validate(ltsfs, false, norec) with norec always being true when called from VPA
                 }
 

@@ -186,7 +186,8 @@ class RepnMetadataPackage extends AnalysisBase {
         document.gotoParentSibling();
         objectValid = true;
         
-        System.out.println(toString());
+        // debug - output model to console
+        // System.out.println(toString());
     }
 
     /**
