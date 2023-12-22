@@ -78,7 +78,7 @@ class RepnInformationObject extends AnalysisBase {
             if (rdfNameSpace != null && !rdfNameSpace.equals("")) {
                 switch (rdfNameSpace) {
                     case "http://www.w3.org/1999/02/22-rdf-syntax-ns#":
-                    case "http://www.w3.org/1999/02/22-rdf-syntax-ns":
+                    // case "http://www.w3.org/1999/02/22-rdf-syntax-ns": without the hash causes the RDF parser to barf
                         rdf = true;
                         break;
                     default:

@@ -154,10 +154,11 @@ public class VEOAnalysis {
      * 20231130 4.07 Deleted Repn.java (replaced by AnalysisBase.java in VERSCommon)
      * 20231130 4.08 Added support for vers:CanUseFor element in a metadata package
      * 20231215 4.09 Cleaned up command line options & make default to only process VEOs
+     * 20231222 4.10 No longer accept xmlns:rdf attribute missing # on end - causes rdf parsing to fail
      * </pre>
      */
     static String version() {
-        return ("4.09");
+        return ("4.10");
     }
 
     static String copyright = "Copyright 2015, 2022, 2023 Public Record Office Victoria";
