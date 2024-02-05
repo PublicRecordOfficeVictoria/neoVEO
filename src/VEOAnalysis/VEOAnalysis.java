@@ -155,13 +155,14 @@ public class VEOAnalysis {
      * 20231130 4.08 Added support for vers:CanUseFor element in a metadata package
      * 20231215 4.09 Cleaned up command line options & make default to only process VEOs
      * 20231222 4.10 No longer accept xmlns:rdf attribute missing # on end - causes rdf parsing to fail
+     * 20240205 4.11 Checks entire DOM subtree for xmlns:rdf attributes, complains if xmls:rdf attribute is missing # on end and bails out of parsing RDF
      * </pre>
      */
     static String version() {
-        return ("4.10");
+        return ("4.11");
     }
 
-    static String copyright = "Copyright 2015, 2022, 2023 Public Record Office Victoria";
+    static String copyright = "Copyright 2015-2024 Public Record Office Victoria";
 
     /**
      * Initialise the analysis regime using command line arguments. Note that in

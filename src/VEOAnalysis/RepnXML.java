@@ -27,6 +27,7 @@ import javax.xml.validation.SchemaFactory;
 import javax.xml.validation.Validator;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
@@ -43,6 +44,7 @@ import org.xml.sax.SAXParseException;
  * @author Andrew Waugh
  */
 abstract class RepnXML extends AnalysisBase implements ErrorHandler {
+
     private static final String CLASSNAME = "RepnXML";
     private Document doc;    // internal DOM representation of XML document
     private DocumentBuilder parser; // parser
@@ -59,11 +61,12 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
      *
      * @param id the identifier to use in describing this
      * @param results the results summary to build
-     * @throws VERSCommon.VEOFatal if prevented from continuing processing at all
+     * @throws VERSCommon.VEOFatal if prevented from continuing processing at
+     * all
      */
     protected RepnXML(String id, ResultSummary results) throws VEOFatal {
         super(id, results);
-        
+
         // create parser
         dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
@@ -110,7 +113,7 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
         // sanity check...
         assert (file != null);
         assert (schemaFile != null);
-        
+
         if (contentsAvailable) {
             LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "parse", 1, id, "Calling parse() twice"));
             return false;
@@ -153,7 +156,7 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
             addError(new VEOFailure(CLASSNAME, "parse", 8, id, "System error when parsing file '" + file.toString() + "'", ioe));
             return false;
         }
-        
+
         // check the overall properties of the XML file. These warnings are
         // unlikely to occur; the XML prolog (?xml version="1.0 encoding="UTF-8"?>
         // is optional. If not present, or only partially present, the defaults
@@ -161,12 +164,12 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
         // version is anything other than 1.0, the parser will complain (and not
         // get to this test). The tests are just for completeness.
         if (!doc.getXmlVersion().equals("1.0")) {
-            addWarning(new VEOFailure(CLASSNAME, "parse", 9, id, "Problem in reading XML file. xml version must be '1.0' not "+doc.getXmlVersion()));
+            addWarning(new VEOFailure(CLASSNAME, "parse", 9, id, "Problem in reading XML file. xml version must be '1.0' not " + doc.getXmlVersion()));
         }
         if (!doc.getInputEncoding().equals("UTF-8")) {
-            addWarning(new VEOFailure(CLASSNAME, "parse", 10, id, "Problem in reading XML file. Encoding must be 'UTF-8' not "+doc.getInputEncoding()));
+            addWarning(new VEOFailure(CLASSNAME, "parse", 10, id, "Problem in reading XML file. Encoding must be 'UTF-8' not " + doc.getInputEncoding()));
         }
-        
+
         // check that the root (document) element contains the necessary
         // namespace declarations.
         e = doc.getDocumentElement();
@@ -181,11 +184,11 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
         } else if (!av.equals("http://www.w3.org/2001/XMLSchema-instance")) {
             addError(new VEOFailure(CLASSNAME, "parse", 14, id, "Root element defines attribute xmlns:xsi as '"+av+"' not \"http://www.w3.org/2001/XMLSchema-instance\""));
         }
-        */
+         */
         if ((av = e.getAttribute("xmlns:vers")).equals("")) {
             addError(new VEOFailure(CLASSNAME, "parse", 15, id, "Root element does not contain attribute definition 'xmlns:vers=\"http://www.prov.vic.gov.au/VERS\""));
         } else if (!av.equals("http://www.prov.vic.gov.au/VERS")) {
-            addError(new VEOFailure(CLASSNAME, "parse", 16, id, "Root element defines attribute xmlns:xsi as '"+av+"' not \"http://www.prov.vic.gov.au/VERS\""));
+            addError(new VEOFailure(CLASSNAME, "parse", 16, id, "Root element defines attribute xmlns:xsi as '" + av + "' not \"http://www.prov.vic.gov.au/VERS\""));
         }
 
         // validate the DOM tree against the schema
@@ -253,7 +256,7 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
      * Go to the root (first) element of the XML document.
      */
     final public void gotoRootElement() {
-        assert(contentsAvailable);
+        assert (contentsAvailable);
         currentElement = 0;
     }
 
@@ -261,7 +264,7 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
      * Step to the next element of the XML document in document order.
      */
     final public void gotoNextElement() {
-        assert(contentsAvailable);
+        assert (contentsAvailable);
         currentElement++;
     }
 
@@ -272,7 +275,7 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
      * @return the index
      */
     final public int getCurrentElementIndex() {
-        assert(contentsAvailable);
+        assert (contentsAvailable);
         return currentElement;
     }
 
@@ -282,7 +285,7 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
      * @return true if at or beyond current element
      */
     final public boolean atEnd() {
-        assert(contentsAvailable);
+        assert (contentsAvailable);
         if (elements == null) {
             return true;
         }
@@ -304,7 +307,7 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
         Node next;
 
         // sanity check...
-        assert(contentsAvailable);
+        assert (contentsAvailable);
 
         // get the next element at this level (or parent level if none at this level)
         next = getCurrentElement();
@@ -341,7 +344,7 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
         Node next;
 
         // sanity check...
-        assert(contentsAvailable);
+        assert (contentsAvailable);
 
         // get the parent node
         next = getCurrentElement().getParentNode();
@@ -361,7 +364,7 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
         do {
             currentElement++;
         } while (currentElement < elements.getLength() && elements.item(currentElement) != next);
-        
+
         // if it was not found, complain
         return !atEnd();
     }
@@ -372,9 +375,9 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
      * @return the current element
      */
     final public Element getCurrentElement() {
-        assert(contentsAvailable);
-        assert(elements != null);
-        assert(currentElement <= elements.getLength());
+        assert (contentsAvailable);
+        assert (elements != null);
+        assert (currentElement <= elements.getLength());
         return (Element) elements.item(currentElement);
     }
 
@@ -390,34 +393,55 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
     final public boolean checkElement(String tagName) {
         Element e;
 
-        assert(contentsAvailable);
+        assert (contentsAvailable);
         e = getCurrentElement();
         if (e == null) {
             return false;
         }
         return e.getTagName().equals(tagName);
     }
-    
+
     /**
      * Get an attribute from the current element.
-     * 
+     *
      * @param attributeName the attribute to return
-     * @return a string containing the attribute 
+     * @return a string containing the attribute
      * @throws IndexOutOfBoundsException if there are no elements, or all have
      * been processed
-     * @throws VEOError if the parse failed and no elements are available 
+     * @throws VEOError if the parse failed and no elements are available
      */
     final public String getAttribute(String attributeName) {
         Element e;
-        
-        assert(contentsAvailable);
+
+        assert (contentsAvailable);
         e = getCurrentElement();
         if (e == null) {
             return null;
         }
         return e.getAttribute(attributeName);
     }
-    
+
+    /**
+     * Set an attribute in the current element. This is used to force
+     * correctness so processing can continue
+     *
+     * @param attrName the attribute to set
+     * @param attrVal the attribute value desired
+     * @throws IndexOutOfBoundsException if there are no elements, or all have
+     * been processed
+     * @throws VEOError if the parse failed and no elements are available
+     */
+    final public void setAttribute(String attrName, String attrVal) {
+        Element e;
+
+        assert (contentsAvailable);
+        e = getCurrentElement();
+        if (e == null) {
+            return;
+        }
+        e.setAttribute(attrName, attrVal);
+    }
+
     /**
      * Get the value associated with the current element. This may be null if
      * the element has no text associated with it. The text returned is trimmed
@@ -428,8 +452,8 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
     final public String getTextValue() {
         Node n;
 
-        assert(contentsAvailable);
-        assert(elements != null);
+        assert (contentsAvailable);
+        assert (elements != null);
 
         // get first child of this element
         n = elements.item(currentElement).getFirstChild();
@@ -466,7 +490,7 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
         NodeList nl;
         int i;
         String v;
-        
+
         if (n == null) {
             return "";
         }
@@ -514,8 +538,8 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
      * @return String containing the DOM representation
      */
     final public String dumpDOM() {
-        
-        assert(contentsAvailable);
+
+        assert (contentsAvailable);
         return dumpNode(elements.item(0), 0);
     }
 
@@ -529,8 +553,10 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
     final public static String dumpNode(Node n, int depth) {
         StringBuffer sb;
         NodeList nl;
-        int i;
+        int i, j;
         String v;
+        NamedNodeMap nnm;
+        Node a;
 
         if (n == null) {
             return "";
@@ -543,14 +569,36 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
         sb.append(n.getNodeName());
         sb.append("(Type: ");
         sb.append(n.getNodeType());
-        sb.append(") '");
+        sb.append(") ");
+        sb.append(n.getNamespaceURI());
         v = n.getNodeValue();
         if (v != null) {
-            sb.append(v.trim());
+            sb.append("'" + v.trim() + "'");
         } else {
             sb.append("<null>");
         }
-        sb.append("'\n");
+        sb.append("\n");
+        nnm = n.getAttributes();
+        if (nnm != null) {
+            for (j = 0; j < nnm.getLength(); j++) {
+                a = nnm.item(j);
+                for (i = 0; i < depth + 1; i++) {
+                    sb.append(' ');
+                }
+                sb.append("Attribute: ");
+                sb.append(a.getNodeName());
+                sb.append("(Type: ");
+                sb.append(a.getNodeType());
+                sb.append(") ");
+                v = a.getNodeValue();
+                if (v != null) {
+                    sb.append("'" + v.trim() + "'");
+                } else {
+                    sb.append("<null>");
+                }
+                sb.append("\n");
+            }
+        }
         if (n.hasChildNodes()) {
             nl = n.getChildNodes();
             for (i = 0; i < nl.getLength(); i++) {

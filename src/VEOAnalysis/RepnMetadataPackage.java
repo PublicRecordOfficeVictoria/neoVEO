@@ -185,7 +185,7 @@ class RepnMetadataPackage extends AnalysisBase {
         } while (document.gotoSibling());
         document.gotoParentSibling();
         objectValid = true;
-        
+
         // debug - output model to console
         // System.out.println(toString());
     }
@@ -314,6 +314,7 @@ class RepnMetadataPackage extends AnalysisBase {
         Node n;
         String elementName;
         boolean foundRdfDescription;
+        boolean rdfNamespaceProblem;
 
         // create a place to put the RDF metadata (if any)
         rdfModel = ModelFactory.createDefaultModel();
@@ -369,6 +370,9 @@ class RepnMetadataPackage extends AnalysisBase {
                         break;
                 }
 
+                // check for extraneous namespace definitions
+                rdfNamespaceProblem = checkForNamespaceDeclns(e);
+
                 // check that the rdf:RDF has at least one rdf:Description element,
                 // and that the rdf:Description element contains an rdf:About
                 // attribute. If it doesn't contain an rdf:Description element,
@@ -399,6 +403,11 @@ class RepnMetadataPackage extends AnalysisBase {
                 if (!foundRdfDescription) {
                     addError(new VEOFailure(CLASSNAME, "parseRDF", 4, id, "rdf:RDF element did not contain an rdf:Description element"));
                 }
+                
+                // bail out if the RDF namespace declaration was invalid
+                if (rdfNamespaceProblem) {
+                    return false;
+                }
 
                 // clear any previous errors in the RDF logging facility
                 parseErrs.getBuffer().setLength(0);
@@ -415,6 +424,7 @@ class RepnMetadataPackage extends AnalysisBase {
                     return false;
                 }
                 // d2m.setErrorHandler(errHandler);
+                System.out.println(RepnXML.dumpNode(e, 0));
                 d2m.load(e);
                 d2m.close();
 
@@ -440,6 +450,51 @@ class RepnMetadataPackage extends AnalysisBase {
             LOG.log(java.util.logging.Level.WARNING, VEOFailure.getMessage(CLASSNAME, "parseRDF", 7, id, "Failed to close StringWriter used to capture parse errors", ioe));
         }
         return true;
+    }
+
+    /**
+     * Check for duplicated standard namespace declarations within the metadata
+     * package & warn if they are present. Technically not an error, but not
+     * necessary and could cause problems. Specifically check for xmlns:rdf
+     * declarations & if found check for correct value (the incorrect value will
+     * cause the RDF parser to crash).
+     *
+     * @param e
+     * @return
+     */
+    private boolean checkForNamespaceDeclns(Element e) {
+        Node n;
+        String s;
+        int i;
+        boolean failed = false;
+
+        NamedNodeMap nnm = e.getAttributes();
+        if (nnm != null) {
+            for (i = 0; i < nnm.getLength(); i++) {
+                n = nnm.item(i);
+                switch (n.getNodeName()) {
+                    case "xmlns:rdf":
+                        s = n.getNodeValue();
+                        if (!s.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#")) {
+                            addError(new VEOFailure(CLASSNAME, "checkForNamespaceDeclns", 1, id, "Incorrect xmlns:rdf declaration on "+e.getNodeName()+" element. Must be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'. RDF has not been validated."));
+                            failed = true;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+        // recurse
+        n = e.getFirstChild();
+        while (n != null) {
+            if (n.getNodeType() == Node.ELEMENT_NODE) {
+                failed |= checkForNamespaceDeclns((Element) n);
+            }
+            n = n.getNextSibling();
+        }
+        return failed;
     }
 
     /**

@@ -15,6 +15,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
 
 /**
  * This class encapsulates an Information Object in a VEO Content file.
@@ -78,11 +81,22 @@ class RepnInformationObject extends AnalysisBase {
             if (rdfNameSpace != null && !rdfNameSpace.equals("")) {
                 switch (rdfNameSpace) {
                     case "http://www.w3.org/1999/02/22-rdf-syntax-ns#":
-                    // case "http://www.w3.org/1999/02/22-rdf-syntax-ns": without the hash causes the RDF parser to barf
+                        rdf = true;
+                        break;
+                    // case "http://www.w3.org/1999/02/22-rdf-syntax-ns":
+                    // without the hash causes the RDF parser to crash. We
+                    // complain, and then force it to be correct so that the
+                    // metadata can be validated. Note that the xmlns:rdf
+                    // namespace defn could re-occur in the metadata, so we
+                    // must brute force search and replace later
+                    case "http://www.w3.org/1999/02/22-rdf-syntax-ns":
+                        System.out.println("Found xmlns:rdf without trailing #");
+                        addError(new VEOFailure(CLASSNAME, 1, id, "vers:MetadataPackage element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', must hava a trailing '#'"));
+                        document.setAttribute("xmlns:rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
                         rdf = true;
                         break;
                     default:
-                        addError(new VEOFailure(CLASSNAME, 1, id, "vers:MetadataPackage element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'"));
+                        addError(new VEOFailure(CLASSNAME, 2, id, "vers:MetadataPackage element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', should be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'"));
                         break;
                 }
             }
@@ -164,6 +178,31 @@ class RepnInformationObject extends AnalysisBase {
     public void setParent(RepnInformationObject io) {
         assert (io != null);
         parent = io;
+    }
+
+    private boolean fixRDFNamespace(Element e) {
+        Node n;
+        String s;
+
+        NamedNodeMap nnm = e.getAttributes();
+        if (nnm != null) {
+            Node a = nnm.getNamedItem("xmlns:rdf");
+            if (a != null) {
+                s = a.getNodeValue();
+                if (!s.endsWith("#")) {
+                    a.setNodeValue(s+"#");
+                    System.out.println("xmlns:rdf:'" + a.getNodeValue() + "'");
+                }
+            }
+        }
+        n = e.getFirstChild();
+        while (n != null) {
+            if (n.getNodeType() == Node.ELEMENT_NODE) {
+                fixRDFNamespace((Element) n);
+            }
+            n = n.getNextSibling();
+        }
+        return true;
     }
 
     /**
