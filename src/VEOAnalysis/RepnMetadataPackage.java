@@ -424,7 +424,7 @@ class RepnMetadataPackage extends AnalysisBase {
                     return false;
                 }
                 // d2m.setErrorHandler(errHandler);
-                System.out.println(RepnXML.dumpNode(e, 0));
+                // System.out.println(RepnXML.dumpNode(e, 0));
                 d2m.load(e);
                 d2m.close();
 

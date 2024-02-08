@@ -90,7 +90,6 @@ class RepnInformationObject extends AnalysisBase {
                     // namespace defn could re-occur in the metadata, so we
                     // must brute force search and replace later
                     case "http://www.w3.org/1999/02/22-rdf-syntax-ns":
-                        System.out.println("Found xmlns:rdf without trailing #");
                         addError(new VEOFailure(CLASSNAME, 1, id, "vers:MetadataPackage element has an invalid xmlns:rdf attribute. Was '" + rdfNameSpace + "', must hava a trailing '#'"));
                         document.setAttribute("xmlns:rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
                         rdf = true;
