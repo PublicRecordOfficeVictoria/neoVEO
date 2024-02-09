@@ -358,8 +358,6 @@ class RepnSignature extends RepnXML {
             addWarning(new VEOFailure(CLASSNAME, "verifyCertificateChain", 2, id, "First certificate could not be extracted. Remaining certificates have not been checked."));
             return false;
         }
-        subject = certToVerify.getSubjectX500Principal().getName();
-        issuer = certToVerify.getIssuerX500Principal().getName();
 
         // verify chain
         for (i = 1; i < certificates.size(); i++) {
@@ -379,6 +377,8 @@ class RepnSignature extends RepnXML {
                 }
                 return false;
             }
+            subject = certToVerify.getSubjectX500Principal().getName();
+            issuer = certToVerify.getIssuerX500Principal().getName();
             if (!verifyCertificate(certToVerify, certOfSigner, r1, r2)) {
                 addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 6, id, "Certificate " + (i - 1) + " failed verification. Subject of certificate is: " + subject + ". Issuer of certificate is: " + issuer));
                 failed = true;
@@ -389,6 +389,8 @@ class RepnSignature extends RepnXML {
 
         // final certificate should be self signed...
         if (!verifyCertificate(certToVerify, certToVerify, r1, r1)) {
+            subject = certToVerify.getSubjectX500Principal().getName();
+            issuer = certToVerify.getIssuerX500Principal().getName();
             if (!subject.equals(issuer)) {
                 addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 7, id, "Final certificate failed verification. Certificate is not self signed.   Subject of final certificate is: " + subject + " Issuer of final certificate is: " + issuer));
             } else {
