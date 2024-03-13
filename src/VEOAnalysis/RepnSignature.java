@@ -36,17 +36,19 @@ import java.util.List;
 /**
  * This class represents the content of a VEO*Signature*.xml file. A valid
  * signature means that the signature validated, and that the certificate chain
- * also validated
+ * also validated.
+ * 
+ * Note that this class is visible externally to allow programs to validate
+ * digital signatures. Use of the class assumes that the VEO has been unzipped.
  *
  * @author Andrew Waugh
  */
-class RepnSignature extends RepnXML {
+public class RepnSignature extends RepnXML {
 
     private static final String CLASSNAME = "RepnSignature";
     private Path source; // file that generated this signature file
     private RepnItem version; // version identifier of this VEOSignature.xml file
     private RepnItem sigAlgorithm; // signature algorithm to use
-    private String sa; // signature algorithm name
     private RepnItem sigDateTime; // signature date and time
     private RepnItem signer; // signer
     private RepnItem signature; // signature
@@ -79,7 +81,6 @@ class RepnSignature extends RepnXML {
         source = null;
         version = new RepnItem(id, "Version of XML file", results);
         sigAlgorithm = new RepnItem(id, "Signature algorithm OID", results);
-        sa = "";
         sigDateTime = new RepnItem(id, "Date/time signature created", results);
         signer = new RepnItem(id, "Signer", results);
         signature = new RepnItem(id, "Signature", results);
@@ -178,7 +179,6 @@ class RepnSignature extends RepnXML {
         version = null;
         sigAlgorithm.abandon();
         sigAlgorithm = null;
-        sa = null;
         sigDateTime.abandon();
         sigDateTime = null;
         signer.abandon();
@@ -208,8 +208,7 @@ class RepnSignature extends RepnXML {
         }
 
         // validate the algorithm
-        sa = sigAlgorithm.getValue();
-        switch (sa) {
+        switch (sigAlgorithm.getValue()) {
             case "SHA224withDSA":
             case "SHA224withRSA":
             case "SHA256withRSA":
@@ -223,7 +222,7 @@ class RepnSignature extends RepnXML {
             case "SHA1withRSA":
                 break;
             default:
-                sigAlgorithm.addError(new VEOFailure(CLASSNAME, "validate", 2, id, "Hash/signature algorithm combination '" + sa + "' is not supported"));
+                sigAlgorithm.addError(new VEOFailure(CLASSNAME, "validate", 2, id, "Hash/signature algorithm combination '" + sigAlgorithm.getValue() + "' is not supported"));
         }
 
         // validate a valid date and time
@@ -248,7 +247,7 @@ class RepnSignature extends RepnXML {
      * @param sourceFile the VEOContent.xml or VEOHistory.xml file to verify
      * @return true if the signature was valid
      */
-    private boolean verifySignature(Path sourceFile) {
+    public boolean verifySignature(Path sourceFile) {
         byte[] sigba;
         X509Certificate x509c;  // certificate to validate
         Signature sig;          // representation of the signature algorithm
@@ -280,10 +279,10 @@ class RepnSignature extends RepnXML {
 
         // set up verification...
         try {
-            sig = Signature.getInstance(sa);
+            sig = Signature.getInstance(sigAlgorithm.getValue());
             sig.initVerify(x509c.getPublicKey());
         } catch (NoSuchAlgorithmException nsae) {
-            addError(new VEOFailure(CLASSNAME, "verifySignature", 4, id, "Security package does not support the signature or message digest algorithm", nsae));
+            addError(new VEOFailure(CLASSNAME, "verifySignature", 4, id, "Security package does not support the signature or message digest algorithm "+sigAlgorithm.getValue(), nsae));
             return false;
         } catch (InvalidKeyException ike) {
             addError(new VEOFailure(CLASSNAME, "verifySignature", 5, id, "Security package reports that public key is invalid", ike));
@@ -339,7 +338,7 @@ class RepnSignature extends RepnXML {
      *
      * @return true if the certificate chain validated
      */
-    private boolean verifyCertificateChain() {
+    public boolean verifyCertificateChain() {
         int i;
         String issuer, subject;
         boolean failed;
