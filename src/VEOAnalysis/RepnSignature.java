@@ -266,6 +266,8 @@ public class RepnSignature extends RepnXML {
         BufferedInputStream bis;//
         int i;
         byte[] b = new byte[1000]; // buffer used to read input file
+        
+        sigStatus = SigStatus.INVALID;
 
         // extract signature from base64 encoding
         try {
@@ -336,7 +338,6 @@ public class RepnSignature extends RepnXML {
         try {
             if (!sig.verify(sigba)) {
                 addError(new VEOFailure(CLASSNAME, "verifySignature", 10, id, "Signature verification failed"));
-                sigStatus = SigStatus.INVALID;
                 return false;
             }
         } catch (SignatureException se) {
