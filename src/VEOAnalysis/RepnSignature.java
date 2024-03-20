@@ -54,6 +54,14 @@ public class RepnSignature extends RepnXML {
     private RepnItem signature; // signature
     private ArrayList<RepnItem> certificates;    // list of certificates associated with this signature
     private final static Logger LOG = Logger.getLogger("VEOAnalysis.RepnSignature");
+    private SigStatus sigStatus; // status of the signature verification
+    private String certSigner;   // signer from the certificate
+    
+    private static enum SigStatus {
+        UNVERIFIED, // don't know if signature is valid or not as it is unverified
+        VALID,      // signature verified
+        INVALID     // signature didn't verify
+    }
 
     /**
      * Build an internal representation of the VEO*Signature*.xml file,
@@ -85,6 +93,8 @@ public class RepnSignature extends RepnXML {
         signer = new RepnItem(id, "Signer", results);
         signature = new RepnItem(id, "Signature", results);
         certificates = new ArrayList<>();
+        sigStatus = SigStatus.UNVERIFIED;
+        certSigner = null;
 
         // get the files involved
         try {
@@ -190,6 +200,7 @@ public class RepnSignature extends RepnXML {
         }
         certificates.clear();
         certificates = null;
+        certSigner = null;
     }
 
     /**
@@ -276,6 +287,7 @@ public class RepnSignature extends RepnXML {
             addError(new VEOFailure(CLASSNAME, "verifySignature", 3, id, "Could not decode first vers:Certificate"));
             return false;
         }
+        certSigner = x509c.getSubjectDN().getName();
 
         // set up verification...
         try {
@@ -324,13 +336,58 @@ public class RepnSignature extends RepnXML {
         try {
             if (!sig.verify(sigba)) {
                 addError(new VEOFailure(CLASSNAME, "verifySignature", 10, id, "Signature verification failed"));
+                sigStatus = SigStatus.INVALID;
                 return false;
             }
         } catch (SignatureException se) {
             addError(new VEOFailure(CLASSNAME, "verifySignature", 11, id, "Signature verification failed", se));
             return false;
         }
+        sigStatus = SigStatus.VALID;
         return true;
+    }
+    
+    /**
+     * Is this signature valid? True/false is only returned if the signature
+     * verification was carried out. If verifySignature() has not been called,
+     * or verifySignature() failed to complete properly, a VEOError is thrown.
+     * 
+     * @return true if the signature validated
+     * @throws VEOError 
+     */
+    public boolean isValid() throws VEOError {
+        switch (sigStatus) {
+            case VALID:
+                return true;
+            case INVALID:
+                return false;
+            default:
+                throw new VEOError(CLASSNAME, "isValid", 1, "isValid() called before verifySignature() called");
+        }
+    }
+    
+    /**
+     * Get the subject of the first certificate. If verifySignature() has not
+     * been called, or verifySignature() failed to complete properly, a VEOError
+     * is thrown.
+     * 
+     * @return subject of the first certificate
+     * @throws VEOError 
+     */
+    public String getSigner() throws VEOError {
+        if (sigStatus == SigStatus.UNVERIFIED) {
+            throw new VEOError(CLASSNAME, "getSigner", 1, "getSigner() called before verifySignature() called");
+        }
+        return certSigner;
+    }
+    
+    /**
+     * Return the path of the file that produced this signature
+     * 
+     * @return 
+     */
+    public Path getSignatureFile() {
+        return source;
     }
 
     /**
