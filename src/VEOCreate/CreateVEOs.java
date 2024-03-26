@@ -292,10 +292,11 @@ public class CreateVEOs {
      * 20220316 3.1 Fixed bug in addAbsContentFile() - not current directory
      * 20220520 3.2 Changed to catch invalid file names (e.g. Paths.get() & in resolve())
      * 20220718 3.3 Now handles IP labels that are valid filesystem names
+     * 20240327 3.4 Now allows sign() to separately sign VEOContent and VEOHistory
      * </pre>
      */
     static String version() {
-        return ("3.3");
+        return ("3.4");
     }
 
     /**

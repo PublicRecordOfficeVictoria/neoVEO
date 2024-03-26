@@ -1158,10 +1158,14 @@ public class CreateVEO {
     }
 
     /**
-     * Sign the VEOContent.xml and VEOHistory.xml files. This method generates a
-     * pair of VEOContentSignature and VEOHistorySignature files using the
+     * Sign the VEOContent.xml and/or VEOHistory.xml files. This method creates
+     * VEOContentSignature and VEOHistorySignature files using the
      * specified signer and hash algorithm. (Note the private key in the signer
      * controls the signature algorithm to be used.)
+     * <p>
+     * The default is to generate both a VEOContent.xml and a VEOHistory.xml
+     * file, but it is possible to request that only one is generated (this is
+     * used in resigning a VEO).
      * <p>
      * This method can be called repeatedly to create multiple pairs of
      * signature files by different signers.
@@ -1178,6 +1182,16 @@ public class CreateVEO {
      * @throws VERSCommon.VEOError if an error occurred
      */
     public void sign(PFXUser signer, String hashAlg) throws VEOError {
+        sign(SignType.BOTH, signer, hashAlg);
+    }
+
+    public enum SignType {
+        VEOContent, // sign the VEOContent.xml files only
+        VEOHistory, // sign the VEOHistory.xml files only
+        BOTH            // sign both VEOContent.xml & VEOHistory.xml files
+    }
+
+    public void sign(SignType type, PFXUser signer, String hashAlg) throws VEOError {
         String method = "sign";
 
         // sanity checks
@@ -1204,8 +1218,12 @@ public class CreateVEO {
         }
 
         // sign the files
-        csf.sign("VEOContent.xml", signer, hashAlg);
-        csf.sign("VEOHistory.xml", signer, hashAlg);
+        if (type == SignType.BOTH || type == SignType.VEOContent) {
+            csf.sign("VEOContent.xml", signer, hashAlg);
+        }
+        if (type == SignType.BOTH || type == SignType.VEOHistory) {
+            csf.sign("VEOHistory.xml", signer, hashAlg);
+        }
         state = VEOState.SIGNED;
     }
 
