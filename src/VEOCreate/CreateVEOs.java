@@ -294,10 +294,11 @@ public class CreateVEOs {
      * 20220718 3.3 Now handles IP labels that are valid filesystem names
      * 20240327 3.4 Now allows sign() to separately sign VEOContent and VEOHistory
      * 20240417 3.5 Updated the semantic ids of AGLS and ANZS5478
+     * 20230417 3.6 Undeprecated registerContentDirectories(), addContentFile(String), & getActualSourcePath() in CreateVEO, as CreateVEOs uses them
      * </pre>
      */
     static String version() {
-        return ("3.5");
+        return ("3.6");
     }
 
     /**

@@ -886,7 +886,8 @@ public class CreateVEO {
      * <b>
      * This method deprecated and is only used with the addContentFile(String)
      * method. Users should use the simpler and more easily understood
-     * addContentFile(String, Path) method instead.
+     * addContentFile(String, Path) method instead. This method is still used
+     * with the CreateVEOs() wrapper.
      * </b>
      * <p>
      * For example, if the content files are m:/a/b/c/d/e.txt and
@@ -911,7 +912,6 @@ public class CreateVEO {
      * @param directories a list of directories to be registered
      * @throws VERSCommon.VEOError if an error occurred
      */
-    @Deprecated
     public void registerContentDirectories(Path... directories) throws VEOError {
         String method = "addContent";
         int i;
@@ -968,7 +968,7 @@ public class CreateVEO {
      * <b>
      * This method is deprecated and retained for backwards compatability. Users
      * should use the simpler and more easily understood addContentFile(String,
-     * Path) method.
+     * Path) method. This method is still used in the createVEOs() wrtapper.
      * </b>
      * <p>
      * The files are referenced by a two part scheme, the parts are the path to
@@ -1000,7 +1000,6 @@ public class CreateVEO {
      * @param file the relative portion of the Content File being added
      * @throws VERSCommon.VEOError if an error occurred
      */
-    @Deprecated
     public void addContentFile(String file) throws VEOError {
         String method = "addContentFile";
 
@@ -1030,7 +1029,6 @@ public class CreateVEO {
      * @return the real file
      * @throws VERSCommon.VEOError if an error occurred
      */
-    @Deprecated
     public Path getActualSourcePath(String file) throws VEOError {
         String method = "getSourcePath";
         Path rootPath, source, destination;
