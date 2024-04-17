@@ -510,33 +510,4 @@ class CreateVEOContent extends CreateXMLDoc {
 
         LOG.exiting("CreateVEOContentFile", "finalise");
     }
-
-    /**
-     * M A I N
-     *
-     * Test program to tell if CreateSignatureFile is working
-     *
-     * @param args the command line arguments
-     */
-    public static void main(String[] args) {
-        CreateVEOContent cvc;
-
-        try {
-            cvc = new CreateVEOContent(Paths.get("Test"), "3.0", "SHA-1");
-            cvc.startInfoObject("Test", 1);
-            cvc.startMetadataPackage("", "");
-            // cvc.addFromTemplate();
-            cvc.finishMetadataPackage();
-            cvc.startMetadataPackage("", "");
-            cvc.finishMetadataPackage();
-            cvc.startInfoPiece("Label");
-            cvc.addContentFile("TestContent.txt", null);
-            cvc.finishInfoPiece();
-            cvc.finishInfoObject();
-            cvc.finalise();
-        } catch (VEOError e) {
-            System.out.println(e.getMessage());
-        }
-        System.out.println("Complete!");
-    }
 }

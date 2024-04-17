@@ -310,25 +310,4 @@ class CreateSignatureFile extends CreateXMLDoc {
     public void abandon(boolean debug) {
         super.abandon(debug);
     }
-
-    /**
-     * M A I N
-     *
-     * Test program to tell if CreateSignatureFile is working
-     *
-     * @param args the command line arguments
-     */
-    public static void main(String[] args) {
-        CreateSignatureFile csf;
-        PFXUser signer;
-
-        try {
-            signer = new PFXUser(new File("Test", "signer.pfx").toString(), "Ag0nc1eS");
-            csf = new CreateSignatureFile(Paths.get("Test"), "3.0");
-            csf.sign("VEOContent.xml", signer, "SHA1withRSA");
-        } catch (VEOError e) {
-            System.out.println(e.getMessage());
-        }
-        System.out.println("Complete!");
-    }
 }

@@ -227,19 +227,4 @@ class RepnHistory extends RepnXML {
         endDiv();
         finishReport();
     }
-
-    public static void main(String args[]) {
-        RepnHistory rh;
-        Path veoDir;
-        Path schemaDir;
-
-        veoDir = Paths.get("Test", "TestVEO.veo");
-        schemaDir = Paths.get("Test", "Schemas");
-        try {
-            rh = new RepnHistory(veoDir, schemaDir, null);
-            System.out.println(rh.toString());
-        } catch (VEOError e) {
-            System.out.println(e.getMessage());
-        }
-    }
 }

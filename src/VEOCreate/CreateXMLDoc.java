@@ -371,28 +371,4 @@ class CreateXMLDoc {
             }
         } catch (IOException e) { /* ignore */ }
     }
-
-    /**
-     * M A I N
-     *
-     * Test program to tell if CreateXMLDoc is working
-     *
-     * @param args the command line arguments
-     */
-    public static void main(String[] args) {
-        CreateXMLDoc cxd;
-        Path path;
-
-        try {
-            path = FileSystems.getDefault().getPath("Test");
-            System.out.println((path.toAbsolutePath()).toString());
-            cxd = new CreateXMLDoc(Paths.get("Test"));
-            cxd.startXMLDoc("VEOContent.xml", "vers:TestDoc");
-            cxd.write("Testing123");
-            cxd.endXMLDoc();
-        } catch (VEOError e) {
-            System.out.println(e.getMessage());
-        }
-        System.out.println("Complete!");
-    }
 }

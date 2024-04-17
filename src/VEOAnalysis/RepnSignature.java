@@ -683,19 +683,4 @@ public class RepnSignature extends RepnXML {
         endDiv();
         finishReport();
     }
-
-    public static void main(String args[]) {
-        RepnSignature rh;
-        Path veoDir;
-        Path schemaDir;
-
-        veoDir = Paths.get("..", "neoVEOOutput", "Demo", "BadVEO1.veo");
-        schemaDir = Paths.get("Test", "Demo", "Schemas");
-        try {
-            rh = new RepnSignature(veoDir, "VEOContentSignature1.xml", schemaDir, null);
-            System.out.println(rh.toString());
-        } catch (VEOError e) {
-            System.out.println(e.getMessage());
-        }
-    }
 }

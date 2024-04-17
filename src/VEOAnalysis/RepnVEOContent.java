@@ -369,26 +369,4 @@ class RepnVEOContent extends RepnXML {
             infoObjs.get(i).genReport(verbose, veoDir, pVersion, copyright);
         }
     }
-
-    /**
-     * Main program for testing
-     *
-     * @param args command line arguments
-     */
-    public static void main(String args[]) {
-        RepnVEOContent rc;
-        Path veoDir;
-        Path schemaDir;
-
-        veoDir = Paths.get("..", "neoVEOOutput", "Demo", "BadVEO1.veo");
-        schemaDir = Paths.get("Test", "Demo", "Schemas");
-        try {
-            rc = new RepnVEOContent(veoDir, schemaDir, null, null);
-            System.out.println(rc.dumpDOM());
-            rc.genReport(false, veoDir, "1.0", "Copyright");
-            // System.out.println(rc.toString());
-        } catch (VEOError e) {
-            System.out.println(e.getMessage());
-        }
-    }
 }

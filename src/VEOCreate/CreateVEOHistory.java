@@ -189,29 +189,4 @@ class CreateVEOHistory extends CreateXMLDoc {
     public void abandon(boolean debug) {
         super.abandon(debug);
     }
-
-    /**
-     * M A I N
-     *
-     * Test program to tell if CreateSignatureFile is working
-     *
-     * @param args the command line arguments
-     */
-    public static void main(String[] args) {
-        CreateVEOHistory cvhf;
-        String[] descriptions, errors;
-
-        try {
-            cvhf = new CreateVEOHistory(Paths.get("Test"), "3.0");
-            cvhf.start();
-            descriptions = new String[]{"One"};
-            errors = new String[]{"Two"};
-            cvhf.addEvent("20140101", "Created", "Andrew", descriptions, errors);
-            cvhf.finalise();
-
-        } catch (VEOError e) {
-            System.out.println(e.getMessage());
-        }
-        System.out.println("Complete!");
-    }
 }
