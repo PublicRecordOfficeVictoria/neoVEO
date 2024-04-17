@@ -4,12 +4,13 @@
  * Author Andrew Waugh
  * Version 1.0 February 2015
  */
-package VEOCreate;
+package VEOResign;
 
 import VERSCommon.PFXUser;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFatal;
 import VEOAnalysis.RepnSignature;
+import VEOCreate.CreateVEO;
 import VEOCreate.CreateVEO.SignType;
 import VERSCommon.AppError;
 import VERSCommon.AppFatal;
@@ -133,10 +134,11 @@ public class SignVEOs {
      * 20210409 1.5 Uses new PFXUser function to report on file name
      * 20210709 1.6 Change Base64 handling routines & provided support for PISA
      * 20240313 2.0 Now updates VEOHistory.xml with events
+     * 20240417 2.1 Moved from VEOCreate to be its own package
      * </pre>
      */
     static String version() {
-        return ("2.0");
+        return ("2.1");
     }
 
     /**
@@ -781,9 +783,6 @@ public class SignVEOs {
         SignVEOs sv;
 
         try {
-            if (args.length == 0) {
-                args = new String[]{"-f", "-c", "Test/Demo/signControl.txt", "../neoVEOOutput/TestAnalysis/TestVEO2.veo"};
-            }
             sv = new SignVEOs(args);
             sv.resignVEOs();
         } catch (AppFatal e) {
