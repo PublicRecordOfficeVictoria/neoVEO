@@ -293,10 +293,11 @@ public class CreateVEOs {
      * 20220520 3.2 Changed to catch invalid file names (e.g. Paths.get() & in resolve())
      * 20220718 3.3 Now handles IP labels that are valid filesystem names
      * 20240327 3.4 Now allows sign() to separately sign VEOContent and VEOHistory
+     * 20240417 3.5 Updated the semantic ids of AGLS and ANZS5478
      * </pre>
      */
     static String version() {
-        return ("3.4");
+        return ("3.5");
     }
 
     /**
@@ -1032,7 +1033,7 @@ public class CreateVEOs {
 
                         // start AGLS (RDF) metadata package
                         try {
-                            veo.startRDFMetadataPackage("http://prov.vic.gov.au/vers/schema/AGLS", AGLSNamespaces, new URL(tokens[1]));
+                            veo.startRDFMetadataPackage("http://www.vic.gov.au/blog/wp-content/uploads/2013/11/AGLS-Victoria-2011-V4-Final-2011.pdf", AGLSNamespaces, new URL(tokens[1]));
                         } catch (VEOError e) {
                             veoFailed(line, "AGLS-MP ('" + tokens[1] + "')command failed", e);
                             veo.abandon(debug);
@@ -1067,7 +1068,7 @@ public class CreateVEOs {
 
                         // start AGLS (RDF) metadata package
                         try {
-                            veo.startRDFMetadataPackage("http://www.prov.vic.gov.au/VERS-as5478", ANZS5478Namespaces, new URL(tokens[1]));
+                            veo.startRDFMetadataPackage("http://www.prov.vic.gov.au/vers/schema/ANZS5478", ANZS5478Namespaces, new URL(tokens[1]));
                         } catch (VEOError e) {
                             veoFailed(line, "ANZS5478-MP ('" + tokens[1] + "')command failed", e);
                             veo.abandon(debug);
