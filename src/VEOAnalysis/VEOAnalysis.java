@@ -158,10 +158,11 @@ public class VEOAnalysis {
      * 20240205 4.11 Checks entire DOM subtree for xmlns:rdf attributes, complains if xmls:rdf attribute is missing # on end and bails out of parsing RDF
      * 20240209 4.12 Fixed bug in reporting on certificate chain validation failures (issuer and subject didn't change with certificates)
      * 20240313 4.13 Altered RepnSignature so that it can be used standalone to validate signatures and certificates
+     * 20240424 4.14 Adjust validation of AS5478 relationships so that role could be either 1 or 2
      * </pre>
      */
     static String version() {
-        return ("4.13");
+        return ("4.14");
     }
 
     static String copyright = "Copyright 2015-2024 Public Record Office Victoria";

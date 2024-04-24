@@ -1028,8 +1028,8 @@ class RepnMetadataPackage extends AnalysisBase {
             if (count > 1) {
                 addError("checkRelatedEntity", 4, nlid + " contains multiple anzs5478:AssignedEntityID, anzs5478:Agent, anzs5478:Business, or anzs5478:Mandate");
             }
-            if (!checkExactValue(r2, anzs5478NameSpace, "RelationshipRole", "2")) {
-                addError("checkRelatedEntity", 5, nlid + "/anzs5478:RelationshipRole must have value '2'");
+            if (!checkExactValue(r2, anzs5478NameSpace, "RelationshipRole", "1") && !checkExactValue(r2, anzs5478NameSpace, "RelationshipRole", "2")) {
+                addError("checkRelatedEntity", 5, nlid + "/anzs5478:RelationshipRole must be present and have a value of '1' or '2'");
             }
         }
         if (!found) {
