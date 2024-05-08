@@ -135,6 +135,7 @@ public class SignVEOs {
      * 20210709 1.6 Change Base64 handling routines & provided support for PISA
      * 20240313 2.0 Now updates VEOHistory.xml with events
      * 20240417 2.1 Moved from VEOCreate to be its own package
+     * 20240508 2.2 Adjusted logging so that std header & help are displayed
      * </pre>
      */
     static String version() {
@@ -174,10 +175,43 @@ public class SignVEOs {
         verbose = false;
         printComments = false;
         debug = false;
+        help = false;
         hashAlg = "SHA-512";
 
         // process command line arguments
         configure(args);
+
+        // tell what is happening
+        LOG.warning("******************************************************************************");
+        LOG.warning("*                                                                            *");
+        LOG.warning("*                V E O ( V 3 )   R E S I G N I N G   T O O L                 *");
+        LOG.warning("*                                                                            *");
+        LOG.log(Level.WARNING, "*                                Version {0}                                *", version());
+        LOG.warning("*               Copyright 2015 Public Record Office Victoria                 *");
+        LOG.warning("*                                                                            *");
+        LOG.warning("******************************************************************************");
+        LOG.warning("");
+        LOG.log(Level.WARNING, "Run at {0}", VERSDate.versDateTime(0));
+        LOG.warning("");
+        if (help) {
+            LOG.warning("Command line arguments:");
+            LOG.warning(" Mandatory:");
+            LOG.warning("  -verify or -renew or -create: task to perform");
+            LOG.warning("  -s <pfxFile> <password>: path to a PFX file and its password for signing a VEO (can be repeated)");
+            LOG.warning("  -support <direct>: path directory where schema files are found");
+            LOG.warning("  one or more VEOs");
+            LOG.warning("");
+            LOG.warning(" Optional:");
+            LOG.warning("  -u <userDesc>: a description of the user resigning the file");
+            LOG.warning("  -e <eventDesc>: a description of the event causing the resigning");
+            LOG.warning("  -ha <hashAlgorithm>: specifies the hash algorithm (default SHA-256)");
+            LOG.warning("  -o <directory>: the directory in which the VEOs are created (default is current working directory)");
+            LOG.warning("");
+            LOG.warning("  -v: verbose mode: give more details about processing");
+            LOG.warning("  -d: debug mode: give a lot of details about processing");
+            LOG.warning("  -help: print this listing");
+            LOG.warning("");
+        }
 
         // set and check config
         if (task == Task.NOTSPECIFIED) {
@@ -197,38 +231,7 @@ public class SignVEOs {
         } else {
             userDesc = userDesc + " (" + System.getProperty("user.name") + ")";
         }
-
-        // tell what is happening
-        LOG.info("******************************************************************************");
-        LOG.info("*                                                                            *");
-        LOG.info("*                V E O ( V 3 )   R E S I G N I N G   T O O L                 *");
-        LOG.info("*                                                                            *");
-        LOG.log(Level.INFO, "*                                Version {0}                                *", version());
-        LOG.info("*               Copyright 2015 Public Record Office Victoria                 *");
-        LOG.info("*                                                                            *");
-        LOG.info("******************************************************************************");
-        LOG.info("");
-        LOG.log(Level.INFO, "Run at {0}", VERSDate.versDateTime(0));
-        LOG.info("");
-        if (help) {
-            LOG.info("Command line arguments:");
-            LOG.info(" Mandatory:");
-            LOG.info("  -verify or -renew or -create: task to perform");
-            LOG.info("  -s <pfxFile> <password>: path to a PFX file and its password for signing a VEO (can be repeated)");
-            LOG.info("  -support <direct>: path directory where schema files are found");
-            LOG.info("  one or more VEOs");
-            LOG.info("");
-            LOG.info(" Optional:");
-            LOG.info("  -u <userDesc>: a description of the user resigning the file");
-            LOG.info("  -e <eventDesc>: a description of the event causing the resigning");
-            LOG.info("  -ha <hashAlgorithm>: specifies the hash algorithm (default SHA-256)");
-            LOG.info("  -o <directory>: the directory in which the VEOs are created (default is current working directory)");
-            LOG.info("");
-            LOG.info("  -v: verbose mode: give more details about processing");
-            LOG.info("  -d: debug mode: give a lot of details about processing");
-            LOG.info("  -help: print this listing");
-            LOG.info("");
-        }
+        
         LOG.info("Configuration:");
         switch (task) {
             case VERIFY:
@@ -244,6 +247,7 @@ public class SignVEOs {
                 LOG.info(" Task to perform is not specified");
                 break;
         }
+        LOG.info(" Signers:");
         for (i = 0; i < signers.size(); i++) {
             pfxu = signers.get(i);
             LOG.log(Level.INFO, "  PFX user: ''{0}''", pfxu.getFileName());
@@ -252,7 +256,6 @@ public class SignVEOs {
         LOG.log(Level.INFO, " Event description: ''{0}''", eventDesc);
         LOG.log(Level.INFO, " Hash algorithm: {0}", hashAlg);
         LOG.log(Level.INFO, " Output directory: ''{0}''", outputDir.toString());
-        LOG.info(" Signers:");
         if (verbose) {
             LOG.info(" Verbose output is selected");
         }
