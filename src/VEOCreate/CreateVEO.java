@@ -15,6 +15,7 @@ import VERSCommon.VEOError;
 import VERSCommon.VEOFatal;
 import java.nio.file.Path;
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
@@ -1157,9 +1158,9 @@ public class CreateVEO {
 
     /**
      * Sign the VEOContent.xml and/or VEOHistory.xml files. This method creates
-     * VEOContentSignature and VEOHistorySignature files using the
-     * specified signer and hash algorithm. (Note the private key in the signer
-     * controls the signature algorithm to be used.)
+     * VEOContentSignature and VEOHistorySignature files using the specified
+     * signer and hash algorithm. (Note the private key in the signer controls
+     * the signature algorithm to be used.)
      * <p>
      * The default is to generate both a VEOContent.xml and a VEOHistory.xml
      * file, but it is possible to request that only one is generated (this is
@@ -1226,7 +1227,7 @@ public class CreateVEO {
     }
 
     /**
-     * Produce the actual VEO (a Zip file) and clean up. This method turns the
+     * Produce the actual VEO (a Zip file) and clean up.This method turns the
      * VEO directory and its contents into a ZIP file. The ZIP file has the same
      * name as the VEO directory with the suffix '.veo.zip'.
      * <p>
@@ -1238,16 +1239,21 @@ public class CreateVEO {
      * method has been called the VEO has been completed and none of the other
      * methods of this class can be called.
      *
+     * @param outputDir directory in which the ZIP file will be placed.
+     * @param generateZip if true generate the ZIP file
      * @param keepVEODir if true the VEO directory is kept
      * @throws VERSCommon.VEOError if an error occurred
      */
-    public void finalise(boolean keepVEODir) throws VEOError {
+    public void finalise(Path outputDir, boolean generateZip, boolean keepVEODir) throws VEOError {
         String method = "finalise";
         // FileOutputStream fos = null;
         // BufferedOutputStream bos = null;
         ZipArchiveOutputStream zos = null;
         String zipName;
         Path p, p1;
+        File zipFileLocn;
+
+        assert outputDir != null;
 
         // VEOContent and VEOHistory files must have been finished and signed
         switch (state) {
@@ -1265,60 +1271,73 @@ public class CreateVEO {
 
         // log.log(Level.INFO, "Finished control file. Zipping");
         // generate the ZIP file
-        try {
-            // VEO name is the VEO directory name with the suffix '.veo.zip'
-            if (veoDir.getFileName().toString().endsWith(".veo")) {
-                zipName = veoDir.getFileName().toString() + ".zip";
-            } else {
-                zipName = veoDir.getFileName().toString() + ".veo.zip";
-            }
-
-            // create Zip Output Stream
-            p = veoDir.getParent();
+        if (generateZip) {
             try {
-                p1 = p.resolve(zipName);
-            } catch (InvalidPathException ipe) {
-                throw new VEOError(classname, 1, "ZIP file name (" + zipName + ") was invalid: " + ipe.getMessage());
-            }
-
-            // changed to use the Apache ZIP implementation rather than the native Java one
-            // fos = new FileOutputStream(Paths.get(p.toString(), zipName).toString());
-            // bos = new BufferedOutputStream(fos);
-            // zos = new ZipOutputStream(bos, StandardCharsets.UTF_8);
-            zos = new ZipArchiveOutputStream(p1.toFile());
-            zos.setFallbackToUTF8(true);
-            zos.setUseLanguageEncodingFlag(true);
-            zos.setCreateUnicodeExtraFields(ZipArchiveOutputStream.UnicodeExtraFieldPolicy.ALWAYS);
-
-            // recursively process VEO file
-            zip(zos, p, veoDir);
-
-            // include the content files
-            zipContentFiles(zos, veoDir);
-
-        } catch (IOException e) {
-            throw new VEOError(classname, method, 1, "Error creating ZIP file: " + e.toString());
-        } finally {
-            try {
-                if (zos != null) {
-                    zos.close();
+                // VEO name is the VEO directory name with the suffix '.veo.zip'
+                if (veoDir.getFileName().toString().endsWith(".veo")) {
+                    zipName = veoDir.getFileName().toString() + ".zip";
+                } else {
+                    zipName = veoDir.getFileName().toString() + ".veo.zip";
                 }
-                /*
+
+                // create Zip Output Stream
+                p = veoDir.getParent();
+                try {
+                    zipFileLocn = outputDir.resolve(zipName).toFile();
+                } catch (InvalidPathException ipe) {
+                    throw new VEOError(classname, 1, "ZIP file name (" + zipName + ") was invalid: " + ipe.getMessage());
+                }
+
+                // changed to use the Apache ZIP implementation rather than the native Java one
+                // fos = new FileOutputStream(Paths.get(p.toString(), zipName).toString());
+                // bos = new BufferedOutputStream(fos);
+                // zos = new ZipOutputStream(bos, StandardCharsets.UTF_8);
+                zos = new ZipArchiveOutputStream(zipFileLocn);
+                zos.setFallbackToUTF8(true);
+                zos.setUseLanguageEncodingFlag(true);
+                zos.setCreateUnicodeExtraFields(ZipArchiveOutputStream.UnicodeExtraFieldPolicy.ALWAYS);
+
+                // recursively process VEO file
+                zip(zos, p, veoDir);
+
+                // include the content files
+                zipContentFiles(zos, veoDir);
+
+            } catch (IOException e) {
+                throw new VEOError(classname, method, 1, "Error creating ZIP file: " + e.toString());
+            } finally {
+                try {
+                    if (zos != null) {
+                        zos.close();
+                    }
+                    /*
                 if (bos != null) {
                     bos.close();
                 }
                 if (fos != null) {
                     fos.close();
                 }
-                 */
-            } catch (IOException e) {
-                /* ignore */ }
+                     */
+                } catch (IOException e) {
+                    /* ignore */ }
+            }
         }
 
         state = VEOState.FINISHED;
 
         // cleanup...
         abandon(debug || keepVEODir);
+    }
+
+    /**
+     * Finalise the VEO, creating the ZIP file in the directory that contains
+     * the VEO.
+     *
+     * @param keepVEODir if true the VEO directory is kept
+     * @throws VEOError
+     */
+    public void finalise(boolean keepVEODir) throws VEOError {
+        finalise(veoDir.getParent(), true, keepVEODir);
     }
 
     /**

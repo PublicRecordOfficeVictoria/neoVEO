@@ -296,10 +296,11 @@ public class CreateVEOs {
      * 20240417 3.5 Updated the semantic ids of AGLS and ANZS5478
      * 20240417 3.6 Undeprecated registerContentDirectories(), addContentFile(String), & getActualSourcePath() in CreateVEO, as CreateVEOs uses them
      * 20240417 3.7 Moved SignVEOs to be a package within neoVEO
+     * 20240515 3.8 Can now ZIP a VEO anywhere, and also finalise without ZIPping
      * </pre>
      */
     static String version() {
-        return ("3.7");
+        return ("3.8");
     }
 
     /**
