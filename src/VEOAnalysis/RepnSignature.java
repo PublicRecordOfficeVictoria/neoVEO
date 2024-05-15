@@ -46,6 +46,7 @@ import java.util.List;
 public class RepnSignature extends RepnXML {
 
     private static final String CLASSNAME = "RepnSignature";
+    private String sigFilename; // name of signature file
     private Path source; // file that generated this signature file
     private RepnItem version; // version identifier of this VEOSignature.xml file
     private RepnItem sigAlgorithm; // signature algorithm to use
@@ -86,6 +87,7 @@ public class RepnSignature extends RepnXML {
         assert(sigFileName != null);
         assert(schemaDir != null);
 
+        sigFilename = sigFileName;
         source = null;
         version = new RepnItem(id, "Version of XML file", results);
         sigAlgorithm = new RepnItem(id, "Signature algorithm OID", results);
@@ -201,6 +203,14 @@ public class RepnSignature extends RepnXML {
         certificates.clear();
         certificates = null;
         certSigner = null;
+    }
+    
+    /**
+     * Return the original file name of the signature
+     * @return filename
+     */
+    public String getSigFilename() {
+        return sigFilename;
     }
 
     /**

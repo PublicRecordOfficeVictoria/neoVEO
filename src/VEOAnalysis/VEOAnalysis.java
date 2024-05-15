@@ -159,10 +159,11 @@ public class VEOAnalysis {
      * 20240209 4.12 Fixed bug in reporting on certificate chain validation failures (issuer and subject didn't change with certificates)
      * 20240313 4.13 Altered RepnSignature so that it can be used standalone to validate signatures and certificates
      * 20240424 4.14 Adjust validation of AS5478 relationships so that role could be either 1 or 2
+     * 20240515 4.15 RepnSignature now stores the Signature filename & can report on it
      * </pre>
      */
     static String version() {
-        return ("4.14");
+        return ("4.15");
     }
 
     static String copyright = "Copyright 2015-2024 Public Record Office Victoria";
