@@ -160,10 +160,11 @@ public class VEOAnalysis {
      * 20240313 4.13 Altered RepnSignature so that it can be used standalone to validate signatures and certificates
      * 20240424 4.14 Adjust validation of AS5478 relationships so that role could be either 1 or 2
      * 20240515 4.15 RepnSignature now stores the Signature filename & can report on it
+     * 20230516 4.16 Moved initialistion to after printing help, so that help can always done
      * </pre>
      */
     static String version() {
-        return ("4.15");
+        return ("4.16");
     }
 
     static String copyright = "Copyright 2015-2024 Public Record Office Victoria";
@@ -188,7 +189,6 @@ public class VEOAnalysis {
         LOG.setLevel(Level.FINEST);
         c = new Config();
         c.configure(args);
-        init(c, null);
 
         // say what we are doing
         LOG.info("******************************************************************************");
@@ -207,7 +207,8 @@ public class VEOAnalysis {
             c.outputHelp();
         }
 
-        // report on what has been asked to do
+        // initialise & report on what has been asked to do
+        init(c, null);
         c.reportConfig();
     }
 
