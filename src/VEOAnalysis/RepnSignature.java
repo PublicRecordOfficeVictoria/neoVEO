@@ -391,15 +391,6 @@ public class RepnSignature extends RepnXML {
         }
         return certSigner;
     }
-    
-    /**
-     * Return the path of the file that produced this signature
-     * 
-     * @return 
-     */
-    public Path getSignatureFile() {
-        return source;
-    }
 
     /**
      * Verify the certificate chain in the signature file.
