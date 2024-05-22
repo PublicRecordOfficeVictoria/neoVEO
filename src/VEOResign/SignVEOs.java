@@ -43,17 +43,17 @@ import java.util.logging.Logger;
  * <ul>
  * <li><b>Verify</b> In this mode, all of the digital signatures in the VEO are
  * verified (but not the certificates). The result of this verification is
- * documented as an event in the VEOHistory.xml file. Since this invalidates
- * the VEOHistory signatures, these are removed and the VEOHistory.xml file.
+ * documented as an event in the VEOHistory.xml file. Since this invalidates the
+ * VEOHistory signatures, these are removed and the VEOHistory.xml file.
  * resigned</li>
- * <li><b>Renew</b> In this mode, the VEOContent.xml is resigned and any
- * invalid VEOContent signatures are deleted. The result of the renewal is
- * documented as an event in the VEOHistory.xml file. The existing VEOHistory
- * signatures are removed and the VEOHistory.xml file resigned.</li>
+ * <li><b>Renew</b> In this mode, the VEOContent.xml is resigned and any invalid
+ * VEOContent signatures are deleted. The result of the renewal is documented as
+ * an event in the VEOHistory.xml file. The existing VEOHistory signatures are
+ * removed and the VEOHistory.xml file resigned.</li>
  * <li><b>Create</b> In this mode, all the existing signatures are removed, and
- * the VEOContent.xml and VEOHistory.xml files are resigned. Note that no
- * entry is made in the VEOHistory.xml file - this mode is intended to be used
- * to create test VEOs from a template VEO.</li>
+ * the VEOContent.xml and VEOHistory.xml files are resigned. Note that no entry
+ * is made in the VEOHistory.xml file - this mode is intended to be used to
+ * create test VEOs from a template VEO.</li>
  * </ul>
  * <h3>Command Line arguments</h3>
  * The following command line arguments must be supplied:
@@ -74,10 +74,10 @@ import java.util.logging.Logger;
  * enclosed in double quote marks. If not specified, the login id will be
  * used</li>
  * <li><b>-e &lt;string&gt;</b> A string containing a description of the event
- * causing the VEO to be resigned (e.g. a description of the changes made to
- * the VEO). If the string contains multiple words, it should be enclosed in
- * double quote marks. If not specified a simple description of the changes
- * to the signatures are added.</li>
+ * causing the VEO to be resigned (e.g. a description of the changes made to the
+ * VEO). If the string contains multiple words, it should be enclosed in double
+ * quote marks. If not specified a simple description of the changes to the
+ * signatures are added.</li>
  * <li><b>-ha &lt;algorithm&gt;</b> The hash algorithm used to protect the
  * content files and create signatures. The default is 'SHA-512'.</li>
  * <li><b>-o &lt;outputDir&gt;</b> the directory in which the VEOs are to be
@@ -101,6 +101,7 @@ public class SignVEOs {
     Task task;              // task to be performed
     ArrayList<String> veoDirectories; // list of directories to sign and zip
     List<PFXUser> signers;  // list of signers
+    boolean noZIP;          // true if leaving VEO unzipped at end
     boolean verbose;        // true if generate lots of detail
     boolean printComments;  // true if printing comments from control file
     boolean debug;          // true if debugging
@@ -136,10 +137,12 @@ public class SignVEOs {
      * 20240313 2.0 Now updates VEOHistory.xml with events
      * 20240417 2.1 Moved from VEOCreate to be its own package
      * 20240508 2.2 Adjusted logging so that std header & help are displayed
+     * 20240515 2.3 Selecting output directory now works, and can skip ZIPping file
+     * 20240522 2.4 Fixed major bug in renewing signatures, improved logging of what happened, & added -nozip option
      * </pre>
      */
     static String version() {
-        return ("2.1");
+        return ("2.4");
     }
 
     /**
@@ -172,6 +175,7 @@ public class SignVEOs {
         eventDesc = null;
         signers = new LinkedList<>();
         veoDirectories = new ArrayList<>();
+        noZIP = false;
         verbose = false;
         printComments = false;
         debug = false;
@@ -206,6 +210,7 @@ public class SignVEOs {
             LOG.warning("  -e <eventDesc>: a description of the event causing the resigning");
             LOG.warning("  -ha <hashAlgorithm>: specifies the hash algorithm (default SHA-256)");
             LOG.warning("  -o <directory>: the directory in which the VEOs are created (default is current working directory)");
+            LOG.warning("  -nozip: leave the VEO unzipped at end)");
             LOG.warning("");
             LOG.warning("  -v: verbose mode: give more details about processing");
             LOG.warning("  -d: debug mode: give a lot of details about processing");
@@ -231,7 +236,7 @@ public class SignVEOs {
         } else {
             userDesc = userDesc + " (" + System.getProperty("user.name") + ")";
         }
-        
+
         LOG.info("Configuration:");
         switch (task) {
             case VERIFY:
@@ -256,6 +261,7 @@ public class SignVEOs {
         LOG.log(Level.INFO, " Event description: ''{0}''", eventDesc);
         LOG.log(Level.INFO, " Hash algorithm: {0}", hashAlg);
         LOG.log(Level.INFO, " Output directory: ''{0}''", outputDir.toString());
+        LOG.log(Level.INFO, " Produce ZIP file: ''{0}''", !noZIP);
         if (verbose) {
             LOG.info(" Verbose output is selected");
         }
@@ -330,6 +336,10 @@ public class SignVEOs {
                         i++;
                         hashAlg = args[i];
                         i++;
+                        break;
+                    case "-nozip": // do not ZIP VEO at end
+                        i++;
+                        noZIP = true;
                         break;
                     case "-v": // verbose output
                         verbose = true;
@@ -470,28 +480,23 @@ public class SignVEOs {
                         sb.append("Signatures checked, but some failed:\n");
                         for (i = 0; i < contentSigs.size(); i++) {
                             rs = contentSigs.get(i);
-                            sb.append(" Content signature ");
-                            sb.append(i + 1);
-                            sb.append(rs.isValid() ? " VALID" : " FAILED");
-                            sb.append(". Signed by: '");
-                            sb.append(rs.getSigner());
+                            sb.append(" ");
+                            sb.append(rs.getSigFilename());
+                            sb.append(rs.isValid() ? " VALID" : " FAILED (but kept)");
                             sb.append("\n");
                         }
                         for (i = 0; i < historySigs.size(); i++) {
                             rs = historySigs.get(i);
-                            sb.append(" History signature ");
-                            sb.append(i + 1);
-                            sb.append(rs.isValid() ? " VALID" : " FAILED");
-                            sb.append(". Signed by: '");
-                            sb.append(rs.getSigner());
+                            sb.append(" ");
+                            sb.append(rs.getSigFilename());
+                            sb.append(rs.isValid() ? " VALID" : " FAILED (and removed)");
                             sb.append("\n");
                         }
                     }
-                    sb.append("VEOHistory.xml signature replaced.\n");
-                    LOG.info(sb.toString());
+                    sb.append("VEOHistory.xml updated, old VEOHistory.xml signatures removed, and new VEOHistory.xml signature applied.");
                     addEvent(veoDir, "Signature verification", userDesc, sb.toString());
-                    deleteSignatures(veoDir, "VEOHistory");
                     sign(veo, SignType.VEOHistory);
+                    deleteOldSignatures(veoDir, historySigs, true);
                     break;
                 case RENEW:
                     if (eventDesc != null) {
@@ -503,37 +508,50 @@ public class SignVEOs {
                         for (i = 0; i < contentSigs.size(); i++) {
                             rs = contentSigs.get(i);
                             if (!rs.isValid()) {
-                                sb.append(" Content signature ");
-                                sb.append(i + 1);
-                                sb.append(" Signed by: '");
-                                sb.append(rs.getSigner());
+                                sb.append(" ");
+                                sb.append(rs.getSigFilename());
                                 sb.append("\n");
                             }
                         }
                     }
-                    sb.append("New VEOContent.xml and VEOHistory.xml signatures generated.\n");
-                    LOG.info(sb.toString());
+                    if (!historySigsPassed) {
+                        sb.append("The following VEOHistory.xml signatures failed:\n");
+                        for (i = 0; i < historySigs.size(); i++) {
+                            rs = historySigs.get(i);
+                            if (!rs.isValid()) {
+                                sb.append(" ");
+                                sb.append(rs.getSigFilename());
+                                sb.append("\n");
+                            }
+                        }
+                    }
+                    sb.append("A new VEOContent.xml signature was applied. ");
+                    sb.append("VEOHistory.xml updated, old VEOHistory.xml signatures removed, and new VEOHistory.xml signature applied.");
                     addEvent(veoDir, "VEOContent.xml signature renewal", userDesc, sb.toString());
-                    deleteSignatures(veoDir, "VEOHistory");
-                    deleteInvalidSignatures(contentSigs);
                     sign(veo, SignType.BOTH);
+                    deleteOldSignatures(veoDir, historySigs, true);
+                    deleteOldSignatures(veoDir, contentSigs, false);
                     break;
                 case CREATE:
                     if (eventDesc != null) {
                         sb.append(eventDesc);
                         sb.append(". ");
                     }
-                    sb.append("All existing signatures have been removed and new VEOContent.xml and VEOHistory.xml signatures generated.\n");
-                    LOG.info(sb.toString());
-                    deleteSignatures(veoDir, "VEOHistory");
-                    deleteSignatures(veoDir, "VEOContent");
                     sign(veo, SignType.BOTH);
+                    deleteOldSignatures(veoDir, historySigs, true);
+                    deleteOldSignatures(veoDir, contentSigs, true);
+                    sb.append("All existing signatures have been removed and new VEOContent.xml and VEOHistory.xml signatures generated.");
                     break;
             }
-            veo.finalise(true);
+            veo.finalise(outputDir, !noZIP, true);
+            if (noZIP) {
+                sb.append(" New ZIP file was NOT created as the -nozip option was set.\n");
+            } else {
+                sb.append("\n");
+            }
+            LOG.info(sb.toString());
         } catch (AppError | VEOError e) {
-            LOG.log(Level.WARNING, "Failed building VEO ''{0}''. Cause: {1}", new Object[]{veoDir.toAbsolutePath().toString(), e.getMessage()});
-        } finally {
+            LOG.log(Level.WARNING, "Failed building VEO ''{0}''. Cause: {1}\n", new Object[]{veoDir.toAbsolutePath().toString(), e.getMessage()});
             if (veo != null) {
                 veo.abandon(true);
             }
@@ -666,7 +684,7 @@ public class SignVEOs {
             // move temporary file to VEOHistory.xml
             Files.move(tmpVEOHistory, veoHistory, REPLACE_EXISTING);
         } catch (IOException ioe) {
-            throw new AppError(classname, "addEvent", 1, "Adding new event to VEOHistory.xml file failes: " + ioe.getMessage());
+            throw new AppError(classname, "addEvent", 1, "Adding new event to VEOHistory.xml file failed: " + ioe.getMessage());
         } finally {
             if (tmpVEOHistory != null) {
                 File f = tmpVEOHistory.toFile();
@@ -729,9 +747,12 @@ public class SignVEOs {
     }
 
     /**
-     * Delete the invalid signatures...
+     * Delete old signatures. The signatures deleted are those present at the
+     * start of processing (i.e. in the array of RepnSignatures). If allSigs
+     * is true, all of the signatures at the start are deleted. If allSigs is
+     * false, only those signatures that are invalid are deleted.
      */
-    private void deleteInvalidSignatures(ArrayList<RepnSignature> sigs) throws AppFatal {
+    private void deleteOldSignatures(Path veoDir, ArrayList<RepnSignature> sigs, boolean allSigs) throws AppFatal {
         int i;
         RepnSignature rs;
         Path p;
@@ -739,8 +760,8 @@ public class SignVEOs {
         for (i = 0; i < sigs.size(); i++) {
             rs = sigs.get(i);
             try {
-                if (!rs.isValid()) {
-                    p = rs.getSignatureFile();
+                if (allSigs || !rs.isValid()) {
+                    p = veoDir.resolve(rs.getSigFilename());
                     if (p != null) {
                         p.toFile().delete();
                     }
