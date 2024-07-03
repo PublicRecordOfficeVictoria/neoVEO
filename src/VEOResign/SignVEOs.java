@@ -15,27 +15,37 @@ import VEOCreate.CreateVEO.SignType;
 import VERSCommon.AppError;
 import VERSCommon.AppFatal;
 import VERSCommon.ResultSummary;
+import VERSCommon.VEOFailure;
 import VERSCommon.VERSDate;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.file.DirectoryIteratorException;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.zip.ZipException;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipFile;
 
 /**
  * This class creates VEOs by signing VEO directories. The class can operate in
@@ -101,9 +111,9 @@ public class SignVEOs {
     Task task;              // task to be performed
     ArrayList<String> veoDirectories; // list of directories to sign and zip
     List<PFXUser> signers;  // list of signers
-    boolean noZIP;          // true if leaving VEO unzipped at end
+    boolean rezipVEO;         // true if rezipping VEO at end
+    boolean overwrite;      // true if ok to overwrite an existing VEO when zipping or unzipping a VEO
     boolean verbose;        // true if generate lots of detail
-    boolean printComments;  // true if printing comments from control file
     boolean debug;          // true if debugging
     boolean help;           // true if printing a cheat list of command line options
     String hashAlg;         // hash algorithm to use
@@ -115,10 +125,11 @@ public class SignVEOs {
         NOTSPECIFIED, // user hasn't specified task; stop and complain
         VERIFY, // verify the signature (only) and record result in VEOHistory
         RENEW, // resign VEOContent, deleting old signatures if invalid, and record even in VEOHistory
-        CREATE      // delete old signatures & resign without updating VEOHistory
+        CREATE, // delete old signatures & resign without updating VEOHistory
+        ADDEVENT            // add an event, deleting the old history signatures
     }
 
-    static String USAGE = "SignVEOs -verify|-renew|-create -s <pfxFile> <password> -support <directory> [-u user] [-e eventDesc] [-ha <hashAlgorithm] [-o <outputDir>] [-v] [-d] fileName*";
+    static String USAGE = "SignVEOs -verify|-renew|-create|-addevent -s <pfxFile> <password> -support <directory> [-zip] [-overwrite] [-u user] [-e eventDesc] [-ha <hashAlgorithm] [-o <outputDir>] [-v] [-d] fileName*";
 
     // private final static Logger rootLog = Logger.getLogger("VEOCreate");
     private final static Logger LOG = Logger.getLogger("VEOCreate.SignVEOs");
@@ -139,10 +150,11 @@ public class SignVEOs {
      * 20240508 2.2 Adjusted logging so that std header & help are displayed
      * 20240515 2.3 Selecting output directory now works, and can skip ZIPping file
      * 20240522 2.4 Fixed major bug in renewing signatures, improved logging of what happened, & added -nozip option
+     * 20240703 2.5 Added -zip, -overwrite, and -addevent options, further improved logging
      * </pre>
      */
     static String version() {
-        return ("2.4");
+        return ("2.5");
     }
 
     /**
@@ -170,14 +182,18 @@ public class SignVEOs {
         // defaults...
         task = Task.NOTSPECIFIED;
         supportDir = null;
-        outputDir = Paths.get("."); // default is the current working directory
+        try {
+            outputDir = Paths.get(".").toRealPath(); // default is the current working directory
+        } catch (IOException ioe) {
+            throw new AppFatal("Failed converting current working directory to a real path: " + ioe.getMessage());
+        }
         userDesc = null;
         eventDesc = null;
         signers = new LinkedList<>();
         veoDirectories = new ArrayList<>();
-        noZIP = false;
+        rezipVEO = false;
+        overwrite = false;
         verbose = false;
-        printComments = false;
         debug = false;
         help = false;
         hashAlg = "SHA-512";
@@ -200,17 +216,18 @@ public class SignVEOs {
         if (help) {
             LOG.warning("Command line arguments:");
             LOG.warning(" Mandatory:");
-            LOG.warning("  -verify or -renew or -create: task to perform");
-            LOG.warning("  -s <pfxFile> <password>: path to a PFX file and its password for signing a VEO (can be repeated)");
+            LOG.warning("  -verify -renew, -create, or -addevent: task to perform");
             LOG.warning("  -support <direct>: path directory where schema files are found");
             LOG.warning("  one or more VEOs");
             LOG.warning("");
             LOG.warning(" Optional:");
+            LOG.warning("  -s <pfxFile> <password>: path to a PFX file and its password for signing a VEO (can be repeated)");
             LOG.warning("  -u <userDesc>: a description of the user resigning the file");
             LOG.warning("  -e <eventDesc>: a description of the event causing the resigning");
             LOG.warning("  -ha <hashAlgorithm>: specifies the hash algorithm (default SHA-256)");
             LOG.warning("  -o <directory>: the directory in which the VEOs are created (default is current working directory)");
-            LOG.warning("  -nozip: leave the VEO unzipped at end)");
+            LOG.warning("  -zip: zip the resulting VEO at end");
+            LOG.warning("  -overwrite: overwrite an existing unzipped or zipped VEO when unpacking or packing a .veo.zip' VEO");
             LOG.warning("");
             LOG.warning("  -v: verbose mode: give more details about processing");
             LOG.warning("  -d: debug mode: give a lot of details about processing");
@@ -220,16 +237,22 @@ public class SignVEOs {
 
         // set and check config
         if (task == Task.NOTSPECIFIED) {
-            throw new AppFatal(classname, 2, "No task specified: must use -verify, -renew, or -create. Usage: " + USAGE);
+            throw new AppFatal(classname, 2, "No task specified: must use -verify, -renew, -addevent, or -create. Usage: " + USAGE);
         }
         if (supportDir == null) {
             throw new AppFatal(classname, 3, "Support directory is not specified. Usage: " + USAGE);
         }
         if (signers.isEmpty()) {
-            throw new AppFatal(classname, 4, "No PFX files specified to resign. Usage: " + USAGE);
+            throw new AppFatal(classname, 4, "No PFX files were supplied to resign (-s option). Usage: " + USAGE);
         }
         if (veoDirectories.isEmpty()) {
             throw new AppFatal(classname, 5, "No VEOs specified to resign. Usage: " + USAGE);
+        }
+        if (task == Task.ADDEVENT && (eventDesc == null || eventDesc.trim().isEmpty())) {
+            throw new AppFatal(classname, 6, "No event description specified (-e option) with -addevent. Usage: " + USAGE);
+        }
+        if (task == Task.CREATE && (eventDesc != null || userDesc != null)) {
+            throw new AppFatal(classname, 7, "Cannot use -e or -u with -create. Use -renew. Usage: " + USAGE);
         }
         if (userDesc == null) {
             userDesc = System.getProperty("user.name");
@@ -248,6 +271,9 @@ public class SignVEOs {
             case CREATE:
                 LOG.info(" Delete all signatures & resign. VEOHistory is not changed");
                 break;
+            case ADDEVENT:
+                LOG.info(" Add an event to VEOHistory.xml & replace VEOHistory signatures");
+                break;
             default:
                 LOG.info(" Task to perform is not specified");
                 break;
@@ -261,7 +287,20 @@ public class SignVEOs {
         LOG.log(Level.INFO, " Event description: ''{0}''", eventDesc);
         LOG.log(Level.INFO, " Hash algorithm: {0}", hashAlg);
         LOG.log(Level.INFO, " Output directory: ''{0}''", outputDir.toString());
-        LOG.log(Level.INFO, " Produce ZIP file: ''{0}''", !noZIP);
+        if (overwrite) {
+            LOG.log(Level.INFO, " Unpack any '.veo.zip' VEOs into the output directory. OVERWRITE any existing unpacked copy of the VEO in the output directory");
+        } else {
+            LOG.log(Level.INFO, " Unpack any '.veo.zip' VEOs into the output directory but only if no unpacked output exists");
+        }
+        if (rezipVEO) {
+            if (overwrite) {
+                LOG.log(Level.INFO, " Rezip VEO after resigning. OVERWRITE any existing zipped copy of the VEO in the output directory");
+            } else {
+                LOG.log(Level.INFO, " Rezip VEO after resigning - if a zipped copy of the VEO does not exist in the output directory");
+            }
+        } else {
+            LOG.log(Level.INFO, " Do NOT rezip VEO after resigning");
+        }
         if (verbose) {
             LOG.info(" Verbose output is selected");
         }
@@ -298,6 +337,10 @@ public class SignVEOs {
                     case "-create": // delete all signatures and resign, don't document
                         i++;
                         task = Task.CREATE;
+                        break;
+                    case "-addevent": // add an event to the history, and delete the history signatures
+                        i++;
+                        task = Task.ADDEVENT;
                         break;
                     case "-s": // specify the PFX file of a signer
                         i++;
@@ -337,9 +380,13 @@ public class SignVEOs {
                         hashAlg = args[i];
                         i++;
                         break;
-                    case "-nozip": // do not ZIP VEO at end
+                    case "-zip": // reZIP VEO at end
                         i++;
-                        noZIP = true;
+                        rezipVEO = true;
+                        break;
+                    case "-overwrite": // overwrite existing VEOs when zipping or unzipping
+                        i++;
+                        overwrite = true;
                         break;
                     case "-v": // verbose output
                         verbose = true;
@@ -385,7 +432,7 @@ public class SignVEOs {
         Path p;
 
         try {
-            p = Paths.get(name).normalize();
+            p = Paths.get(name).toAbsolutePath().normalize();
         } catch (InvalidPathException ipe) {
             throw new AppFatal(classname, 9, type + " '" + name + "' is not a valid file name: " + ipe.getMessage());
         }
@@ -409,47 +456,69 @@ public class SignVEOs {
      */
     public void resignVEOs() throws AppFatal {
         int i;
-        String s;
-        Path veoDir;
+        Path givenVEOPath;  // whatever path from command line argument
+        String veoName;     // name from command line argument
+        Path veoDir;        // actual path containing the unpacked VEO
 
         // go through list of VEO directories
         for (i = 0; i < veoDirectories.size(); i++) {
 
-            // get directory name and sanity check it...
-            s = veoDirectories.get(i);
-            if (!s.endsWith(".veo")) {
-                LOG.log(Level.INFO, "VEO name ''{0}'' must end with ''.veo''", s);
-                continue;
-            }
+            // get directory name and sanity check it. Unpack into the output
+            // directory if still zipped
             try {
-                veoDir = checkFile("VEO directory", s, true);
-            } catch (AppFatal e) {
-                LOG.severe(e.getMessage());
+            givenVEOPath = Paths.get(veoDirectories.get(i)).toRealPath();
+            } catch (IOException ioe) {
+                LOG.log(Level.SEVERE, "Could not get real path of ''{0}''", new Object[]{veoDirectories.get(i)});
                 continue;
             }
-            switch (task) {
-                case VERIFY:
-                    LOG.log(Level.INFO, "{0} Verifying signatures: {1}", new Object[]{VERSDate.versDateTime(0), veoDir.toString()});
-                    break;
-                case RENEW:
-                    LOG.log(Level.INFO, "{0} Renewing VEOContent signatures: {1}", new Object[]{VERSDate.versDateTime(0), veoDir.toString()});
-                    break;
-                case CREATE:
-                    LOG.log(Level.INFO, "{0} Resigning from scratch: {1}", new Object[]{VERSDate.versDateTime(0), veoDir.toString()});
-                    break;
+            if (!givenVEOPath.toFile().exists()) {
+                LOG.log(Level.WARNING, "File ''{0}'' does not exist", new Object[]{givenVEOPath});
+                continue;
             }
-            doTask(veoDir);
+            veoName = givenVEOPath.getFileName().toString();
+            
+            // if being asked to resign a packed VEO, unzip it first
+            if (veoName.toLowerCase().endsWith(".veo.zip")) {
+                i = veoName.toLowerCase().lastIndexOf(".zip");
+                String s = veoName.substring(0, i);
+                veoDir = outputDir.resolve(Paths.get(s));
+                if (veoDir.toFile().exists()) {
+                    if (overwrite) {
+                        try {
+                            deleteFile(veoDir);
+                        } catch (IOException ioe) {
+                            LOG.log(Level.WARNING, "{0}: Could not delete unpacked VEO.", new Object[]{veoDir.toString()});
+                        }
+                    } else {
+                        log(Level.WARNING, givenVEOPath, "FAILED. VEO unchanged. Cause: Unpacked VEO already exists & -overwrite not set.");
+                        continue;
+                    }
+                }
+                try {
+                    unzip(givenVEOPath, outputDir);
+                } catch (VEOError e) {
+                    log(Level.WARNING, givenVEOPath, "FAILED unzipping. VEO unchanged. Cause: " + e.getMessage());
+                    continue;
+                }
+            } else if (veoName.toLowerCase().endsWith(".veo")) {
+                veoDir = outputDir.resolve(Paths.get(veoName));
+            } else {
+                LOG.log(Level.WARNING, "VEO name ''{0}'' must end with ''.veo'' or ''.veo.zip''", givenVEOPath);
+                continue;
+            }
+
+            doTask(givenVEOPath, veoDir);
         }
-        LOG.log(Level.INFO, "{0} Finished!", new Object[]{VERSDate.versDateTime(0)});
     }
 
     /**
      * Perform the requested resigning task on a VEO
      *
-     * @param veoDir the directory representing the unpacked VEO
+     * @param givenVEOPath the file containing the original VEO
+     * @param veoDir the file containing the unpacked VEO
      * @throws AppError if something failed in resigning this VEO
      */
-    private void doTask(Path veoDir) throws AppFatal {
+    private void doTask(Path givenVEOPath, Path veoDir) throws AppFatal {
         CreateVEO veo;      // current VEO being created
         boolean contentSigsPassed; // the existing VEOContentSignatures verified
         boolean historySigsPassed; // the existing VEOHistorySignatures verified
@@ -457,10 +526,14 @@ public class SignVEOs {
         ArrayList<RepnSignature> historySigs = new ArrayList<>(); // list of VEOHistory signatures in VEO
         RepnSignature rs;
         int i;
-        StringBuilder sb = new StringBuilder();
+        StringBuilder eventMesg = new StringBuilder();
+        StringBuilder logMesg = new StringBuilder();
+        Level logMesgLevel;
+        String s;
 
         // create a VEO from the VEO directory...
         veo = null;
+        logMesgLevel = Level.INFO;
         try {
             // test the existing digital signatures
             contentSigsPassed = checkSignatures(veoDir, contentSigs, "VEOContent");
@@ -471,91 +544,140 @@ public class SignVEOs {
             switch (task) {
                 case VERIFY:
                     if (eventDesc != null) {
-                        sb.append(eventDesc);
-                        sb.append(". ");
+                        eventMesg.append(eventDesc);
+                        eventMesg.append(". ");
                     }
                     if (contentSigsPassed && historySigsPassed) {
-                        sb.append("All signatures checked and were valid. ");
+                        eventMesg.append("All signatures checked and were valid. ");
                     } else {
-                        sb.append("Signatures checked, but some failed:\n");
+                        eventMesg.append("Signatures checked, but some failed:\n");
                         for (i = 0; i < contentSigs.size(); i++) {
                             rs = contentSigs.get(i);
-                            sb.append(" ");
-                            sb.append(rs.getSigFilename());
-                            sb.append(rs.isValid() ? " VALID" : " FAILED (but kept)");
-                            sb.append("\n");
+                            eventMesg.append(" ");
+                            eventMesg.append(rs.getSigFilename());
+                            eventMesg.append(rs.isValid() ? " VALID" : " FAILED (but kept)");
+                            eventMesg.append("\n");
                         }
                         for (i = 0; i < historySigs.size(); i++) {
                             rs = historySigs.get(i);
-                            sb.append(" ");
-                            sb.append(rs.getSigFilename());
-                            sb.append(rs.isValid() ? " VALID" : " FAILED (and removed)");
-                            sb.append("\n");
+                            eventMesg.append(" ");
+                            eventMesg.append(rs.getSigFilename());
+                            eventMesg.append(rs.isValid() ? " VALID" : " FAILED (and removed)");
+                            eventMesg.append("\n");
                         }
                     }
-                    sb.append("VEOHistory.xml updated, old VEOHistory.xml signatures removed, and new VEOHistory.xml signature applied.");
-                    addEvent(veoDir, "Signature verification", userDesc, sb.toString());
+                    eventMesg.append("VEOHistory.xml updated, old VEOHistory.xml signatures removed, and new VEOHistory.xml signature(s) applied.");
+                    addEvent(veoDir, "Signature verification", userDesc, eventMesg.toString());
                     sign(veo, SignType.VEOHistory);
                     deleteOldSignatures(veoDir, historySigs, true);
+                    if (contentSigsPassed && historySigsPassed) {
+                        logMesg.append("Signatures verified. VEO history updated. ");
+                    } else {
+                        logMesg.append("Some signatures FAILED. VEO history updated. ");
+                        logMesgLevel = Level.SEVERE;
+                    }
                     break;
                 case RENEW:
                     if (eventDesc != null) {
-                        sb.append(eventDesc);
-                        sb.append(". ");
+                        eventMesg.append(eventDesc);
+                        eventMesg.append(". ");
                     }
                     if (!contentSigsPassed) {
-                        sb.append("The following VEOContent.xml signatures failed and have been removed:\n");
+                        eventMesg.append("The following VEOContent.xml signatures failed and have been removed:\n");
                         for (i = 0; i < contentSigs.size(); i++) {
                             rs = contentSigs.get(i);
                             if (!rs.isValid()) {
-                                sb.append(" ");
-                                sb.append(rs.getSigFilename());
-                                sb.append("\n");
+                                eventMesg.append(" ");
+                                eventMesg.append(rs.getSigFilename());
+                                eventMesg.append("\n");
                             }
                         }
                     }
                     if (!historySigsPassed) {
-                        sb.append("The following VEOHistory.xml signatures failed:\n");
+                        eventMesg.append("The following VEOHistory.xml signatures failed:\n");
                         for (i = 0; i < historySigs.size(); i++) {
                             rs = historySigs.get(i);
                             if (!rs.isValid()) {
-                                sb.append(" ");
-                                sb.append(rs.getSigFilename());
-                                sb.append("\n");
+                                eventMesg.append(" ");
+                                eventMesg.append(rs.getSigFilename());
+                                eventMesg.append("\n");
                             }
                         }
                     }
-                    sb.append("A new VEOContent.xml signature was applied. ");
-                    sb.append("VEOHistory.xml updated, old VEOHistory.xml signatures removed, and new VEOHistory.xml signature applied.");
-                    addEvent(veoDir, "VEOContent.xml signature renewal", userDesc, sb.toString());
+                    eventMesg.append("New VEOContent.xml signature(s) were applied. ");
+                    eventMesg.append("VEOHistory.xml updated, old VEOHistory.xml signatures removed, and new VEOHistory.xml signature(s) applied.");
+                    addEvent(veoDir, "VEOContent.xml signature renewal", userDesc, eventMesg.toString());
                     sign(veo, SignType.BOTH);
                     deleteOldSignatures(veoDir, historySigs, true);
                     deleteOldSignatures(veoDir, contentSigs, false);
+                    logMesg.append("Signatures renewed. VEO history updated. ");
                     break;
                 case CREATE:
-                    if (eventDesc != null) {
-                        sb.append(eventDesc);
-                        sb.append(". ");
-                    }
                     sign(veo, SignType.BOTH);
                     deleteOldSignatures(veoDir, historySigs, true);
                     deleteOldSignatures(veoDir, contentSigs, true);
-                    sb.append("All existing signatures have been removed and new VEOContent.xml and VEOHistory.xml signatures generated.");
+                    logMesg.append("Signatures created. ");
+                    break;
+                case ADDEVENT:
+                    if (eventDesc != null) {
+                        eventMesg.append(eventDesc);
+                        eventMesg.append(". ");
+                    }
+                    if (!historySigsPassed) {
+                        eventMesg.append("The following VEOHistory.xml signatures were already invalid:\n");
+                        for (i = 0; i < historySigs.size(); i++) {
+                            rs = historySigs.get(i);
+                            if (!rs.isValid()) {
+                                eventMesg.append(" ");
+                                eventMesg.append(rs.getSigFilename());
+                                eventMesg.append("\n");
+                            }
+                        }
+                    }
+                    eventMesg.append("VEOHistory.xml updated, old VEOHistory.xml signatures removed, and new VEOHistory.xml signature(s) applied.");
+                    addEvent(veoDir, "VEOHistory.xml event added", userDesc, eventMesg.toString());
+                    sign(veo, SignType.VEOHistory);
+                    deleteOldSignatures(veoDir, historySigs, true);
+                    logMesg.append("Event added to history. VEOHistory resigned. ");
                     break;
             }
-            veo.finalise(outputDir, !noZIP, true);
-            if (noZIP) {
-                sb.append(" New ZIP file was NOT created as the -nozip option was set.\n");
+
+            // finalise VEO. Rezip the VEO if asked to and either the zipped
+            // VEO doesn't exist, or it does and overwrite has been specified.
+            // For all other cases, finalise the VEO without rezipping
+            if (rezipVEO) {
+                Path p;
+                s = veoDir.getFileName().toString();
+                p = outputDir.resolve(s + ".zip");
+                if (!p.toFile().exists()) {
+                    veo.finalise(outputDir, true, true);
+                        logMesg.append("Rezipped");
+                } else {
+                    if (overwrite) {
+                        try {
+                            deleteFile(p);
+                        } catch (IOException ioe) {
+                            LOG.log(Level.WARNING, "{0}: Could not delete zipped VEO in output directory.", new Object[]{veoDir.toString()});
+                        }
+                        veo.finalise(outputDir, true, true);
+                        logMesg.append("Rezipped");
+                    } else {
+                        veo.finalise(outputDir, false, true);
+                        logMesg.append("Not rezipped (-overwrite not set)");
+                    }
+                }
             } else {
-                sb.append("\n");
+                veo.finalise(outputDir, false, true);
             }
-            LOG.info(sb.toString());
         } catch (AppError | VEOError e) {
-            LOG.log(Level.WARNING, "Failed building VEO ''{0}''. Cause: {1}\n", new Object[]{veoDir.toAbsolutePath().toString(), e.getMessage()});
+            logMesg.append("FAILED. VEO not updated. Cause: ");
+            logMesg.append(e.getMessage());
+            logMesgLevel = Level.SEVERE;
             if (veo != null) {
                 veo.abandon(true);
             }
         }
+        log(logMesgLevel, givenVEOPath, logMesg.toString());
     }
 
     /**
@@ -696,60 +818,9 @@ public class SignVEOs {
     }
 
     /**
-     * Delete the existing signatures.The VEOContentSignatures are only deleted
-     * if the VEOContent.xml has been modified since the signatures have been
-     * created.
-     *
-     * @param veoDir the VEO directory we are resigning
-     * @param type
-     * @throws VEOError if the signatures couldn't be deleted
-     */
-    private void deleteSignatures(Path veoDir, String type) throws VEOError {
-        String method = "deleteSignatures";
-        String fileName;
-        DirectoryStream<Path> ds;
-
-        // go through files in VEO Directory, looking for signature files
-        ds = null;
-        try {
-            ds = Files.newDirectoryStream(veoDir);
-            for (Path entry : ds) {
-                fileName = entry.getFileName().toString();
-
-                // delete content signature files older than the VEOContent.xml file
-                if (fileName.startsWith(type + "Signature") && fileName.endsWith(".xml")) {
-                    Files.delete(entry);
-                }
-
-                // delete all the report files
-                if (fileName.startsWith("Report") && fileName.endsWith(".html")) {
-                    Files.delete(entry);
-                }
-                if (fileName.equals("index.html")) {
-                    Files.delete(entry);
-                }
-                if (fileName.equals("ReportStyle.css")) {
-                    Files.delete(entry);
-                }
-            }
-        } catch (DirectoryIteratorException e) {
-            throw new VEOError(classname, method, 1, "Directory iterator failed: " + e.getMessage());
-        } catch (IOException e) {
-            throw new VEOError(classname, method, 2, "Failed to open the VEO directory for reading files: " + e.getMessage());
-        } finally {
-            if (ds != null) {
-                try {
-                    ds.close();
-                } catch (IOException ioe) {
-                    /* ignore */ }
-            }
-        }
-    }
-
-    /**
      * Delete old signatures. The signatures deleted are those present at the
-     * start of processing (i.e. in the array of RepnSignatures). If allSigs
-     * is true, all of the signatures at the start are deleted. If allSigs is
+     * start of processing (i.e. in the array of RepnSignatures). If allSigs is
+     * true, all of the signatures at the start are deleted. If allSigs is
      * false, only those signatures that are invalid are deleted.
      */
     private void deleteOldSignatures(Path veoDir, ArrayList<RepnSignature> sigs, boolean allSigs) throws AppFatal {
@@ -796,6 +867,232 @@ public class SignVEOs {
      */
     public void abandon(boolean debug) {
 
+    }
+
+    /**
+     * Private function to recursively delete a directory or file. Needed
+     * because you cannot delete a non empty directory
+     *
+     * @param file Path of directory or file to delete
+     * @throws IOException if deleting file failed
+     */
+    private void deleteFile(Path file) throws IOException {
+        DirectoryStream<Path> ds;
+
+        // if a directory, list all the files and delete them
+        if (Files.isDirectory(file)) {
+            ds = Files.newDirectoryStream(file);
+            for (Path p : ds) {
+                deleteFile(p);
+            }
+            ds.close();
+        }
+
+        // finally, delete the file
+        try {
+            Files.delete(file);
+        } catch (FileSystemException e) {
+            LOG.log(Level.WARNING, "{0} Failed to delete temporary file: ", e.toString());
+        }
+    }
+
+    /**
+     * Private function to unzip a VEO file. This is almost identical to the
+     * code in VEOAnalysis.RepnVEO - it was replicated because the calling
+     * environment is completely different. In the original code, we tried to
+     * find and report on all errors. In this code we give up when we find the
+     * first.
+     *
+     * When unzipping, we follow the advice in the PKWARE application developer
+     * notes
+     * https://support.pkware.com/home/pkzip/developer-tools/appnote/application-developer-considerations
+     * These recommend checking that the file name in the ZIP entries doesn't
+     * point to arbitrary locations in the file system (especially containing
+     * '..') and that the file sizes are reasonable.
+     *
+     * @param zipFilePath the path to the VEO file
+     * @param outputDir the directory in which the VEO is to be unpacked
+     */
+    private void unzip(Path zipFilePath, Path outputDir) throws VEOError, AppFatal {
+        String CLASSNAME = "unzip";
+        ZipFile zipFile;
+        Enumeration entries;
+        ZipArchiveEntry entry;
+        Path vze, zipEntryPath;
+        InputStream is;
+        BufferedInputStream bis;
+        FileOutputStream fos;
+        BufferedOutputStream bos;
+        byte[] b = new byte[1024];
+        int len, i;
+        String veoName;
+        long modTime;
+        File f;
+
+        // unzip the VEO file
+        bos = null;
+        fos = null;
+        bis = null;
+        is = null;
+        zipFile = null;
+        try {
+            // get the name of this VEO, stripping off the final '.zip'
+            veoName = zipFilePath.getFileName().toString();
+            i = veoName.lastIndexOf(".");
+            if (i != -1) {
+                veoName = veoName.substring(0, i);
+            }
+
+            // open the zip file and get the entries in it
+            f = zipFilePath.toFile();
+            if (!f.exists()) {
+                throw new VEOError("ZIP file doesn't exist: '" + zipFilePath.toString() + "'");
+            }
+            zipFile = new ZipFile(f);
+
+            // be paranoid, just check that the supposed length of the
+            // ZIP entry against the length of the ZIP file itself
+            entries = zipFile.getEntries();
+            long zipFileLength = f.length();
+            long claimedLength = 0;
+            while (entries.hasMoreElements()) {
+                entry = (ZipArchiveEntry) entries.nextElement();
+                claimedLength += entry.getCompressedSize();
+            }
+            if (zipFileLength < claimedLength) {
+                throw new VEOError("ZIP file length (" + zipFileLength + ") is less than the sum of the compressed sizes of the ZIP entrys (" + claimedLength + ")");
+            }
+
+            // go through each entry
+            entries = zipFile.getEntries();
+            while (entries.hasMoreElements()) {
+                entry = (ZipArchiveEntry) entries.nextElement();
+                LOG.log(Level.FINE, "Extracting: {0}({1}) {2} {3}", new Object[]{entry.getName(), entry.getSize(), entry.getTime(), entry.isDirectory()});
+
+                // get the local path to extract the ZIP entry into
+                // this is so horrible because Paths.resolve won't process
+                // windows file separators in a string on Unix boxes
+                String safe = entry.getName().replaceAll("\\\\", "/");
+                try {
+                    zipEntryPath = Paths.get(safe);
+                } catch (InvalidPathException ipe) {
+                    throw new VEOError("ZIP path entry '" + safe + "' is invalid: " + ipe.getMessage());
+                }
+
+                // complain (once!) if filename of the VEO is different to the
+                // base of the filenames in the ZIP file (e.g. the VEO file has
+                // been renamed)
+                if (!veoName.equals(zipEntryPath.getName(0).toString())) {
+                    if (zipEntryPath.getNameCount() == 1) {
+                        throw new VEOError("The names of the entries in the ZIP file (e.g. '" + entry.getName() + "') do not start with the name of the veo ('" + veoName + "')");
+                    } else {
+                        throw new VEOError("The filename of the VEO (" + veoName + ") is different to that contained in the entries in the ZIP file (" + entry.getName() + ")");
+                    }
+                }
+
+                // doesn't matter what the ZIP file says, force the extract to
+                // be in a directory with the same name as the VEO filename
+                // (even if we have complained about this)
+                try {
+                    if (zipEntryPath.getNameCount() > 1) {
+                        zipEntryPath = zipEntryPath.subpath(1, zipEntryPath.getNameCount());
+                        vze = outputDir.resolve(veoName).resolve(zipEntryPath);
+                    } else {
+                        vze = outputDir.resolve(veoName);
+                    }
+                } catch (InvalidPathException ipe) {
+                    throw new VEOError("File name '" + veoName + "' is invalid" + ipe.getMessage());
+                }
+
+                // where does the file name in the ZIP entry really point to?
+                vze = vze.normalize();
+
+                // be really, really, paranoid - the file we are creating
+                // shouldn't have any 'parent' ('..') elements in the file path
+                for (i = 0; i < vze.getNameCount(); i++) {
+                    if (vze.getName(i).toString().equals("..")) {
+                        throw new VEOError("ZIP file contains a pathname that includes '..' elements: '" + zipEntryPath + "'");
+                    }
+                }
+
+                // just be cynical and check that the file name to be extracted
+                // from the ZIP file is actually in the VEO directory...
+                if (!vze.startsWith(outputDir)) {
+                    throw new VEOError("ZIP entry in VEO '" + veoName + "' is attempting to create a file outside the VEO directory '" + vze.toString());
+                }
+
+                // make any directories...
+                if (entry.isDirectory()) {
+                    Files.createDirectories(vze);
+                } else {
+                    // make any missing directories parent
+                    Files.createDirectories(vze.getParent());
+
+                    // extract file
+                    is = zipFile.getInputStream(entry);
+                    bis = new BufferedInputStream(is);
+                    fos = new FileOutputStream(vze.toFile());
+                    bos = new BufferedOutputStream(fos, 1024);
+                    while ((len = bis.read(b, 0, 1024)) != -1) {
+                        bos.write(b, 0, len);
+                    }
+                    bos.flush();
+                    bos.close();
+                    bos = null;
+                    fos.flush();
+                    fos.close();
+                    fos = null;
+                    bis.close();
+                    bis = null;
+                    is.close();
+                    is = null;
+                }
+
+                // set the time of the file
+                if ((modTime = entry.getTime()) != -1) {
+                    Files.setLastModifiedTime(vze, FileTime.fromMillis(modTime));
+                }
+            }
+            zipFile.close();
+        } catch (ZipException e) {
+            throw new VEOError("ZIP format error in opening Zip file: " + e.getMessage());
+        } catch (IOException e) {
+            throw new VEOError("IO error reading Zip file: " + e.getMessage());
+        } finally {
+            try {
+                if (bos != null) {
+                    bos.close();
+                }
+                if (fos != null) {
+                    fos.close();
+                }
+                if (bis != null) {
+                    bis.close();
+                }
+                if (is != null) {
+                    is.close();
+                }
+                if (zipFile != null) {
+                    zipFile.close();
+                }
+            } catch (IOException e) {
+                LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "unzip", 10, "IOException in closing Zip files", e));
+            }
+        }
+    }
+
+    /**
+     * Internal logging method to ensure consistent reporting
+     */
+    private void log(Level logLevel, Path veo, String s) {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(VERSDate.versDateTime(0));
+        sb.append(" ");
+        sb.append(veo.toString());
+        sb.append(" ");
+        sb.append(s);
+        LOG.log(logLevel, sb.toString());
     }
 
     /**
