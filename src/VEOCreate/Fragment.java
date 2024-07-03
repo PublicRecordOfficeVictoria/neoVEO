@@ -213,7 +213,7 @@ abstract public class Fragment {
 
                 // append new fragement (if any) to list...
                 if (fn != null) {
-                    if (fs == null) {
+                    if (fs == null || fe == null) {
                         fe = fn;
                         fs = fe;
                     } else {

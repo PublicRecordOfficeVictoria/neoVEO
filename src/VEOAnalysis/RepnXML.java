@@ -573,7 +573,9 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
         sb.append(n.getNamespaceURI());
         v = n.getNodeValue();
         if (v != null) {
-            sb.append("'" + v.trim() + "'");
+            sb.append("'");
+            sb.append(v.trim());
+            sb.append("'");
         } else {
             sb.append("<null>");
         }
@@ -592,7 +594,9 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
                 sb.append(") ");
                 v = a.getNodeValue();
                 if (v != null) {
-                    sb.append("'" + v.trim() + "'");
+                    sb.append("'");
+                    sb.append(v.trim());
+                    sb.append("'");
                 } else {
                     sb.append("<null>");
                 }

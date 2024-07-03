@@ -12,11 +12,9 @@ import java.io.*;
 import java.nio.CharBuffer;
 import java.nio.channels.*;
 import java.nio.charset.*;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.logging.*;
 
 /**
@@ -142,7 +140,6 @@ class CreateXMLDoc {
      * @throws VEOError
      */
     public void addSimpleElement(String tag, String attributes, String value) throws VEOError {
-        String method = "addSimpleElement";
         int i;
         
         // indent
@@ -172,7 +169,6 @@ class CreateXMLDoc {
      * @throws VEOError
      */
     public void startComplexElement(String tag, String attributes) throws VEOError {
-        String method = "addComplexElement";
         int i;
         
         for (i=0; i<indentDepth; i++) {
@@ -192,7 +188,6 @@ class CreateXMLDoc {
      * @throws VEOError 
      */
     public void endComplexElement(String tag) throws VEOError {
-        String method = "endComplexElement";
         int i;
         
         indentDepth--;

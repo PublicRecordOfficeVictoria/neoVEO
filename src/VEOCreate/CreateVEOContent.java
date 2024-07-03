@@ -207,7 +207,6 @@ class CreateVEOContent extends CreateXMLDoc {
      * @throws VEOError
      */
     public void startRDFMetadataPackage(String semanticId, String namespaceDefns, URL resourceId) throws VEOError {
-        String method = "startRDFMetadataPackage";
 
         startMetadataPackage(semanticId, "http://www.w3.org/1999/02/22-rdf-syntax-ns");
         write(contentsRDFMP1);
@@ -229,7 +228,6 @@ class CreateVEOContent extends CreateXMLDoc {
      * @throws VEOError
      */
     public void startXMLMetadataPackage(String semanticId) throws VEOError {
-        String method = "startRDFMetadataPackage";
 
         startMetadataPackage(semanticId, "https://www.w3.org/TR/2008/REC-xml-20081126/");
         indentDepth = 3;

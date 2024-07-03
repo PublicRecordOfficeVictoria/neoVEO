@@ -241,7 +241,6 @@ import java.util.regex.PatternSyntaxException;
 public class CreateVEOs {
 
     static String classname = "CreateVEOs"; // for reporting
-    FileOutputStream fos;   // underlying file stream for file channel
     Path templateDir;       // directory that holds the templates
     Path supportDir;        // directory that holds the V3 support files (especially the VEOReadme.txt file)
     Path controlFile;       // control file to generate the VEOs
@@ -297,10 +296,11 @@ public class CreateVEOs {
      * 20240417 3.6 Undeprecated registerContentDirectories(), addContentFile(String), & getActualSourcePath() in CreateVEO, as CreateVEOs uses them
      * 20240417 3.7 Moved SignVEOs to be a package within neoVEO
      * 20240515 3.8 Can now ZIP a VEO anywhere, and also finalise without ZIPping
+     * 20230703 3.9 Moved to latest version of Netbeans resulting in correcting warnings
      * </pre>
      */
     static String version() {
-        return ("3.8");
+        return ("3.9");
     }
 
     /**
@@ -401,7 +401,7 @@ public class CreateVEOs {
         }
         System.out.println(" Hash algorithm (specified on command line or the default): " + hashAlg);
         System.out.println(" Character encoding used for the control file: " + inputEncoding);
-        if (signers.size() > 0) {
+        if (!signers.isEmpty()) {
             System.out.println(" Signers specified on command line:");
             for (i = 0; i < signers.size(); i++) {
                 pfxu = signers.get(i);

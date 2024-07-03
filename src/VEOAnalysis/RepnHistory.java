@@ -10,7 +10,6 @@ import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFailure;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 

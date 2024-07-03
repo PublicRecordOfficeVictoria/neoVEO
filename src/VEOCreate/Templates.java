@@ -103,9 +103,6 @@ public class Templates {
     final protected void readTemplateDirectory(Path templateDir) throws VEOFatal {
         DirectoryStream<Path> ds; // iterator for template directory
         Path template;  // template file to read
-        Fragment f;     // generated fragment
-        String key;     // key (i.e. name of file with stripped '.txt'
-        int j;
 
         if (!Files.exists(templateDir)) {
             throw new VEOFatal(classname, 1,

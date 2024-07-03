@@ -24,7 +24,7 @@ public class Config {
     private final static Logger LOG = Logger.getLogger("VEOAnalysis.Config");
     private final static String CLASSNAME = "Config";
 
-    private String USAGE
+    private final String USAGE
             = "AnalyseVEOs [-help] -s supportDir [-o outputDir] [-all] [-e|-sr|-csv] [-r|-u] [-class] [-iocnt] [-v] [-d] [-c] [-norec] [-vpa] files*";
 
     public Path supportDir;    // directory in which XML schemas are to be found

@@ -1250,7 +1250,7 @@ public class CreateVEO {
         // BufferedOutputStream bos = null;
         ZipArchiveOutputStream zos = null;
         String zipName;
-        Path p, p1;
+        Path p;
         File zipFileLocn;
 
         assert outputDir != null;
@@ -1349,7 +1349,6 @@ public class CreateVEO {
      * @throws IOException
      */
     private void zip(ZipArchiveOutputStream zos, Path veoDir, Path dir) throws IOException {
-        String method = "zip";
         FileInputStream fis;
         BufferedInputStream bis;
         byte[] b = new byte[1024];
@@ -1411,7 +1410,6 @@ public class CreateVEO {
      * @throws IOException
      */
     private void zipContentFiles(ZipArchiveOutputStream zos, Path veoDir) throws IOException, VEOError {
-        String method = "zipContentFiles";
         FileInputStream fis;
         BufferedInputStream bis;
         byte[] b = new byte[1024];

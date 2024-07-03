@@ -162,10 +162,11 @@ public class VEOAnalysis {
      * 20240515 4.15 RepnSignature now stores the Signature filename & can report on it
      * 20240516 4.16 Moved initialistion to after printing help, so that help can always done
      * 20240516 4.17 Removed RepnSignature.getSignatureFile()
+     * 20240703 4.18 Moved to latest version of Netbeans resulting in correcting warnings
      * </pre>
      */
     static String version() {
-        return ("4.17");
+        return ("4.18");
     }
 
     static String copyright = "Copyright 2015-2024 Public Record Office Victoria";
@@ -283,7 +284,7 @@ public class VEOAnalysis {
         Handler h[];
         int i;
 
-        runDateTime = getISODateTime('-', ':', false);
+        runDateTime = getISODateTime('-', ':');
         totalIOs = 0;
         hasErrors = false;
 
@@ -478,7 +479,7 @@ public class VEOAnalysis {
         if (c.genErrorReport) {
             LOG.info("******************************************************************************");
             LOG.info("*                                                                            *");
-            LOG.log(Level.INFO, "* V3 VEO analysed: {0} at {1}", new Object[]{veo.getFileName().toString(), getISODateTime('T', ':', false)});
+            LOG.log(Level.INFO, "* V3 VEO analysed: {0} at {1}", new Object[]{veo.getFileName().toString(), getISODateTime('T', ':')});
             LOG.log(Level.INFO, "* ''{0}''", veo.toString());
             LOG.info("*                                                                            *");
             LOG.info("******************************************************************************");
@@ -636,7 +637,7 @@ public class VEOAnalysis {
      * @param sep the separator between the date and the time
      * @return a string containing the date time
      */
-    private String getISODateTime(char dateTimeSep, char timeSep, boolean addTimeZone) {
+    private String getISODateTime(char dateTimeSep, char timeSep) {
         Instant now;
         ZonedDateTime zdt;
         DateTimeFormatter formatter;

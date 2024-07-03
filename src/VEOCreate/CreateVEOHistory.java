@@ -8,7 +8,6 @@ package VEOCreate;
 
 import VERSCommon.VEOError;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.logging.Logger;
 
 /**

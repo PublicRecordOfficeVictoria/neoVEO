@@ -11,7 +11,6 @@ import VERSCommon.ResultSummary;
 import VERSCommon.VEOError;
 import VERSCommon.VEOFailure;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -338,7 +337,7 @@ class RepnVEOContent extends RepnXML {
         if (contentsAvailable()) {
             version.genReport(verbose, w);
             hashAlgorithm.genReport(verbose, w);
-            if (infoObjs.size() > 0) {
+            if (!infoObjs.isEmpty()) {
                 startDiv(null, "InfoObjs", null);
                 addLabel("Information Objects: ");
                 for (i = 0; i < infoObjs.size(); i++) {
