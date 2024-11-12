@@ -1161,7 +1161,7 @@ class RepnMetadataPackage extends AnalysisBase {
             }
              */
             // DC_TERMS:creator
-            testLeafProperty(r, "rdf:Description", dcNameSpace, "creator", "checkAGLSProperties", 2, WhatToDo.errorIfMissing);
+            testLeafProperty(r, dcNameSpace, "creator", "checkAGLSProperties", 2, WhatToDo.errorIfMissing);
 
             // DC_TERMS:date m format YYYY-MM-DD (available, created, dateCopyrighted, dateLicensed, issued, modified, valid) see AGLS Usage Guide for valid schemas and formats.
             if (!containsLeafProperty(r, dcNameSpace, "date", true)
@@ -1182,17 +1182,17 @@ class RepnMetadataPackage extends AnalysisBase {
             }
 
             // DC_TERMS:title m
-            testLeafProperty(r, "rdf:Description", dcNameSpace, "title", "checkAGLSProperties", 5, WhatToDo.errorIfMissing);
+            testLeafProperty(r, dcNameSpace, "title", "checkAGLSProperties", 5, WhatToDo.errorIfMissing);
 
             // DC_TERMS:availability m for offline resources (can't test conditional)
             // DC_TERMS:identifier m for online resources (can't test conditional)
-            testLeafProperty(r, "rdf:Description", dcNameSpace, "identifier", "checkAGLSProperties", 2, WhatToDo.errorIfMissing);
+            testLeafProperty(r, dcNameSpace, "identifier", "checkAGLSProperties", 2, WhatToDo.errorIfMissing);
 
             // DC_TERMS:publisher m for information resources  (can't test conditional)
-            testLeafProperty(r, "rdf:Description", dcNameSpace, "publisher", "checkAGLSProperties", 2, WhatToDo.errorIfMissing);
+            testLeafProperty(r, dcNameSpace, "publisher", "checkAGLSProperties", 2, WhatToDo.errorIfMissing);
 
             // DC_TERMS:description r
-            testLeafProperty(r, "rdf:Description", dcNameSpace, "description", "checkAGLSProperties", 6, WhatToDo.warningIfMissing);
+            testLeafProperty(r, dcNameSpace, "description", "checkAGLSProperties", 6, WhatToDo.warningIfMissing);
 
             // DC_TERMS:function r
             // DC_TERMS:subject r if function not present
@@ -1272,7 +1272,6 @@ class RepnMetadataPackage extends AnalysisBase {
      * null is returned.
      *
      * @param r the RDF resource that should contain the property
-     * @parem parent the element name of the parent
      * @param nameSpace the namespace the property exists within
      * @param element the property (element) name within the namespace
      * @param method the method testing the property (used to make a unique id)
@@ -1288,7 +1287,7 @@ class RepnMetadataPackage extends AnalysisBase {
         justReturnNull      // just return null if property is missing or empty
     }
 
-    private String testLeafProperty(Resource r, String parent, Namespace nameSpace, String element, String method, int errno, WhatToDo wtd) {
+    private String testLeafProperty(Resource r, Namespace nameSpace, String element, String method, int errno, WhatToDo wtd) {
         Statement stmt;
         String s;
 
@@ -1297,12 +1296,12 @@ class RepnMetadataPackage extends AnalysisBase {
         stmt = r.getProperty(ResourceFactory.createProperty(nameSpace.value, element));
         if (stmt == null) {
             // System.out.println("- Didn't find it");
-            createMesg(method, errno, parent, false, nameSpace.handle + ":" + element, wtd);
+            createMesg(method, errno, false, nameSpace.handle + ":" + element, wtd);
             return null;
         }
         s = stmt.getString();
         if (s.trim().equals("")) {
-            createMesg(method, errno + 50, parent, true, nameSpace.handle + ":" + element, wtd);
+            createMesg(method, errno + 50, true, nameSpace.handle + ":" + element, wtd);
             return null;
         }
         return s.trim();
@@ -1446,20 +1445,19 @@ class RepnMetadataPackage extends AnalysisBase {
      *
      * @param method method calling
      * @param errno unique error identifier in the method
-     * @param parent the XML tag of the parent
      * @param child the XML tag of the property
      * @param wtd what to do if property is missing or empty
      */
-    private void createMesg(String method, int errno, String parent, boolean isEmpty, String child, WhatToDo wtd) {
+    private void createMesg(String method, int errno, boolean isEmpty, String child, WhatToDo wtd) {
         VEOFailure vf;
 
         if (wtd == WhatToDo.justReturnNull) {
             return;
         }
         if (isEmpty) {
-            vf = new VEOFailure(CLASSNAME, method, errno, id, child + " is empty (metadata package '" + resourceURI + "')");
+            vf = new VEOFailure(CLASSNAME, method, errno, id, child + " is empty");
         } else {
-            vf = new VEOFailure(CLASSNAME, method, errno, id, child + " is not present in " + parent + " (metadata package '" + resourceURI + "')");
+            vf = new VEOFailure(CLASSNAME, method, errno, id, child + " is not present");
         }
         if (wtd == WhatToDo.errorIfMissing) {
             addError(vf);
