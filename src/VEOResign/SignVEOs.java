@@ -151,10 +151,11 @@ public class SignVEOs {
      * 20240515 2.3 Selecting output directory now works, and can skip ZIPping file
      * 20240522 2.4 Fixed major bug in renewing signatures, improved logging of what happened, & added -nozip option
      * 20240703 2.5 Added -zip, -overwrite, and -addevent options, further improved logging
+     * 20241113 2.6 Minor bug fix
      * </pre>
      */
     static String version() {
-        return ("2.5");
+        return ("2.6");
     }
 
     /**
@@ -455,7 +456,7 @@ public class SignVEOs {
      * being constructed
      */
     public void resignVEOs() throws AppFatal {
-        int i;
+        int i, j;
         Path givenVEOPath;  // whatever path from command line argument
         String veoName;     // name from command line argument
         Path veoDir;        // actual path containing the unpacked VEO
@@ -466,7 +467,7 @@ public class SignVEOs {
             // get directory name and sanity check it. Unpack into the output
             // directory if still zipped
             try {
-            givenVEOPath = Paths.get(veoDirectories.get(i)).toRealPath();
+                givenVEOPath = Paths.get(veoDirectories.get(i)).toRealPath();
             } catch (IOException ioe) {
                 LOG.log(Level.SEVERE, "Could not get real path of ''{0}''", new Object[]{veoDirectories.get(i)});
                 continue;
@@ -476,11 +477,11 @@ public class SignVEOs {
                 continue;
             }
             veoName = givenVEOPath.getFileName().toString();
-            
+
             // if being asked to resign a packed VEO, unzip it first
             if (veoName.toLowerCase().endsWith(".veo.zip")) {
-                i = veoName.toLowerCase().lastIndexOf(".zip");
-                String s = veoName.substring(0, i);
+                j = veoName.toLowerCase().lastIndexOf(".zip");
+                String s = veoName.substring(0, j);
                 veoDir = outputDir.resolve(Paths.get(s));
                 if (veoDir.toFile().exists()) {
                     if (overwrite) {
@@ -651,7 +652,7 @@ public class SignVEOs {
                 p = outputDir.resolve(s + ".zip");
                 if (!p.toFile().exists()) {
                     veo.finalise(outputDir, true, true);
-                        logMesg.append("Rezipped");
+                    logMesg.append("Rezipped");
                 } else {
                     if (overwrite) {
                         try {
