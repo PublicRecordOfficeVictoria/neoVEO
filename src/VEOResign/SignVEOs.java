@@ -153,10 +153,11 @@ public class SignVEOs {
      * 20240703 2.5 Added -zip, -overwrite, and -addevent options, further improved logging
      * 20241113 2.6 Minor bug fix
      * 20241113 2.7 Changed error message when source VEO could not be found
+     * 20241113 2.8 Changed status message when not rezipping VEO
      * </pre>
      */
     static String version() {
-        return ("2.7");
+        return ("2.8");
     }
 
     /**
@@ -301,7 +302,7 @@ public class SignVEOs {
                 LOG.log(Level.INFO, " Rezip VEO after resigning - if a zipped copy of the VEO does not exist in the output directory");
             }
         } else {
-            LOG.log(Level.INFO, " Do NOT rezip VEO after resigning");
+            LOG.log(Level.INFO, " Do NOT rezip VEO after resigning (-zip not set)");
         }
         if (verbose) {
             LOG.info(" Verbose output is selected");
