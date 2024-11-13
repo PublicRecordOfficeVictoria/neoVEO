@@ -152,10 +152,11 @@ public class SignVEOs {
      * 20240522 2.4 Fixed major bug in renewing signatures, improved logging of what happened, & added -nozip option
      * 20240703 2.5 Added -zip, -overwrite, and -addevent options, further improved logging
      * 20241113 2.6 Minor bug fix
+     * 20241113 2.7 Changed error message when source VEO could not be found
      * </pre>
      */
     static String version() {
-        return ("2.6");
+        return ("2.7");
     }
 
     /**
@@ -469,7 +470,7 @@ public class SignVEOs {
             try {
                 givenVEOPath = Paths.get(veoDirectories.get(i)).toRealPath();
             } catch (IOException ioe) {
-                LOG.log(Level.SEVERE, "Could not get real path of ''{0}''", new Object[]{veoDirectories.get(i)});
+                LOG.log(Level.SEVERE, "Could not find ''{0}''", new Object[]{veoDirectories.get(i)});
                 continue;
             }
             if (!givenVEOPath.toFile().exists()) {
