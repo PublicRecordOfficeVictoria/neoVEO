@@ -164,10 +164,11 @@ public class VEOAnalysis {
      * 20240516 4.17 Removed RepnSignature.getSignatureFile()
      * 20240703 4.18 Moved to latest version of Netbeans resulting in correcting warnings
      * 20241113 4.19 Simplified some VEOFailure messages when processing a dcterms:Description
+     * 20241113 4.20 Changed checking for dcterms:Description - now handled like other recommended elements (test suppressed if -norec set)
      * </pre>
      */
     static String version() {
-        return ("4.19");
+        return ("4.20");
     }
 
     static String copyright = "Copyright 2015-2024 Public Record Office Victoria";

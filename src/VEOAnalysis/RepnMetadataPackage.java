@@ -1192,7 +1192,10 @@ class RepnMetadataPackage extends AnalysisBase {
             testLeafProperty(r, dcNameSpace, "publisher", "checkAGLSProperties", 2, WhatToDo.errorIfMissing);
 
             // DC_TERMS:description r
-            testLeafProperty(r, dcNameSpace, "description", "checkAGLSProperties", 6, WhatToDo.warningIfMissing);
+            if (!noRec && !containsLeafProperty(r, aglsNameSpace, "description", true)) {
+                addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 6, id, "AGLS metadata package does not contain the recommended dcterms:description)"));
+            }
+            //testLeafProperty(r, dcNameSpace, "description", "checkAGLSProperties", 6, WhatToDo.warningIfMissing);
 
             // DC_TERMS:function r
             // DC_TERMS:subject r if function not present
