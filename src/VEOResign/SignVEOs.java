@@ -154,10 +154,11 @@ public class SignVEOs {
      * 20241113 2.6 Minor bug fix
      * 20241113 2.7 Changed error message when source VEO could not be found
      * 20241113 2.8 Changed status message when not rezipping VEO
+     * 20241125 2.9 Minor bug fix when specifying the output directory of an unzipped input file
      * </pre>
      */
     static String version() {
-        return ("2.8");
+        return ("2.9");
     }
 
     /**
@@ -504,7 +505,8 @@ public class SignVEOs {
                     continue;
                 }
             } else if (veoName.toLowerCase().endsWith(".veo")) {
-                veoDir = outputDir.resolve(Paths.get(veoName));
+                // veoDir = outputDir.resolve(Paths.get(veoName));
+                veoDir = givenVEOPath;
             } else {
                 LOG.log(Level.WARNING, "VEO name ''{0}'' must end with ''.veo'' or ''.veo.zip''", givenVEOPath);
                 continue;
