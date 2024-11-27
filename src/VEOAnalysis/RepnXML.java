@@ -188,7 +188,7 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
         if ((av = e.getAttribute("xmlns:vers")).equals("")) {
             addError(new VEOFailure(CLASSNAME, "parse", 15, id, "Root element does not contain attribute definition 'xmlns:vers=\"http://www.prov.vic.gov.au/VERS\""));
         } else if (!av.equals("http://www.prov.vic.gov.au/VERS")) {
-            addError(new VEOFailure(CLASSNAME, "parse", 16, id, "Root element defines attribute xmlns:xsi as '" + av + "' not \"http://www.prov.vic.gov.au/VERS\""));
+            addWarning(new VEOFailure(CLASSNAME, "parse", 16, id, "Root element defines attribute xmlns:vers as '" + av + "' not \"http://www.prov.vic.gov.au/VERS\""));
         }
 
         // validate the DOM tree against the schema
@@ -519,6 +519,20 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
                     sb.append(' ');
                 }
                 sb.append("Text: '");
+                sb.append(v.trim());
+                sb.append("'\n");
+                break;
+            case Node.ATTRIBUTE_NODE:
+                v = n.getNodeValue();
+                if (v == null || v.trim().equals("")) {
+                    break;
+                }
+                for (i = 0; i < depth; i++) {
+                    sb.append(' ');
+                }
+                sb.append("Name: '");
+                sb.append(n.getNodeName());
+                sb.append("' Value: '");
                 sb.append(v.trim());
                 sb.append("'\n");
                 break;

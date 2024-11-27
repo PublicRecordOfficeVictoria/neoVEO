@@ -44,6 +44,8 @@ import org.apache.logging.log4j.core.config.LoggerConfig;
 // Use the com.hp.hpl.jena imports if using Jena 2
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.Property;
+import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.ResIterator;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.ResourceFactory;
@@ -72,13 +74,12 @@ class RepnMetadataPackage extends AnalysisBase {
     private RepnItem syntaxId;  // syntax identifier
     private RepnItem canUseFor;    // use this metadata package for...
     private ArrayList<Element> metadata; // list of metadata roots
-    private boolean rdf;        // true if the metadata package is RDF
     private Model rdfModel;     // RDF model
     private String resourceURI; // URL identifying RDF resource
-    private Namespace dcNameSpace; // URL for dublin core namespace actually used
-    private Namespace aglsNameSpace; // URL for AGLS namespace actually used
-    private Namespace versNameSpace; // URL for VERS namespace actually used
-    private Namespace anzs5478NameSpace; // URL for ANZS5478 namespace actually used
+    private String dcTermsNSURI;   // namespace URI for xmlns:dcterms
+    private String aglsTermsNSURI; // namespace URI for xmlns:aglsterms
+    private String versTermsNSURI; // namespace URI for xmlns:versterms
+    private String anzs5478NSURI;  // namespace for xmlns:anzs5478
     private final static java.util.logging.Logger LOG = java.util.logging.Logger.getLogger("VEOAnalysis.RepnMetadatPackage");
 
     /**
@@ -90,43 +91,31 @@ class RepnMetadataPackage extends AnalysisBase {
         ANZS5478    // ASNZS5478
     }
 
-    /**
-     * Namespace information
-     */
-    private class Namespace {
-
-        String handle;  // the short identifier used in the XML
-        String value;   // the actual URL of this namespace used in the document
-
-        Namespace(String handle, String value) {
-            this.handle = handle;
-            this.value = value;
-        }
-    }
-
     // These are the accepted URLs for the namespaces used in the standard VERS
     // metadata packages. If the VEO uses other URLs for these namespaces, an
     // Error will be generated, but the actual namespace used in the VEO will
-    // be used to check the VEO (this prevents cascading errors).
-    private static final String[] DC_TERMS_NS
+    // be used to check the VEO (this prevents cascading errors)
+    // IMPORTANT - the second RDF namespace (without the '#') will cause the
+    // RDF tool to crash, so it separately trapped and prevents validation of
+    // the metadata
+    private static final String[] DC_TERMS_NS_URIs
             = {"http://purl.org/dc/terms/"};
-    private static final String[] AGLS_TERMS_NS
+    private static final String[] AGLS_TERMS_NS_URIs
             = {"http://www.agls.gov.au/agls/terms/",
                 "https://www.agls.gov.au/agls/terms/"};
-    private static final String[] VERS_TERMS_NS = {
-        "http://www.prov.vic.gov.au/vers/terms/"
-    };
-    private static final String[] ANZS5478_TERMS_NS = {
+    private static final String[] VERS_TERMS_NS_URIs = {
+        "http://www.prov.vic.gov.au/vers/terms/"};
+    private static final String[] ANZS5478_NS_URIs = {
         "http://prov.vic.gov.au/ANZS5478",
         "http://www.prov.vic.gov.au/ANZS5478",
         "http://www.prov.vic.gov.au/vers/schema/ANZS5478",
         "http://www.prov.vic.gov.au/ANSZ5478/terms/",
         "http://www.prov.vic.gov.au/VERS-as5478"};
 
-    private static final String DC_TERMS = "dcterms";
-    private static final String AGLS_TERMS = "aglsterms";
-    private static final String VERS_TERMS = "versterms";
-    private static final String ANZS5478_TERMS = "anzs5478";
+    private static final String DC_TERMS_NS = "dcterms";
+    private static final String AGLS_TERMS_NS = "aglsterms";
+    private static final String VERS_TERMS_NS = "versterms";
+    private static final String ANZS5478_TERMS_NS = "anzs5478";
 
     // AGRkMS RDF properties
     /**
@@ -135,11 +124,10 @@ class RepnMetadataPackage extends AnalysisBase {
      * @param document the representation of the XML document
      * @param parentId the parent object identifier
      * @param seq the sequence number of this MP in the Information Object
-     * @param rdf true if metadata is expressed in RDF
      * @param results the results summary to build
      * @throws VEOError if the XML document has not been properly parsed
      */
-    public RepnMetadataPackage(RepnXML document, String parentId, int seq, boolean rdf, ResultSummary results) throws VEOError {
+    public RepnMetadataPackage(RepnXML document, String parentId, int seq, ResultSummary results) throws VEOError {
         super(parentId + ":MP-" + seq, results);
 
         assert (document != null);
@@ -147,13 +135,12 @@ class RepnMetadataPackage extends AnalysisBase {
         assert (seq > -1);
 
         metadata = new ArrayList<>();
-        this.rdf = rdf;
         rdfModel = null;
         resourceURI = null;
-        dcNameSpace = null;
-        aglsNameSpace = null;
-        versNameSpace = null;
-        anzs5478NameSpace = null;
+        dcTermsNSURI = null;
+        aglsTermsNSURI = null;
+        versTermsNSURI = null;
+        anzs5478NSURI = null;
 
         // VERS:MetadataSchemaIdentifier
         schemaId = new RepnItem(id, "Metadata schema id:", results);
@@ -162,13 +149,6 @@ class RepnMetadataPackage extends AnalysisBase {
         // VERS:MetadataSyntaxIdentifier
         syntaxId = new RepnItem(id, "Metadata syntax id:", results);
         syntaxId.setValue(document.getTextValue());
-        if (syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
-            if (!rdf) {
-                addError(new VEOFailure(CLASSNAME, 1, id, "Error. Metadata Package has vers:MetadataSyntaxIdentifier of http://www.w3.org/1999/02/22-rdf-syntax-ns, but xmlns:rdf namespace attribute is not defined"));
-            }
-        } else {
-            this.rdf = false; // force rdf false, even if we have seen RDF attributes defined
-        }
         document.gotoNextElement();
 
         // vers:UseFor
@@ -232,14 +212,14 @@ class RepnMetadataPackage extends AnalysisBase {
         if (schema.endsWith("ANZS5478") || schema.equals("http://www.prov.vic.gov.au/VERS-as5478")) {
 
             // correct syntax?
-            if (!syntax.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
+            if (!(syntax.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns") || syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#"))) {
                 addError(new VEOFailure(CLASSNAME, "validate", 5, id, "ANZS-5478 metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'"));
                 return true;
             }
 
             // we've seen the rdf:RDF definition, and the RDF parsing succeeded..
-            if (rdf && parseRDF(MetadataPackage.ANZS5478)) {
-                checkANZSProperties(noRec);
+            if (parseRDF(MetadataPackage.ANZS5478)) {
+                checkANZSProperties();
                 return true;
             }
             return true;
@@ -249,19 +229,25 @@ class RepnMetadataPackage extends AnalysisBase {
         if (schema.endsWith("AGLS") || schema.equals("http://www.vic.gov.au/blog/wp-content/uploads/2013/11/AGLS-Victoria-2011-V4-Final-2011.pdf")) {
 
             // correct syntax?
-            if (!syntax.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns")) {
+            if (!(syntax.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns") || syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#"))) {
                 addError(new VEOFailure(CLASSNAME, "validate", 6, id, "AGLS metadata must be represented as RDF with the syntax id 'http://www.w3.org/1999/02/22-rdf-syntax-ns'"));
                 return true;
             }
 
             // we've seen the rdf:RDF definition, and the RDF parsing succeeded..
-            if (rdf && parseRDF(MetadataPackage.AGLS)) {
+            if (parseRDF(MetadataPackage.AGLS)) {
                 checkAGLSProperties(noRec);
                 return true;
             }
             return true;
         }
-        return false;
+
+        // was an RDF syntax anyway, so see if it parses...
+        if (syntax.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns") || syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#")) {
+            return parseRDF(MetadataPackage.Unknown);
+        }
+
+        return true; // no idea about this metadata package, so assume it's valid
     }
 
     /**
@@ -310,11 +296,11 @@ class RepnMetadataPackage extends AnalysisBase {
         Model m;
         StringWriter parseErrs;     // place where parse errors can be captured
         int i;
-        Element e;
+        Element e, ec;
         Node n;
+        Attr a;
         String elementName;
-        boolean foundRdfDescription;
-        boolean rdfNamespaceProblem;
+        boolean foundRdfDescription, emptyRdfRDF;
 
         // create a place to put the RDF metadata (if any)
         rdfModel = ModelFactory.createDefaultModel();
@@ -352,26 +338,8 @@ class RepnMetadataPackage extends AnalysisBase {
         for (i = 0; i < metadata.size(); i++) {
             e = metadata.get(i);
 
-            // if this is RDF metadata, attempt to parse it...
+            // only process things that are inside an rdf:RDF element
             if (e.getTagName().equals("rdf:RDF")) {
-
-                // check the namespace declarations
-                switch (mp) {
-                    case AGLS:
-                        dcNameSpace = setNameSpace(e, DC_TERMS, DC_TERMS_NS, false);
-                        aglsNameSpace = setNameSpace(e, AGLS_TERMS, AGLS_TERMS_NS, false);
-                        versNameSpace = setNameSpace(e, VERS_TERMS, VERS_TERMS_NS, false);
-                        break;
-                    case ANZS5478:
-                        anzs5478NameSpace = setNameSpace(e, ANZS5478_TERMS, ANZS5478_TERMS_NS, false);
-                        versNameSpace = setNameSpace(e, VERS_TERMS, VERS_TERMS_NS, true);
-                        break;
-                    default:
-                        break;
-                }
-
-                // check for extraneous namespace definitions
-                rdfNamespaceProblem = checkForNamespaceDeclns(e);
 
                 // check that the rdf:RDF has at least one rdf:Description element,
                 // and that the rdf:Description element contains an rdf:About
@@ -379,33 +347,85 @@ class RepnMetadataPackage extends AnalysisBase {
                 // try parsing it anyway as it might contain RDF that can be
                 // checked.
                 n = e.getFirstChild();
+                if (n == null) {
+                    addError(new VEOFailure(CLASSNAME, "parseRDF", 1, id, "rdf:RDF element is empty. Should contain an rdf:Description element"));
+                    return false;
+                }
                 foundRdfDescription = false;
+                emptyRdfRDF = true;
                 while (n != null) {
                     if (n.getNodeType() == Node.ELEMENT_NODE) {
+                        emptyRdfRDF = false;
+                        ec = (Element) n;
                         elementName = n.getNodeName();
-                        if (!elementName.equals("rdf:Description")) {
-                            addError(new VEOFailure(CLASSNAME, "parseRDF", 1, id, "rdf:RDF element has a child (" + elementName + ")that is not an rdf:Description element"));
-                        } else {
-                            foundRdfDescription = true;
-                            NamedNodeMap nnm = n.getAttributes();
-                            if (nnm == null) {
-                                LOG.log(Level.SEVERE, VEOFailure.getMessage(CLASSNAME, "parseRDF", 2, id, "rdf:Description element has no attributes (must have an rdf:about attribute)"));
-                            } else {
-                                Node a = nnm.getNamedItem("rdf:about");
-                                if (a == null) {
-                                    addError(new VEOFailure(CLASSNAME, "parseRDF", 3, id, "rdf:Description element does not contain an rdf:about attribute"));
+                        switch (elementName) {
+                            case "rdf:Description":
+                                foundRdfDescription = true;
+                                if (!ec.hasAttribute("rdf:about")) {
+                                    addError(new VEOFailure(CLASSNAME, "parseRDF", 2, id, "rdf:Description element does not contain an rdf:about attribute"));
+                                    
+                                    // force a dummy rdf:about attribute into rdf:Description to validate the contents
+                                    ec.setAttribute("rdf:about", "http://dummy.prov.vic.gov.au/dummy");
                                 }
-                            }
+
+                                // the children of the rdf:Description element
+                                // are the last place you can define the
+                                // metadata namespaces, so interogate the DOM
+                                // model to retrieve what they have been set to.
+                                // Note the RDF model namespaces will be set to
+                                // to the last values encountered. Meh
+                                Node n1 = ec.getFirstChild();
+                                while (n1 != null) {
+                                    if (n1.getNodeType() == Node.ELEMENT_NODE) {
+                                        setNamespaces(mp, (Element) n1);
+                                    }
+                                    n1 = n1.getNextSibling();
+                                }
+                                break;
+
+                            // missing rdf:Description. Create one and put it in
+                            // the DOM tree. Move the rdf:about attribute (if it
+                            // exists) into the new node. Then we can validate
+                            // the RDF
+                            case "anzs5478:Record":
+                            case "anzs5478:Agent":
+                            case "anzs5478:Business":
+                            case "anzs5478:Mandate":
+                            case "anzs5478:Relationship":
+                                addError(new VEOFailure(CLASSNAME, "parseRDF", 3, id, "rdf:RDF element has a child AGLS or ANZS54678 element (" + elementName + ") instead of an rdf:Description element"));
+                                foundRdfDescription = true; // a lie, but we've already flagged the missing rdf:Description element
+                                Element en = e.getOwnerDocument().createElement("rdf:Description");
+                                a = ec.getAttributeNode("rdf:about");
+                                if (a != null) {
+                                    ec.removeAttributeNode(a);
+                                    en.setAttributeNode(a);
+                                }
+                                a = ec.getAttributeNode("rdf:parseType");
+                                if (a == null) {
+                                    ec.setAttribute("rdf:parseType", "Resource");
+                                }
+                                e.replaceChild(en, ec);
+                                en.appendChild(ec);
+                                setNamespaces(mp, ec);
+                                break;
+                            default:
+                                addError(new VEOFailure(CLASSNAME, "parseRDF", 5, id, "rdf:RDF element has a child (" + elementName + ") instead of an rdf:Description element"));
+                                break;
                         }
                     }
                     n = n.getNextSibling();
                 }
                 if (!foundRdfDescription) {
-                    addError(new VEOFailure(CLASSNAME, "parseRDF", 4, id, "rdf:RDF element did not contain an rdf:Description element"));
+                    addError(new VEOFailure(CLASSNAME, "parseRDF", 6, id, "rdf:RDF element did not contain an rdf:Description element"));
                 }
-                
-                // bail out if the RDF namespace declaration was invalid
-                if (rdfNamespaceProblem) {
+                if (emptyRdfRDF) {
+                    return false;
+                }
+
+                // If the RDF namespace is not absolutely correct in the VEO,
+                // the RDF parser will crash. If this has happened, just
+                // ignore the RDF.
+                if (!checkRDFNamesSpaceURI(e)) {
                     return false;
                 }
 
@@ -420,7 +440,7 @@ class RepnMetadataPackage extends AnalysisBase {
                 try {
                     d2m = DOM2Model.createD2M(null, m);
                 } catch (SAXParseException spe) {
-                    LOG.log(java.util.logging.Level.WARNING, VEOFailure.getMessage(CLASSNAME, "parseRDF", 5, id, "Failed to initialise Jena to parse RDF", spe));
+                    LOG.log(java.util.logging.Level.WARNING, VEOFailure.getMessage(CLASSNAME, "parseRDF", 7, id, "Failed to initialise Jena to parse RDF", spe));
                     return false;
                 }
                 // d2m.setErrorHandler(errHandler);
@@ -435,7 +455,7 @@ class RepnMetadataPackage extends AnalysisBase {
                 // rdfModel.write(System.out);
                 // if errors occurred, remember them
                 if (parseErrs.getBuffer().length() > 0) {
-                    addError(new VEOFailure(CLASSNAME, "parseRDF", 6, id, parseErrs.toString().trim()));
+                    addError(new VEOFailure(CLASSNAME, "parseRDF", 8, id, parseErrs.toString().trim()));
                 }
                 parseErrs.getBuffer().setLength(0);
             }
@@ -447,42 +467,96 @@ class RepnMetadataPackage extends AnalysisBase {
         try {
             parseErrs.close();
         } catch (IOException ioe) {
-            LOG.log(java.util.logging.Level.WARNING, VEOFailure.getMessage(CLASSNAME, "parseRDF", 7, id, "Failed to close StringWriter used to capture parse errors", ioe));
+            LOG.log(java.util.logging.Level.WARNING, VEOFailure.getMessage(CLASSNAME, "parseRDF", 9, id, "Failed to close StringWriter used to capture parse errors", ioe));
         }
         return true;
     }
+    
+    /**
+     * Set up the namespaces for the metadata packages.
+     * 
+     * @param mp type of metadata
+     * @param e current element
+     */
+
+    private void setNamespaces(MetadataPackage mp, Element e) {
+        switch (mp) {
+            case AGLS:
+                dcTermsNSURI = checkNamespace(e, DC_TERMS_NS, DC_TERMS_NS_URIs);
+                aglsTermsNSURI = checkNamespace(e, AGLS_TERMS_NS, AGLS_TERMS_NS_URIs);
+                versTermsNSURI = checkNamespace(e, VERS_TERMS_NS, VERS_TERMS_NS_URIs);
+                break;
+            case ANZS5478:
+                anzs5478NSURI = checkNamespace(e, ANZS5478_TERMS_NS, ANZS5478_NS_URIs);
+                versTermsNSURI = checkNamespace(e, VERS_TERMS_NS, VERS_TERMS_NS_URIs);
+                break;
+            default:
+                break;
+        }
+    }
 
     /**
-     * Check for duplicated standard namespace declarations within the metadata
-     * package & warn if they are present. Technically not an error, but not
-     * necessary and could cause problems. Specifically check for xmlns:rdf
-     * declarations & if found check for correct value (the incorrect value will
-     * cause the RDF parser to crash).
+     * Check if this element has a specific namespace defined and, if so, if it
+     * is one of the preferred values. If it is not a Warning is generated (note
+     * not an error because most things don't actually care about the value).
+     * In the XML DOM tree, namespaces inherit so the actual definition may be
+     * much higher in the XML document tree.
+     * We don't care if the namespace is defined at the right time - if it is
+     * not defined by the time it is used, the XML parsing will fail.
      *
-     * @param e
-     * @return
+     * @param e the element being checked
+     * @param namespace the namespace we are looking for
+     * @param properValues the proper values of the namespace
+     * @return the value of the namespace attribute actually used in the VEO
      */
-    private boolean checkForNamespaceDeclns(Element e) {
+    private String checkNamespace(Element e, String namespace, String[] properValues) {
+        String v;
+        int i;
+
+        // find namespace definition
+        v = e.lookupNamespaceURI(namespace);
+        if (v != null) {
+
+            // check that the namespace definition is a valid value. Note that
+            // there may be a number of acceptable values, but the proper one is
+            // the first in the list
+            for (i = 0; i < properValues.length; i++) {
+                if (v.equals(properValues[i])) {
+                    break;
+                }
+            }
+            if (i == properValues.length) {
+                addWarning(new VEOFailure(CLASSNAME, "checkNamespace", 1, id, "Namespace declaration for xmlns:" + namespace + " is '" + v + "' instead of '" + properValues[0]));
+            } else if (i != 0) {
+                addWarning(new VEOFailure(CLASSNAME, "checkNamespace", 2, id, "Namespace declaration for xmlns:" + namespace + " is '" + v + "' instead of preferred '" + properValues[0]));
+            }
+            rdfModel.setNsPrefix(namespace, v);
+        }
+        return v;
+    }
+
+    /**
+     * Check for the correct definition of the rdf namespace. The full subtree
+     * is checked as the RDF parser crashes if an incorrect value is used
+     * anywhere in the tree.
+     *
+     * @param e the root element of the subtee to be checked
+     * @return true if the RDF name space was valid
+     */
+    private boolean checkRDFNamesSpaceURI(Element e) {
         Node n;
         String s;
-        int i;
-        boolean failed = false;
 
-        NamedNodeMap nnm = e.getAttributes();
-        if (nnm != null) {
-            for (i = 0; i < nnm.getLength(); i++) {
-                n = nnm.item(i);
-                switch (n.getNodeName()) {
-                    case "xmlns:rdf":
-                        s = n.getNodeValue();
-                        if (!s.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#")) {
-                            addError(new VEOFailure(CLASSNAME, "checkForNamespaceDeclns", 1, id, "Incorrect xmlns:rdf declaration on "+e.getNodeName()+" element. Must be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'. RDF has not been validated."));
-                            failed = true;
-                        }
-                        break;
-                    default:
-                        break;
-                }
+        if ((s = e.lookupNamespaceURI("rdf")) != null) {
+            switch (s) {
+                case "http://www.w3.org/1999/02/22-rdf-syntax-ns#":
+                    break;
+                case "http://www.w3.org/1999/02/22-rdf-syntax-ns":
+                    addError(new VEOFailure(CLASSNAME, "checkRDFNamesSpaceURI", 1, id, "Incorrect xmlns:rdf declaration on " + e.getNodeName() + " element. Must be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'. Was '"+s+"' (an error in the VERS specification). RDF metadata has not been validated and may contain errors."));
+                    return false;
+                default:
+                    addError(new VEOFailure(CLASSNAME, "checkRDFNamesSpaceURI", 2, id, "Incorrect xmlns:rdf declaration on " + e.getNodeName() + " element. Must be 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'. Was '"+s+"'. RDF metadata has not been validated and may contain errors."));
+                    return false;
             }
         }
 
@@ -490,51 +564,13 @@ class RepnMetadataPackage extends AnalysisBase {
         n = e.getFirstChild();
         while (n != null) {
             if (n.getNodeType() == Node.ELEMENT_NODE) {
-                failed |= checkForNamespaceDeclns((Element) n);
+                if (!checkRDFNamesSpaceURI((Element) n)) {
+                    return false;
+                }
             }
             n = n.getNextSibling();
         }
-        return failed;
-    }
-
-    /**
-     * Process the metadata package namespace declarations in the rdf:RDF
-     * element. The namespace declaration must exist and must be set to the
-     * correct value. However, when parsing the RDF we use the namespace value
-     * set in the VEO - this prevents errors about missing metadata if all that
-     * is wrong is that the namespace value is incorrect.
-     *
-     * @param e the RDF element
-     * @param namespace the namespace we are looking for
-     * @param properValues the proper values of the namespace
-     * @param optional this namespace might not appear
-     * @return the values of the namespace attribute actually used in the VEO
-     */
-    private Namespace setNameSpace(Element e, String namespace, String[] properValues, boolean optional) {
-        Attr a;
-        String v;
-        int i;
-
-        if ((a = e.getAttributeNode("xmlns:" + namespace)) == null) {
-            if (!optional) {
-                addWarning(new VEOFailure(CLASSNAME, "parseRDF", 1, id, "Namespace declaration for xmlns:" + namespace + " missing from rdf:RDF element"));
-            }
-            v = properValues[0]; // hack - if namespace is not specified, set it to the default so testing doesn't fail later
-        } else {
-            v = a.getValue().trim();
-        }
-        rdfModel.setNsPrefix(namespace, v);
-
-        // check that the namespace definition is the correct one
-        for (i = 0; i < properValues.length; i++) {
-            if (v.equals(properValues[i])) {
-                break;
-            }
-        }
-        if (i == properValues.length) {
-            addError(new VEOFailure(CLASSNAME, "parseRDF", 2, id, "Namespace declaration for xmlns:" + namespace + " is '" + v + "' instead of '" + properValues[0] + "'"));
-        }
-        return new Namespace(namespace, v);
+        return true;
     }
 
     /**
@@ -563,55 +599,66 @@ class RepnMetadataPackage extends AnalysisBase {
      * entity being represented as anonymous RDF resources within the
      * relationship entity.
      */
-    private void checkANZSProperties(boolean noRec) {
+    private void checkANZSProperties() {
         ResIterator ri;
         Resource r1;
-        int entitiesFound;
         String lid;
+        boolean recordFound;
+        boolean anzs5478Found;
 
         // System.out.println(rdfModel2String());
         // get all resources
         ri = rdfModel.listSubjects();
 
+        // should not happen, but...
+        if (!ri.hasNext()) {
+            addError(new VEOFailure(CLASSNAME, "checkANZProperties", 1, id, "rdf:Description element is empty. Should contain an anzs5478:Record, anzs5478:Agent, anzs5478:Business, anzs5478:Mandate, or anzs5478:Relationship element"));
+            return;
+        }
+
         // step through the resources that have subjects. We are only interested
         // in the named resources (that have an rdf:about attribute)
-        entitiesFound = 0;
+        recordFound = false;
+        anzs5478Found = false;
         while (ri.hasNext()) {
             r1 = ri.nextResource();
+            
+            // System.out.println(rdfResource2String(r1));
+
+            // check to see if this resource is anonymous (has no URI)
             resourceURI = r1.getURI();
             if (resourceURI == null) { // a blank resource
-                continue;
+                    continue;
             }
             lid = resourceURI;
 
             // what entity is it?
             if (checkRecord(lid, r1)) {
-                entitiesFound += 16;
-            }
-            if (checkAgent(lid, r1)) {
-                entitiesFound += 8;
-            }
-            if (checkBusiness(lid, r1)) {
-                entitiesFound += 4;
-            }
-            if (checkMandate(lid, r1)) {
-                entitiesFound += 2;
-            }
-            if (checkRelationship(lid, r1, true)) {
-                entitiesFound += 1;
-            }
+                if (recordFound) {
+                    addWarning(new VEOFailure(CLASSNAME, "checkANZSProperties", 2, id, lid + ": multiple anzs5478:Record elements found in rdf:RDF element"));
+                }
+                recordFound = true;
+                anzs5478Found = true;
+            } else if (checkAgent(lid, r1)) {
+                anzs5478Found = true;
+            } else if (checkBusiness(lid, r1)) {
+                anzs5478Found = true;
+            } else if (checkMandate(lid, r1)) {
+                anzs5478Found = true;
+            } else if (checkRelationship(lid, r1, true)) {
+                anzs5478Found = true;
+            } else if (!rdfModel.contains(null, null, r1)) { // ignore referenced resources
 
-            // found a named object that is not one of the ANZS5478 entities...
-            if (entitiesFound == 0) {
-                addWarning(new VEOFailure(CLASSNAME, "checkANZSProperties", 1, id, lid + ": has no named resource that is an anzs5478:Record, anzs5478:Agent, anzs5478:Business, anzs5478:Mandate, or anzs5478:Relationship entity"));
+                // found a named object that is not one of the ANZS5478 entities...
+                addWarning(new VEOFailure(CLASSNAME, "checkANZSProperties", 2, id, lid + ": has a named resource that is not an anzs5478:Record, anzs5478:Agent, anzs5478:Business, anzs5478:Mandate, or anzs5478:Relationship entity"));
             }
         }
         // found no named objects...
-        if (entitiesFound == 0) {
-            addError(new VEOFailure(CLASSNAME, "checkANZSProperties", 2, id, "Metadata package does not contain a named resource (normally the rdf:Description element doesn't contain an rdf:about attribute)"));
-        } else if (entitiesFound < 16) {
+        if (!anzs5478Found) {
+            addError(new VEOFailure(CLASSNAME, "checkANZSProperties", 3, id, "AS5478 metadata package has no anzs5478:Record, anzs5478:Agent, anzs5478:Business, anzs5478:Mandate, or anzs5478:Relationship entity"));
+        } else if (!recordFound) {
             // found a named object that is not one of the ANZS5478 entities...
-            addError(new VEOFailure(CLASSNAME, "checkANZSProperties", 3, id, "Metadata package does not contain an anzs5478:Record"));
+            addError(new VEOFailure(CLASSNAME, "checkANZSProperties", 4, id, "Metadata package does not contain an anzs5478:Record"));
         }
 
         ri.close();
@@ -630,7 +677,7 @@ class RepnMetadataPackage extends AnalysisBase {
         String nlid;
 
         nlid = lid + "/anzs5478:Record";
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Record"));
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NSURI, "Record"));
         count = 0;
         while (si.hasNext()) {
             if ((r2 = getResource(si)) == null) {
@@ -668,7 +715,7 @@ class RepnMetadataPackage extends AnalysisBase {
         String nlid;
 
         nlid = lid + "/anzs5478:Agent";
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Agent"));
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NSURI, "Agent"));
         count = 0;
         while (si.hasNext()) {
             if ((r2 = getResource(si)) == null) {
@@ -701,7 +748,7 @@ class RepnMetadataPackage extends AnalysisBase {
         String nlid;
 
         nlid = lid + "/anzs5478:Business";
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Business"));
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NSURI, "Business"));
         count = 0;
         while (si.hasNext()) {
             if ((r2 = getResource(si)) == null) {
@@ -734,7 +781,7 @@ class RepnMetadataPackage extends AnalysisBase {
         String nlid;
 
         nlid = lid + "/anzs5478:Mandate";
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Mandate"));
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NSURI, "Mandate"));
         count = 0;
         while (si.hasNext()) {
             if ((r2 = getResource(si)) == null) {
@@ -767,7 +814,7 @@ class RepnMetadataPackage extends AnalysisBase {
         String nlid;
 
         nlid = lid + "/anzs5478:Relationship";
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Relationship"));
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NSURI, "Relationship"));
         count = 0;
         while (si.hasNext()) {
             if ((r2 = getResource(si)) == null) {
@@ -797,10 +844,10 @@ class RepnMetadataPackage extends AnalysisBase {
      * @param entityType entityType being looked for
      */
     private void checkEntityType(String lid, Resource r, String entityType) {
-        if (checkLeafProperty(r, anzs5478NameSpace, "EntityType", 1, 1, "checkEntityType", lid) == null) {
+        if (checkLeafProperty(r, ANZS5478_TERMS_NS, anzs5478NSURI, "EntityType", 1, 1, "checkEntityType", lid) == null) {
             return;
         }
-        if (!checkExactValue(r, anzs5478NameSpace, "EntityType", entityType)) {
+        if (!checkExactValue(r, anzs5478NSURI, "EntityType", entityType)) {
             addError("checkEntityType", 1, lid + "/anzs5478:EntityType must have value '" + entityType + "'");
         }
     }
@@ -812,7 +859,7 @@ class RepnMetadataPackage extends AnalysisBase {
      * @param entityType entityType being looked for
      */
     private void checkCategory(String lid, Resource r) {
-        checkLeafProperty(r, anzs5478NameSpace, "Category", 1, 1, "checkCategory", lid);
+        checkLeafProperty(r, ANZS5478_TERMS_NS, anzs5478NSURI, "Category", 1, 1, "checkCategory", lid);
     }
 
     /**
@@ -829,7 +876,7 @@ class RepnMetadataPackage extends AnalysisBase {
         String nlid;
 
         nlid = lid + "/anzs5478:Identifier";
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Identifier"));
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NSURI, "Identifier"));
         found = false;
         while (si.hasNext()) {
             if ((r2 = getResource(si)) == null) {
@@ -837,7 +884,7 @@ class RepnMetadataPackage extends AnalysisBase {
                 continue;
             }
             found = true;
-            checkLeafProperty(r2, anzs5478NameSpace, "IdentifierString", 1, 1, "checkIdentifier", nlid);
+            checkLeafProperty(r2, ANZS5478_TERMS_NS, anzs5478NSURI, "IdentifierString", 1, 1, "checkIdentifier", nlid);
         }
         if (!found) {
             addError("checkIdentifier", 3, lid + " must contain an anzs5478:Identifier");
@@ -858,7 +905,7 @@ class RepnMetadataPackage extends AnalysisBase {
         String nlid;
 
         nlid = lid + "/anzs5478:Name";
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Name"));
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NSURI, "Name"));
         found = false;
         while (si.hasNext()) {
             if ((r2 = getResource(si)) == null) {
@@ -866,7 +913,7 @@ class RepnMetadataPackage extends AnalysisBase {
                 continue;
             }
             found = true;
-            checkLeafProperty(r2, anzs5478NameSpace, "NameWords", 1, 1, "checkName", nlid);
+            checkLeafProperty(r2, ANZS5478_TERMS_NS, anzs5478NSURI, "NameWords", 1, 1, "checkName", nlid);
         }
         if (!found) {
             addError("checkName", 3, lid + " must contain an anzs5478:Name");
@@ -887,7 +934,7 @@ class RepnMetadataPackage extends AnalysisBase {
         String nlid;
 
         nlid = lid + "/anzs5478:DateRange";
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "DateRange"));
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NSURI, "DateRange"));
         found = false;
         while (si.hasNext()) {
             if (found) {
@@ -898,7 +945,7 @@ class RepnMetadataPackage extends AnalysisBase {
                 continue;
             }
             found = true;
-            checkLeafProperty(r2, anzs5478NameSpace, "StartDate", 1, 1, "checkDateRange", nlid);
+            checkLeafProperty(r2, ANZS5478_TERMS_NS, anzs5478NSURI, "StartDate", 1, 1, "checkDateRange", nlid);
         }
         if (!found) {
             addError("checkDateRange", 3, lid + " must contain an anzs5478:DateRange");
@@ -920,7 +967,7 @@ class RepnMetadataPackage extends AnalysisBase {
         String s, nlid;
 
         nlid = lid + "/anzs5478:Disposal";
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Disposal"));
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NSURI, "Disposal"));
         found = false;
         while (si.hasNext()) {
             if (found) {
@@ -933,14 +980,14 @@ class RepnMetadataPackage extends AnalysisBase {
             found = true;
             // for some reason, V3S5 lists 'RetentionAndDisposalAuthority'
             // instead of 'RecordsAuthority'. Accept both.
-            if ((s = checkLeafProperty(r2, anzs5478NameSpace, "RecordsAuthority", 0, 1, "checkDisposal", nlid)) == null) {
-                if ((s = checkLeafProperty(r2, anzs5478NameSpace, "RetentionAndDisposalAuthority", 0, 1, "checkDisposal", nlid)) == null) {
+            if ((s = checkLeafProperty(r2, ANZS5478_TERMS_NS, anzs5478NSURI, "RecordsAuthority", 0, 1, "checkDisposal", nlid)) == null) {
+                if ((s = checkLeafProperty(r2, ANZS5478_TERMS_NS, anzs5478NSURI, "RetentionAndDisposalAuthority", 0, 1, "checkDisposal", nlid)) == null) {
                     addError("checkDisposal", 3, lid + " must contain an anzs5478:RecordsAuthority (or anzs5478:RetentionAndDisposalAuthority)");
                 }
             }
             if (s != null && !s.equals("No Disposal Coverage")) {
-                checkLeafProperty(r2, anzs5478NameSpace, "DisposalClassID", 1, 1, "checkDisposal", nlid);
-                checkLeafProperty(r2, anzs5478NameSpace, "DisposalAction", 1, 1, "checkDisposal", nlid);
+                checkLeafProperty(r2, ANZS5478_TERMS_NS, anzs5478NSURI, "DisposalClassID", 1, 1, "checkDisposal", nlid);
+                checkLeafProperty(r2, ANZS5478_TERMS_NS, anzs5478NSURI, "DisposalAction", 1, 1, "checkDisposal", nlid);
                 // technically, should check DisposalTriggerDate, and DisposalActionDue, but these are messy and have little value
             }
         }
@@ -964,7 +1011,7 @@ class RepnMetadataPackage extends AnalysisBase {
         String nlid;
 
         nlid = lid + "/anzs5478:Extent";
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "Extent"));
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NSURI, "Extent"));
         found = false;
         while (si.hasNext()) {
             if ((r2 = getResource(si)) == null) {
@@ -972,10 +1019,10 @@ class RepnMetadataPackage extends AnalysisBase {
                 continue;
             }
             found = true;
-            checkLeafProperty(r2, anzs5478NameSpace, "PhysicalDimensions", 0, 0, "checkExtent", nlid);
-            checkLeafProperty(r2, anzs5478NameSpace, "LogicalSize", 1, 1, "checkExtent", nlid);
-            checkLeafProperty(r2, anzs5478NameSpace, "Quantity", 0, 0, "checkExtent", nlid);
-            checkLeafProperty(r2, anzs5478NameSpace, "Units", 1, 1, "checkExtent", nlid);
+            checkLeafProperty(r2, ANZS5478_TERMS_NS, anzs5478NSURI, "PhysicalDimensions", 0, 0, "checkExtent", nlid);
+            checkLeafProperty(r2, ANZS5478_TERMS_NS, anzs5478NSURI, "LogicalSize", 1, 1, "checkExtent", nlid);
+            checkLeafProperty(r2, ANZS5478_TERMS_NS, anzs5478NSURI, "Quantity", 0, 0, "checkExtent", nlid);
+            checkLeafProperty(r2, ANZS5478_TERMS_NS, anzs5478NSURI, "Units", 1, 1, "checkExtent", nlid);
         }
         if (!found) {
             addError("checkExtent", 3, lid + " must contain at least one anzs5478:Extent");
@@ -997,7 +1044,7 @@ class RepnMetadataPackage extends AnalysisBase {
         String nlid;
 
         nlid = lid + "/anzs5478:RelatedEntity";
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "RelatedEntity"));
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NSURI, "RelatedEntity"));
         found = false;
         while (si.hasNext()) {
             if (found) {
@@ -1009,9 +1056,9 @@ class RepnMetadataPackage extends AnalysisBase {
             }
             found = true;
             count = 0;
-            if (checkPropertyExists(r2, anzs5478NameSpace, "AssignedEntityID")) {
+            if (checkPropertyExists(r2, anzs5478NSURI, "AssignedEntityID")) {
                 count++;
-                checkLeafProperty(r2, anzs5478NameSpace, "AssignedEntityID", 1, 1, "checkRelatedEntityOneEntity", nlid);
+                checkLeafProperty(r2, ANZS5478_TERMS_NS, anzs5478NSURI, "AssignedEntityID", 1, 1, "checkRelatedEntityOneEntity", nlid);
             }
             if (checkAgent(nlid, r2)) {
                 count++;
@@ -1028,7 +1075,7 @@ class RepnMetadataPackage extends AnalysisBase {
             if (count > 1) {
                 addError("checkRelatedEntity", 4, nlid + " contains multiple anzs5478:AssignedEntityID, anzs5478:Agent, anzs5478:Business, or anzs5478:Mandate");
             }
-            if (!checkExactValue(r2, anzs5478NameSpace, "RelationshipRole", "1") && !checkExactValue(r2, anzs5478NameSpace, "RelationshipRole", "2")) {
+            if (!checkExactValue(r2, anzs5478NSURI, "RelationshipRole", "1") && !checkExactValue(r2, anzs5478NSURI, "RelationshipRole", "2")) {
                 addError("checkRelatedEntity", 5, nlid + "/anzs5478:RelationshipRole must be present and have a value of '1' or '2'");
             }
         }
@@ -1052,7 +1099,7 @@ class RepnMetadataPackage extends AnalysisBase {
         String nlid;
 
         nlid = lid + "/anzs5478:RelatedEntity";
-        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NameSpace.value, "RelatedEntity"));
+        si = r1.listProperties(ResourceFactory.createProperty(anzs5478NSURI, "RelatedEntity"));
         fromFound = false;
         toFound = false;
         while (si.hasNext()) {
@@ -1060,7 +1107,7 @@ class RepnMetadataPackage extends AnalysisBase {
                 addError("checkRelatedEntityMultiEntity", 1, lid + " is empty or blank");
                 continue;
             }
-            s = checkLeafProperty(r2, anzs5478NameSpace, "RelationshipRole", 1, 1, "checkRelatedEntityMultiEntity", nlid);
+            s = checkLeafProperty(r2, ANZS5478_TERMS_NS, anzs5478NSURI, "RelationshipRole", 1, 1, "checkRelatedEntityMultiEntity", nlid);
             switch (s) {
                 case "1":
                     if (toFound) {
@@ -1099,14 +1146,14 @@ class RepnMetadataPackage extends AnalysisBase {
         String nlid;
 
         nlid = lid + "/versterms:contextPath";
-        si = r1.listProperties(ResourceFactory.createProperty(versNameSpace.value, "contextPath"));
+        si = r1.listProperties(ResourceFactory.createProperty(versTermsNSURI, "contextPath"));
         while (si.hasNext()) {
             if ((r2 = getResource(si)) == null) {
                 addError("checkContextPath", 2, nlid + " is empty or blank");
                 continue;
             }
-            checkLeafProperty(r2, versNameSpace, "ContextPathDomain", 1, 1, "checkContextPath", nlid);
-            checkLeafProperty(r2, versNameSpace, "ContextPathValue", 1, 1, "checkContextPath", nlid);
+            checkLeafProperty(r2, VERS_TERMS_NS, versTermsNSURI, "ContextPathDomain", 1, 1, "checkContextPath", nlid);
+            checkLeafProperty(r2, VERS_TERMS_NS, versTermsNSURI, "ContextPathValue", 1, 1, "checkContextPath", nlid);
         }
     }
 
@@ -1127,12 +1174,12 @@ class RepnMetadataPackage extends AnalysisBase {
         boolean foundRecord;
         Resource r;
 
-        // System.out.println(rdfModel2String());
-        // get all resources
-        // get all resources
+        // get subjects
         ri = rdfModel.listSubjects();
+
+        // if nothing found, either rdf:Description was missing, or no contents in the rdf:Description
         if (!ri.hasNext()) {
-            addError(new VEOFailure(CLASSNAME, "checkAGLSProperties", 1, id, "metadata contained no rdf:Description, or only empty rdf:Description"));
+            addError(new VEOFailure(CLASSNAME, "checkAGLSProperties", 1, id, "rdf:RDF element contained no rdf:Description element, or the rdf:Description element had no contents"));
             return;
         }
 
@@ -1161,82 +1208,82 @@ class RepnMetadataPackage extends AnalysisBase {
             }
              */
             // DC_TERMS:creator
-            testLeafProperty(r, dcNameSpace, "creator", "checkAGLSProperties", 2, WhatToDo.errorIfMissing);
+            testLeafProperty(r, DC_TERMS_NS, dcTermsNSURI, "creator", "checkAGLSProperties", 2, WhatToDo.errorIfMissing);
 
             // DC_TERMS:date m format YYYY-MM-DD (available, created, dateCopyrighted, dateLicensed, issued, modified, valid) see AGLS Usage Guide for valid schemas and formats.
-            if (!containsLeafProperty(r, dcNameSpace, "date", true)
-                    && !containsLeafProperty(r, dcNameSpace, "available", true)
-                    && !containsLeafProperty(r, dcNameSpace, "created", true)
-                    && !containsLeafProperty(r, dcNameSpace, "dateCopyrighted", true)
-                    && !containsLeafProperty(r, aglsNameSpace, "dateLicensed", true)
-                    && !containsLeafProperty(r, dcNameSpace, "dateLicensed", true) // error in VERSV3 spec, see below
-                    && !containsLeafProperty(r, dcNameSpace, "issued", true)
-                    && !containsLeafProperty(r, dcNameSpace, "modified", true)
-                    && !containsLeafProperty(r, dcNameSpace, "valid", true)) {
+            if (!containsLeafProperty(r, dcTermsNSURI, "date", true)
+                    && !containsLeafProperty(r, dcTermsNSURI, "available", true)
+                    && !containsLeafProperty(r, dcTermsNSURI, "created", true)
+                    && !containsLeafProperty(r, dcTermsNSURI, "dateCopyrighted", true)
+                    && !containsLeafProperty(r, aglsTermsNSURI, "dateLicensed", true)
+                    && !containsLeafProperty(r, dcTermsNSURI, "dateLicensed", true) // error in VERSV3 spec, see below
+                    && !containsLeafProperty(r, dcTermsNSURI, "issued", true)
+                    && !containsLeafProperty(r, dcTermsNSURI, "modified", true)
+                    && !containsLeafProperty(r, dcTermsNSURI, "valid", true)) {
                 addError(new VEOFailure(CLASSNAME, "checkAGLSProperties", 3, id, "AGLS metadata package does not contain the mandatory dcterms:date or its subelements (dcterms:available, dcterms:created, dcterms:dateCopyrighted, aglsterms:dateLicensed, dcterms:issued, dcterms:modified, or dcterms:valid) or the element was empty"));
             }
 
             // This was an error in the VERSV3 spec, DateLicensed has the wrong namespace. Warn about it, but not mark it as an error
-            if (containsLeafProperty(r, dcNameSpace, "dateLicensed", false)) {
+            if (containsLeafProperty(r, dcTermsNSURI, "dateLicensed", false)) {
                 addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 4, id, "AGLS metadata package contains 'dcterms:dateLicensed' not 'aglsterms:dateLicensed'. This was an error in the specification. The VEO should be fixed."));
             }
 
             // DC_TERMS:title m
-            testLeafProperty(r, dcNameSpace, "title", "checkAGLSProperties", 5, WhatToDo.errorIfMissing);
+            testLeafProperty(r, DC_TERMS_NS, dcTermsNSURI, "title", "checkAGLSProperties", 5, WhatToDo.errorIfMissing);
 
             // DC_TERMS:availability m for offline resources (can't test conditional)
             // DC_TERMS:identifier m for online resources (can't test conditional)
-            testLeafProperty(r, dcNameSpace, "identifier", "checkAGLSProperties", 2, WhatToDo.errorIfMissing);
+            testLeafProperty(r, DC_TERMS_NS, dcTermsNSURI, "identifier", "checkAGLSProperties", 2, WhatToDo.errorIfMissing);
 
             // DC_TERMS:publisher m for information resources  (can't test conditional)
-            testLeafProperty(r, dcNameSpace, "publisher", "checkAGLSProperties", 2, WhatToDo.errorIfMissing);
+            testLeafProperty(r, DC_TERMS_NS, dcTermsNSURI, "publisher", "checkAGLSProperties", 2, WhatToDo.errorIfMissing);
 
             // DC_TERMS:description r
-            if (!noRec && !containsLeafProperty(r, aglsNameSpace, "description", true)) {
+            if (!noRec && !containsLeafProperty(r, aglsTermsNSURI, "description", true)) {
                 addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 6, id, "AGLS metadata package does not contain the recommended dcterms:description)"));
             }
-            //testLeafProperty(r, dcNameSpace, "description", "checkAGLSProperties", 6, WhatToDo.warningIfMissing);
+            //testLeafProperty(r, DC_TERMS, "description", "checkAGLSProperties", 6, WhatToDo.warningIfMissing);
 
             // DC_TERMS:function r
             // DC_TERMS:subject r if function not present
-            if (!noRec && !containsLeafProperty(r, aglsNameSpace, "function", true) && !containsLeafProperty(r, dcNameSpace, "subject", true)) {
+            if (!noRec && !containsLeafProperty(r, aglsTermsNSURI, "function", true) && !containsLeafProperty(r, DC_TERMS_NS, "subject", true)) {
                 addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 7, id, "AGLS metadata package does not contain the recommended function element (aglsterms:function or dcterms:subject)"));
             }
 
             // DC_TERMS:language r if not in English (can't test conditional)
             // DC_TERMS:type r (aggregationLevel, category, documentType, serviceType)
-            if (!noRec && !containsLeafProperty(r, dcNameSpace, "type", true)
-                    && !containsLeafProperty(r, aglsNameSpace, "aggregationLevel", true)
-                    && !containsLeafProperty(r, dcNameSpace, "aggregationLevel", true) // mistake in the standard - invalid namespace
-                    && !containsLeafProperty(r, aglsNameSpace, "category", true)
-                    && !containsLeafProperty(r, dcNameSpace, "category", true) // mistake in the standard - invalid namespace
-                    && !containsLeafProperty(r, aglsNameSpace, "documentType", true)
-                    && !containsLeafProperty(r, dcNameSpace, "documentType", true) // mistake in the standard - invalid namespace
-                    && !containsLeafProperty(r, aglsNameSpace, "serviceType", true)
-                    && !containsLeafProperty(r, dcNameSpace, "serviceType", true)) { // mistake in the standard - invalid namespace
+            if (!noRec && !containsLeafProperty(r, dcTermsNSURI, "type", true)
+                    && !containsLeafProperty(r, aglsTermsNSURI, "aggregationLevel", true)
+                    && !containsLeafProperty(r, dcTermsNSURI, "aggregationLevel", true) // mistake in the standard - invalid namespace
+                    && !containsLeafProperty(r, aglsTermsNSURI, "category", true)
+                    && !containsLeafProperty(r, dcTermsNSURI, "category", true) // mistake in the standard - invalid namespace
+                    && !containsLeafProperty(r, aglsTermsNSURI, "documentType", true)
+                    && !containsLeafProperty(r, dcTermsNSURI, "documentType", true) // mistake in the standard - invalid namespace
+                    && !containsLeafProperty(r, aglsTermsNSURI, "serviceType", true)
+                    && !containsLeafProperty(r, dcTermsNSURI, "serviceType", true)) { // mistake in the standard - invalid namespace
                 addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 8, id, "AGLS metadata package does not contain the recommended type property (dcterms:type) or one of the subproperties (aglsterms:aggregationLevel, aglsterms:category, aglsterms:documentType, or aglsterms:serviceType) or the element was emtpy"));
             }
             // This was an error in the VERSV3 spec, the subtypes have the wrong namespace. Warn about it, but not mark it as an error
-            if (containsLeafProperty(r, dcNameSpace, "aggregationLevel", false)) {
+            if (containsLeafProperty(r, dcTermsNSURI, "aggregationLevel", false)) {
                 addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 9, id, "AGLS metadata package contains 'dcterms:aggregationLevel' not 'aglsterms:aggregationLevel'. This was an error in the specification. The VEO should be fixed."));
             }
-            if (containsLeafProperty(r, dcNameSpace, "category", false)) {
+            if (containsLeafProperty(r, dcTermsNSURI, "category", false)) {
                 addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 10, id, "AGLS metadata package contains 'dcterms:category' not 'aglsterms:category'. This was an error in the specification. The VEO should be fixed."));
             }
-            if (containsLeafProperty(r, dcNameSpace, "documentType", false)) {
+            if (containsLeafProperty(r, dcTermsNSURI, "documentType", false)) {
                 addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 11, id, "AGLS metadata package contains 'dcterms:documentType' not 'aglsterms:documentType'. This was an error in the specification. The VEO should be fixed."));
             }
-            if (containsLeafProperty(r, dcNameSpace, "serviceType", false)) {
+            if (containsLeafProperty(r, dcTermsNSURI, "serviceType", false)) {
                 addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 12, id, "AGLS metadata package contains 'dcterms:serviceType' not 'aglsterms:serviceType'. This was an error in the specification. The VEO should be fixed."));
             }
             // warn if disposal metadata is not present...
-            if (!noRec && !containsLeafProperty(r, versNameSpace, "disposalReviewDate", true) && !containsLeafProperty(r, versNameSpace, "disposalCondition", true)) {
+            if (!noRec && !containsLeafProperty(r, dcTermsNSURI, "disposalReviewDate", true) && !containsLeafProperty(r, VERS_TERMS_NS, "disposalCondition", true)) {
                 addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 13, id, "AGLS metadata package does not contain either the disposal review date or disposal condition properties (versterms:disposalReviewDate or versterms:disposalCondition)"));
             }
-            if (!noRec && !containsLeafProperty(r, versNameSpace, "disposalAction", true)) {
+            if (!noRec && !containsLeafProperty(r, dcTermsNSURI, "disposalAction", true)) {
                 addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 14, id, "AGLS metadata package does not contain the disposal action property (vers:disposalAction)"));
             }
-            if (!noRec && !containsLeafProperty(r, versNameSpace, "disposalReference", true)) {
+            if (!noRec && !containsLeafProperty(r, dcTermsNSURI, "disposalReference", true)) {
                 addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 15, id, "AGLS metadata package does not contain the disposal reference property (vers:disposalReference)"));
             }
         }
@@ -1252,10 +1299,10 @@ class RepnMetadataPackage extends AnalysisBase {
      * @param notEmpty true if the value has to be non-empty
      * @return whether the property exists
      */
-    private boolean containsLeafProperty(Resource r, Namespace nameSpace, String element, boolean notEmpty) {
+    private boolean containsLeafProperty(Resource r, String namespace, String element, boolean notEmpty) {
         Statement stmt;
 
-        stmt = r.getProperty(ResourceFactory.createProperty(nameSpace.value, element));
+        stmt = r.getProperty(ResourceFactory.createProperty(namespace, element));
         if (stmt == null) {
             return false;
         }
@@ -1290,21 +1337,21 @@ class RepnMetadataPackage extends AnalysisBase {
         justReturnNull      // just return null if property is missing or empty
     }
 
-    private String testLeafProperty(Resource r, Namespace nameSpace, String element, String method, int errno, WhatToDo wtd) {
+    private String testLeafProperty(Resource r, String namespace, String namespaceURI, String element, String method, int errno, WhatToDo wtd) {
         Statement stmt;
         String s;
 
         assert errno < 50;
         // System.out.print("Testing for "+p.toString());
-        stmt = r.getProperty(ResourceFactory.createProperty(nameSpace.value, element));
+        stmt = r.getProperty(ResourceFactory.createProperty(namespaceURI, element));
         if (stmt == null) {
             // System.out.println("- Didn't find it");
-            createMesg(method, errno, false, nameSpace.handle + ":" + element, wtd);
+            createMesg(method, errno, false, namespace + ":" + element, wtd);
             return null;
         }
         s = stmt.getString();
         if (s.trim().equals("")) {
-            createMesg(method, errno + 50, true, nameSpace.handle + ":" + element, wtd);
+            createMesg(method, errno + 50, true, namespace + ":" + element, wtd);
             return null;
         }
         return s.trim();
@@ -1323,35 +1370,35 @@ class RepnMetadataPackage extends AnalysisBase {
      * @param max the maximum number of elements that is allowed
      * @return the value actually found
      */
-    private String checkLeafProperty(Resource r1, Namespace namespace, String element, int min, int max, String method, String lid) {
+    private String checkLeafProperty(Resource r1, String namespace, String namespaceURI, String element, int min, int max, String method, String lid) {
         StmtIterator si;
         String s;
         int numFound;
 
-        si = r1.listProperties(ResourceFactory.createProperty(namespace.value, element));
+        si = r1.listProperties(ResourceFactory.createProperty(namespaceURI, element));
         numFound = 0;
         s = null;
         while (si.hasNext()) {
             numFound++;
             s = getValue(si);
             if (s == null) {
-                addError(method, 11, lid + "/" + namespace.handle + ":" + element + " is empty or blank");
+                addError(method, 11, lid + "/" + namespace + ":" + element + " is empty or blank");
             } else {
                 s = s.trim();
             }
         }
         if (numFound > 0 && min == 0 && max == 0) {
-            addError(method, 12, lid + " contains an " + namespace.handle + ":" + element);
+            addError(method, 12, lid + " contains an " + namespace + ":" + element);
         }
         if (numFound == 0 && min == 1) {
             if (max == 1) {
-                addError(method, 13, lid + " must contain an " + namespace.handle + ":" + element);
+                addError(method, 13, lid + " must contain an " + namespace + ":" + element);
             } else {
-                addError(method, 13, lid + " must contain at least one " + namespace.handle + ":" + element);
+                addError(method, 13, lid + " must contain at least one " + namespace + ":" + element);
             }
         }
         if (numFound > 1 && max == 1) {
-            addError(method, 14, lid + ":  contains more than one " + namespace.handle + ":" + element);
+            addError(method, 14, lid + ":  contains more than one " + namespace + ":" + element);
         }
         return s;
     }
@@ -1364,10 +1411,10 @@ class RepnMetadataPackage extends AnalysisBase {
      * @param element the element being looked for
      * @return true if the property exists in the resource
      */
-    private boolean checkPropertyExists(Resource r1, Namespace namespace, String element) {
+    private boolean checkPropertyExists(Resource r1, String namespaceURI, String element) {
         StmtIterator si;
 
-        si = r1.listProperties(ResourceFactory.createProperty(namespace.value, element));
+        si = r1.listProperties(ResourceFactory.createProperty(namespaceURI, element));
         return si.hasNext();
     }
 
@@ -1380,11 +1427,11 @@ class RepnMetadataPackage extends AnalysisBase {
      * @param value the value being looked for
      * @return true if the element with the specified value exists
      */
-    private boolean checkExactValue(Resource r1, Namespace namespace, String element, String value) {
+    private boolean checkExactValue(Resource r1, String namespaceURI, String element, String value) {
         StmtIterator si;
         String s;
 
-        si = r1.listProperties(ResourceFactory.createProperty(namespace.value, element));
+        si = r1.listProperties(ResourceFactory.createProperty(namespaceURI, element));
         while (si.hasNext()) {
             s = getValue(si);
             if (s != null && s.trim().equals(value)) {
@@ -1572,10 +1619,10 @@ class RepnMetadataPackage extends AnalysisBase {
 
         // if metadata was RDF...
         addTag("<br>");
-        if (rdf) {
-            //startDiv("RDF", null);
-            addRDF();
-            //endDiv();
+        if (rdfModel != null) {
+            addTag("<pre>");
+            addString(rdfModel2String());
+            addTag("</pre>\n");
 
             // otherwise treat it as normal XML
         } else {
@@ -1694,13 +1741,63 @@ class RepnMetadataPackage extends AnalysisBase {
             sw.append("Failed to generate RDF: ");
             sw.append(bue.getMessage());
             sw.append(" RepnMetadataPackage.addRDF()");
+            sw.append(rdfModel2String());
         }
         return sw.toString();
     }
 
-    public void addRDF() {
-        addTag("<pre>");
-        addString(rdfModel2String());
-        addTag("</pre>");
+    /**
+     * This method pretty prints an RDF resource
+     *
+     * @param r the resource to dump
+     * @return string containing the resource's contents
+     */
+    public String rdfResource2String(Resource r) {
+        StringBuilder sb = new StringBuilder();
+        StmtIterator properties;
+        Statement stmt;
+        RDFNode object;
+        Resource subject;
+        Property property;
+        String namespace;
+        String lname;
+
+        if (r == null) {
+            return ("Null passed");
+        }
+        namespace = r.getNameSpace();
+        lname = r.getLocalName();
+        if (namespace != null && lname != null) {
+            sb.append("Namespace: ");
+            sb.append(namespace);
+            sb.append(" Local name: ");
+            sb.append(lname);
+            sb.append("\n");
+        } else {
+            sb.append(" Anonymous node: id: ");
+            sb.append(r.getId());
+            if (rdfModel.contains(null, null, r)) {
+                sb.append(" is referenced in model");
+            }
+            sb.append("\n");
+        }
+
+        properties = r.listProperties();
+        while (properties.hasNext()) {
+            stmt = properties.next();
+            sb.append(" Subject: ");
+            subject = stmt.getSubject();
+            sb.append(subject.toString());
+            sb.append(" property: ");
+            property = stmt.getPredicate();
+            sb.append(property.getNameSpace());
+            sb.append(property.getLocalName());
+            sb.append(" object: ");
+            object = stmt.getObject();
+            sb.append(object.toString());
+            sb.append("\n");
+        }
+
+        return sb.toString();
     }
 }

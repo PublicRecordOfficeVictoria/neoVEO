@@ -42,15 +42,13 @@ class RepnInformationObject extends AnalysisBase {
      * @param document the representation of the XML document
      * @param parentId the parent object identifier
      * @param seq the sequence number of this IO in the VEOContent file
-     * @param rdf true if we have seen the RDF namespace declaration
      * @param results the results summary to build
      * @throws VEOError if the XML document has not been properly parsed
      */
-    public RepnInformationObject(RepnXML document, String parentId, int seq, boolean rdf, ResultSummary results) throws VEOError {
+    public RepnInformationObject(RepnXML document, String parentId, int seq, ResultSummary results) throws VEOError {
         super(parentId + ":IO-" + seq, results);
 
         int i;
-        String rdfNameSpace;
 
         assert (document != null);
         assert (parentId != null);
@@ -77,6 +75,7 @@ class RepnInformationObject extends AnalysisBase {
         document.gotoNextElement();
         i = 0;
         while (document.checkElement("vers:MetadataPackage")) {
+            /*
             rdfNameSpace = document.getAttribute("xmlns:rdf");
             if (rdfNameSpace != null && !rdfNameSpace.equals("")) {
                 switch (rdfNameSpace) {
@@ -99,10 +98,11 @@ class RepnInformationObject extends AnalysisBase {
                         break;
                 }
             }
+            */
 
             document.gotoNextElement();
             i++;
-            metadata.add(new RepnMetadataPackage(document, id, i, rdf, results));
+            metadata.add(new RepnMetadataPackage(document, id, i, results));
         }
         i = 0;
         while (!document.atEnd() && document.checkElement("vers:InformationPiece")) {
