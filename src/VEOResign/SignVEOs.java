@@ -155,10 +155,11 @@ public class SignVEOs {
      * 20241113 2.7 Changed error message when source VEO could not be found
      * 20241113 2.8 Changed status message when not rezipping VEO
      * 20241125 2.9 Minor bug fix when specifying the output directory of an unzipped input file
+     * 20241129 2.10 Caught exception if VEO directory doesn't exist
      * </pre>
      */
     static String version() {
-        return ("2.9");
+        return ("2.10");
     }
 
     /**
@@ -471,7 +472,7 @@ public class SignVEOs {
             // directory if still zipped
             try {
                 givenVEOPath = Paths.get(veoDirectories.get(i)).toRealPath();
-            } catch (IOException ioe) {
+            } catch (IOException | InvalidPathException ioe) {
                 LOG.log(Level.SEVERE, "Could not find ''{0}''", new Object[]{veoDirectories.get(i)});
                 continue;
             }
