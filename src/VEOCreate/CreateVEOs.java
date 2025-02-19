@@ -296,7 +296,7 @@ public class CreateVEOs {
      * 20240417 3.6 Undeprecated registerContentDirectories(), addContentFile(String), & getActualSourcePath() in CreateVEO, as CreateVEOs uses them
      * 20240417 3.7 Moved SignVEOs to be a package within neoVEO
      * 20240515 3.8 Can now ZIP a VEO anywhere, and also finalise without ZIPping
-     * 20230703 3.9 Moved to latest version of Netbeans resulting in correcting warnings
+     * 20240703 3.9 Moved to latest version of Netbeans resulting in correcting warnings
      * </pre>
      */
     static String version() {

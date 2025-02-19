@@ -121,11 +121,11 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
 
         // check that the file exists and is an ordinary file
         if (!Files.exists(file)) {
-            addError(new VEOFailure(CLASSNAME, "parse", 3, id, "file '" + file.toString() + "' does not exist"));
+            addError(new VEOFailure(CLASSNAME, "parse", 2, id, "File '" + file.toString() + "' does not exist"));
             return false;
         }
         if (!Files.isRegularFile(file)) {
-            addError(new VEOFailure(CLASSNAME, "parse", 4, id, "file '" + file.toString() + "' is not a regular file"));
+            addError(new VEOFailure(CLASSNAME, "parse", 3, id, "File '" + file.toString() + "' is not a regular file"));
             return false;
         }
 
@@ -134,7 +134,7 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
         try {
             schema = sf.newSchema(schemaFile.toFile());
         } catch (SAXException se) {
-            addError(new VEOFailure(CLASSNAME, "parse", 5, id, "Failed to parse schema '" + schemaFile.toString() + "'", se));
+            addError(new VEOFailure(CLASSNAME, "parse", 4, id, "Failed to parse schema '" + schemaFile.toString() + "'", se));
             return false;
         }
         validator = schema.newValidator();
@@ -147,13 +147,13 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
             is.setEncoding("UTF-8");
             doc = parser.parse(is);
         } catch (SAXParseException spe) {
-            addError(new VEOFailure(CLASSNAME, "parse", 6, id, "Parse error when parsing file" + spe.getSystemId() + " (line " + spe.getLineNumber() + " column " + spe.getColumnNumber() + ")", spe));
+            addError(new VEOFailure(CLASSNAME, "parse", 5, id, "Parse error when parsing file '" + spe.getSystemId() + "' (line " + spe.getLineNumber() + " column " + spe.getColumnNumber() + ")", spe));
             return false;
         } catch (SAXException se) {
-            addError(new VEOFailure(CLASSNAME, "parse", 7, id, "Problem when parsing file", se));
+            addError(new VEOFailure(CLASSNAME, "parse", 6, id, "Problem when parsing file", se));
             return false;
         } catch (IOException ioe) {
-            addError(new VEOFailure(CLASSNAME, "parse", 8, id, "System error when parsing file '" + file.toString() + "'", ioe));
+            addError(new VEOFailure(CLASSNAME, "parse", 7, id, "System error when parsing file '" + file.toString() + "'", ioe));
             return false;
         }
 
@@ -164,41 +164,41 @@ abstract class RepnXML extends AnalysisBase implements ErrorHandler {
         // version is anything other than 1.0, the parser will complain (and not
         // get to this test). The tests are just for completeness.
         if (!doc.getXmlVersion().equals("1.0")) {
-            addWarning(new VEOFailure(CLASSNAME, "parse", 9, id, "Problem in reading XML file. xml version must be '1.0' not " + doc.getXmlVersion()));
+            addWarning(new VEOFailure(CLASSNAME, "parse", 8, id, "Problem in reading XML file. xml version must be '1.0' not " + doc.getXmlVersion()));
         }
         if (!doc.getInputEncoding().equals("UTF-8")) {
-            addWarning(new VEOFailure(CLASSNAME, "parse", 10, id, "Problem in reading XML file. Encoding must be 'UTF-8' not " + doc.getInputEncoding()));
+            addWarning(new VEOFailure(CLASSNAME, "parse", 9, id, "Problem in reading XML file. Encoding must be 'UTF-8' not " + doc.getInputEncoding()));
         }
 
         // check that the root (document) element contains the necessary
         // namespace declarations.
         e = doc.getDocumentElement();
-        /*
+        /* xsd/xsi namespaces are not used
         if ((av = e.getAttribute("xmlns:xsd")).equals("")) {
-            addError(new VEOFailure(CLASSNAME, "parse", 11, id, "Root element does not contain attribute definition 'xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\""));
+            addError(new VEOFailure(CLASSNAME, "parse", 10, id, "Root element does not contain attribute definition 'xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\""));
         } else if (!av.equals("http://www.w3.org/2001/XMLSchema")) {
-            addError(new VEOFailure(CLASSNAME, "parse", 12, id, "Root element defines attribute xmlns:xsd as '"+av+"' not \"http://www.w3.org/2001/XMLSchema\""));
+            addError(new VEOFailure(CLASSNAME, "parse", 11, id, "Root element defines attribute xmlns:xsd as '"+av+"' not \"http://www.w3.org/2001/XMLSchema\""));
         }
         if ((av = e.getAttribute("xmlns:xsi")).equals("")) {
-            addError(new VEOFailure(CLASSNAME, "parse", 13, id, "Root element does not contain attribute definition 'xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\""));
+            addError(new VEOFailure(CLASSNAME, "parse", 12, id, "Root element does not contain attribute definition 'xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\""));
         } else if (!av.equals("http://www.w3.org/2001/XMLSchema-instance")) {
-            addError(new VEOFailure(CLASSNAME, "parse", 14, id, "Root element defines attribute xmlns:xsi as '"+av+"' not \"http://www.w3.org/2001/XMLSchema-instance\""));
+            addError(new VEOFailure(CLASSNAME, "parse", 13, id, "Root element defines attribute xmlns:xsi as '"+av+"' not \"http://www.w3.org/2001/XMLSchema-instance\""));
         }
          */
         if ((av = e.getAttribute("xmlns:vers")).equals("")) {
-            addError(new VEOFailure(CLASSNAME, "parse", 15, id, "Root element does not contain attribute definition 'xmlns:vers=\"http://www.prov.vic.gov.au/VERS\""));
+            addError(new VEOFailure(CLASSNAME, "parse", 14, id, "Root element does not contain attribute definition 'xmlns:vers=\"http://www.prov.vic.gov.au/VERS\""));
         } else if (!av.equals("http://www.prov.vic.gov.au/VERS")) {
-            addWarning(new VEOFailure(CLASSNAME, "parse", 16, id, "Root element defines attribute xmlns:vers as '" + av + "' not \"http://www.prov.vic.gov.au/VERS\""));
+            addWarning(new VEOFailure(CLASSNAME, "parse", 15, id, "Root element defines attribute xmlns:vers as '" + av + "' not \"http://www.prov.vic.gov.au/VERS\""));
         }
 
         // validate the DOM tree against the schema
         try {
             validator.validate(new DOMSource(doc));
         } catch (SAXException se) {
-            addError(new VEOFailure(CLASSNAME, "parse", 17, id, "Error when validating " + file.getFileName().toString() + " against schema '" + schemaFile.toString() + "'", se));
+            addError(new VEOFailure(CLASSNAME, "parse", 16, id, "Error when validating " + file.getFileName().toString() + " against schema '" + schemaFile.toString() + "'", se));
             return false;
         } catch (IOException ioe) {
-            addError(new VEOFailure(CLASSNAME, "parse", 18, id, "System error when validating XML", ioe));
+            addError(new VEOFailure(CLASSNAME, "parse", 17, id, "System error when validating XML", ioe));
             return false;
         }
 

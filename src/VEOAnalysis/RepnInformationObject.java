@@ -15,9 +15,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
 
 /**
  * This class encapsulates an Information Object in a VEO Content file.
@@ -27,13 +24,13 @@ import org.w3c.dom.Node;
 class RepnInformationObject extends AnalysisBase {
 
     private static final String CLASSNAME = "RepnInformationObject";
-    private int IOid;       // integer used to distinguish this IO from all other IOs in the VEO
+    private final int IOid;       // integer used to distinguish this IO from all other IOs in the VEO
     private RepnItem type;  // information object type
     private RepnItem depth;   // depth of the information object
-    private boolean firstIO;    // true if this the first information object in VEO
+    private final boolean firstIO;    // true if this the first information object in VEO
     private ArrayList<RepnMetadataPackage> metadata;  // list of metadata packages
     private ArrayList<RepnInformationPiece> infoPieces; // list of information pieces
-    private ArrayList<RepnInformationObject> children;  // list of children of this information object
+    private final ArrayList<RepnInformationObject> children;  // list of children of this information object
     private RepnInformationObject parent;   // parent of this information object
 
     /**
@@ -75,7 +72,8 @@ class RepnInformationObject extends AnalysisBase {
         document.gotoNextElement();
         i = 0;
         while (document.checkElement("vers:MetadataPackage")) {
-            /*
+            /* no longer check the namespace attributes here (can be any higher
+            // higher element)
             rdfNameSpace = document.getAttribute("xmlns:rdf");
             if (rdfNameSpace != null && !rdfNameSpace.equals("")) {
                 switch (rdfNameSpace) {
@@ -177,31 +175,6 @@ class RepnInformationObject extends AnalysisBase {
     public void setParent(RepnInformationObject io) {
         assert (io != null);
         parent = io;
-    }
-
-    private boolean fixRDFNamespace(Element e) {
-        Node n;
-        String s;
-
-        NamedNodeMap nnm = e.getAttributes();
-        if (nnm != null) {
-            Node a = nnm.getNamedItem("xmlns:rdf");
-            if (a != null) {
-                s = a.getNodeValue();
-                if (!s.endsWith("#")) {
-                    a.setNodeValue(s+"#");
-                    System.out.println("xmlns:rdf:'" + a.getNodeValue() + "'");
-                }
-            }
-        }
-        n = e.getFirstChild();
-        while (n != null) {
-            if (n.getNodeType() == Node.ELEMENT_NODE) {
-                fixRDFNamespace((Element) n);
-            }
-            n = n.getNextSibling();
-        }
-        return true;
     }
 
     /**
@@ -404,7 +377,7 @@ class RepnInformationObject extends AnalysisBase {
         type.genReport(verbose, w);
         depth.genReport(verbose, w);
 
-        if (metadata.size() > 0) {
+        if (!metadata.isEmpty()) {
             startDiv(null, "MetaPackages", null);
             addLabel("Metadata Packages:");
             for (i = 0; i < metadata.size(); i++) {
@@ -412,7 +385,7 @@ class RepnInformationObject extends AnalysisBase {
             }
             endDiv();
         }
-        if (infoPieces.size() > 0) {
+        if (!infoPieces.isEmpty()) {
             startDiv(null, "InfoPieces", null);
             addLabel("Information Pieces:");
             for (i = 0; i < infoPieces.size(); i++) {
@@ -420,7 +393,7 @@ class RepnInformationObject extends AnalysisBase {
             }
             endDiv();
         }
-        if (children.size() > 0) {
+        if (!children.isEmpty()) {
             startDiv("Children", null);
             addLabel("Child Information Objects:");
             for (i = 0; i < children.size(); i++) {

@@ -90,7 +90,7 @@ class RepnVEOContent extends RepnXML {
                 // add this io as a child of the last io we saw at depth-1
                 if (io.getDepth() > 1) {
                     if (io.getDepth() - 2 >= lastIOatDepth.size()) {
-                        addError(new VEOFailure(CLASSNAME, 3, id, "Information Object(" + ioCnt + ") has depth of " + io.getDepth() + " but deepest previous IO was " + lastIOatDepth.size()));
+                        addError(new VEOFailure(CLASSNAME, 1, id, "Information Object (" + ioCnt + ") has depth of " + io.getDepth() + " but deepest previous IO was " + lastIOatDepth.size()));
                         continue;
                     }
                     parentIO = lastIOatDepth.get(io.getDepth() - 2);
@@ -98,7 +98,7 @@ class RepnVEOContent extends RepnXML {
                         parentIO.addChild(io);
                         io.setParent(parentIO);
                     } else {
-                        addError(new VEOFailure(CLASSNAME, 4, id, "Information Object(" + ioCnt + ") has depth of " + io.getDepth() + " but last seen IO at depth-1 is null"));
+                        addError(new VEOFailure(CLASSNAME, 2, id, "Information Object (" + ioCnt + ") has depth of " + io.getDepth() + " but last seen IO at depth-1 is null"));
                         continue;
                     }
                 }
@@ -109,7 +109,7 @@ class RepnVEOContent extends RepnXML {
                 } else if (io.getDepth() - 1 < lastIOatDepth.size()) {
                     lastIOatDepth.set(io.getDepth() - 1, io);
                 } else {
-                    addError(new VEOFailure(CLASSNAME, 5, id, "Information Object(" + ioCnt + ") has depth of " + io.getDepth() + " which is more than one more than the maximum depth " + lastIOatDepth.size()));
+                    addError(new VEOFailure(CLASSNAME, 3, id, "Information Object (" + ioCnt + ") has depth of " + io.getDepth() + " which is more than one more than the maximum depth " + lastIOatDepth.size()));
                 }
             }
         }

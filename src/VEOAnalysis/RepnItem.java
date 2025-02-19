@@ -17,6 +17,7 @@ import java.util.List;
  * The object represents a unit of data (typically a string)
  */
 final class RepnItem extends AnalysisBase {
+
     private static final String CLASSNAME = "RepnItem";
     private String label; // label for the unit of data
     private String value; // the value of the data
@@ -30,9 +31,9 @@ final class RepnItem extends AnalysisBase {
      */
     public RepnItem(String id, String label, ResultSummary results) {
         super(id, results);
-        
-        assert(label != null);
-        
+
+        assert (label != null);
+
         this.label = label;
         value = null;
         objectValid = true;
@@ -54,7 +55,7 @@ final class RepnItem extends AnalysisBase {
      * @param s the value
      */
     public void setValue(String s) {
-        
+
         if (s == null || s.equals("") || s.trim().equals(" ")) {
             s = null;
         }
@@ -67,7 +68,7 @@ final class RepnItem extends AnalysisBase {
      * @return a String containing the value as read
      */
     public String getValue() {
-        return value != null?value:"";
+        return value != null ? value : "";
     }
 
     /**
@@ -76,8 +77,8 @@ final class RepnItem extends AnalysisBase {
      * @param s the label
      */
     public void setLabel(String s) {
-        assert(s != null && !s.equals(""));
-        
+        assert (s != null && !s.equals(""));
+
         label = s;
     }
 
@@ -99,7 +100,7 @@ final class RepnItem extends AnalysisBase {
         sb.append("\n");
         sb.append("Errors:\n   ");
         getProblems(true, l);
-        for (i=0; i<l.size(); i++) {
+        for (i = 0; i < l.size(); i++) {
             sb.append("  ");
             sb.append(l.get(i).getMessage());
             sb.append("\n");
@@ -107,7 +108,7 @@ final class RepnItem extends AnalysisBase {
         l.clear();
         sb.append("Warnings:\n   ");
         getProblems(false, l);
-        for (i=0; i<l.size(); i++) {
+        for (i = 0; i < l.size(); i++) {
             sb.append("  ");
             sb.append(l.get(i).getMessage());
             sb.append("\n");
@@ -122,7 +123,7 @@ final class RepnItem extends AnalysisBase {
      * @param writer where to write the output
      */
     public void genReport(boolean verbose, Writer w) {
-        assert(w != null);
+        assert (w != null);
         genReport(verbose, null, w);
     }
 
@@ -134,21 +135,19 @@ final class RepnItem extends AnalysisBase {
      * @param writer where to write the output
      */
     public void genReport(boolean verbose, String mesg, Writer w) {
-        assert(mesg != null);
-        assert(w != null);
-        
+        assert (mesg != null);
+        assert (w != null);
+
         this.w = w;
         startDiv("Item", null);
         addLabel(label);
         addString(": " + value);
-        if (mesg != null) {
-            if (mesg.length() < 40) {
-                addString(mesg);
-            } else if (verbose) {
-                addTag("<pre>");
-                addString(mesg);
-                addTag("</pre>\n");
-            }
+        if (mesg.length() < 40) {
+            addString(mesg);
+        } else if (verbose) {
+            addTag("<pre>");
+            addString(mesg);
+            addTag("</pre>\n");
         }
         if (hasErrors() || hasWarnings()) {
             addTag("<ul>\n");

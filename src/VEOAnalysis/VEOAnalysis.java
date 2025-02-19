@@ -167,10 +167,11 @@ public class VEOAnalysis {
      * 20241113 4.20 Changed checking for dcterms:Description - now handled like other recommended elements (test suppressed if -norec set)
      * 20241113 4.21 Now prints the time run even if no command line arguments present
      * 20241127 4.22 Major rewrite of XML namespace handling, and interface between XML validation and RDF validation in handling metadata packages
+     * 20250219 4.23 Linting of error messages and making the handling of metadata packages more robust
      * </pre>
      */
     static String version() {
-        return ("4.22");
+        return ("4.23");
     }
 
     static String copyright = "Copyright 2015-2024 Public Record Office Victoria";

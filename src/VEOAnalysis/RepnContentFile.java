@@ -153,7 +153,7 @@ class RepnContentFile extends AnalysisBase {
         try {
             p = Paths.get(safe);
         } catch (InvalidPathException ipe) {
-            addError(new VEOFailure(CLASSNAME, "validate", 5, id, "Content file name '"+safe+"' is a valid file name"));
+            addError(new VEOFailure(CLASSNAME, "validate", 5, id, "Content file name '"+safe+"' is not a valid file name"));
             return false;
         }
         if (contentFiles.containsKey(p)) {
@@ -202,7 +202,7 @@ class RepnContentFile extends AnalysisBase {
             try {
                 bis.close();
             } catch (IOException e) {
-                LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "validate", 12, id, "failed closing file to hash", e));
+                LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "validate", 12, id, "Failed closing file to hash", e));
             }
         }
 
@@ -221,7 +221,7 @@ class RepnContentFile extends AnalysisBase {
         // System.out.println("Orig "+DatatypeConverter.printBase64Binary(hashValue));
         // System.out.println("Calc "+DatatypeConverter.printBase64Binary(genHash));
         if (storedHash != null && !MessageDigest.isEqual(genHash, storedHash)) {
-            addError(new VEOFailure(CLASSNAME, "validate", 14, id, "Integrity check of file '" + pathName.getValue() + "' failed as hash value has changed."));
+            addError(new VEOFailure(CLASSNAME, "validate", 14, id, "Integrity check of file '" + pathName.getValue() + "' failed as hash value has changed"));
             return false;
         }
 

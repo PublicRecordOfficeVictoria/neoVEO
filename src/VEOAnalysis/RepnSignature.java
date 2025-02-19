@@ -412,7 +412,7 @@ public class RepnSignature extends RepnXML {
         r1 = certificates.get(0);
         certToVerify = extractCertificate(r1);
         if (certToVerify == null) {
-            addWarning(new VEOFailure(CLASSNAME, "verifyCertificateChain", 2, id, "First certificate could not be extracted. Remaining certificates have not been checked."));
+            addWarning(new VEOFailure(CLASSNAME, "verifyCertificateChain", 2, id, "First certificate could not be extracted. Remaining certificates have not been checked"));
             return false;
         }
 
@@ -423,13 +423,13 @@ public class RepnSignature extends RepnXML {
             if (certOfSigner == null) {
                 switch (i) {
                     case 1:
-                        addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 3, id, "Could not decode the second vers:Certificate. Remaining certificates have not been checked."));
+                        addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 3, id, "Could not decode the second vers:Certificate. Remaining certificates have not been checked"));
                         break;
                     case 2:
-                        addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 4, id, "Could not decode the third vers:Certificate. Remaining certificates have not been checked."));
+                        addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 4, id, "Could not decode the third vers:Certificate. Remaining certificates have not been checked"));
                         break;
                     default:
-                        addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 5, id, "Could not decode the " + i + "th vers:Certificate. Remaining certificates have not been checked."));
+                        addError(new VEOFailure(CLASSNAME, "verifyCertificateChain", 5, id, "Could not decode the " + i + "th vers:Certificate. Remaining certificates have not been checked"));
                         break;
                 }
                 return false;
@@ -480,7 +480,7 @@ public class RepnSignature extends RepnXML {
             riFirst.addError(new VEOFailure(CLASSNAME, "verifyCertificate", 2, id, "Certificate problem", e));
             return false;
         } catch (NoSuchAlgorithmException e) {
-            riFirst.addError(new VEOFailure(CLASSNAME, "verifyCertificate", 3, id, "No Such Algorithm", e));
+            riFirst.addError(new VEOFailure(CLASSNAME, "verifyCertificate", 3, id, "No such algorithm", e));
             return false;
         } catch (InvalidKeyException e) {
             riSecond.addError(new VEOFailure(CLASSNAME, "verifyCertificate", 4, id, "Invalid public key in certificate", e));
@@ -518,7 +518,7 @@ public class RepnSignature extends RepnXML {
             x509c = (X509Certificate) cf.generateCertificate(bais);
             bais.close();
         } catch (IOException | CertificateException e) {
-            certificate.addError(new VEOFailure(CLASSNAME, "extractCertificate", 2, id, "Error decoding certificate: " + e.getMessage() + "\n"));
+            certificate.addError(new VEOFailure(CLASSNAME, "extractCertificate", 2, id, "Error decoding certificate: " + e.getMessage()));
             return null;
         }
         return x509c;

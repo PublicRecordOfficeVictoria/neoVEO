@@ -116,7 +116,7 @@ class RepnVEO extends AnalysisBase {
         try {
             veoOutputDir = output.resolve(s).normalize();
         } catch (InvalidPathException ipe) {
-            throw new VEOError(CLASSNAME, 4, "VEO name is invalid as a directory'" + s + "' is invalid: " + ipe.getMessage());
+            throw new VEOError(CLASSNAME, 4, "VEO name is invalid as a directory' " + s + "' is invalid: " + ipe.getMessage());
         }
 
         // delete the VEO directory (if it exists)
@@ -289,7 +289,7 @@ class RepnVEO extends AnalysisBase {
                                     sb.append(", ");
                                 }
                             }
-                            readme.addWarning(new VEOFailure(CLASSNAME, "constRepn", 3, "VEOReadme.txt has an unexpected size (" + Files.size(entry) + ") instead of the valid values of " + sb.toString()));
+                            readme.addWarning(new VEOFailure(CLASSNAME, "constructRepn", 1, "VEOReadme.txt has an unexpected size (" + Files.size(entry) + ") instead of the valid values of " + sb.toString()));
                         }
                         veoReadmePresent = true;
                         break;
@@ -307,20 +307,20 @@ class RepnVEO extends AnalysisBase {
                         } else if (fileName.equals("Report.css")) {
                             /* ignore */
                         } else {
-                            addWarning(new VEOFailure(CLASSNAME, "constRepn", 4, "Unexpected file in VEO directory: " + fileName));
+                            addWarning(new VEOFailure(CLASSNAME, "constRepn", 2, "Unexpected file in VEO directory: " + fileName));
                         }
                 }
             }
         } catch (DirectoryIteratorException e) {
-            LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "constRepn", 5, "Directory iterator failed", e));
+            LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "constRepn", 3, "Directory iterator failed", e));
         } catch (IOException e) {
-            addError(new VEOFailure(CLASSNAME, "constRepn", 6, "Failed to open a file in the VEO for reading", e));
+            addError(new VEOFailure(CLASSNAME, "constRepn", 4, "Failed to open a file in the VEO for reading", e));
         } finally {
             if (ds != null) {
                 try {
                     ds.close();
                 } catch (IOException e) {
-                    LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "constRepn", 7, "Closing directory stream failed", e));
+                    LOG.log(Level.WARNING, VEOFailure.getMessage(CLASSNAME, "constRepn", 5, "Closing directory stream failed", e));
                 }
             }
         }
@@ -525,9 +525,7 @@ class RepnVEO extends AnalysisBase {
     public final void validate(LTSF ltsfs, boolean noRec, boolean vpa) throws VEOError {
         int i;
 
-        if (ltsfs == null) {
-            throw new VEOError(CLASSNAME, "validate", 1, "List of valid long term sustainable formats is null");
-        }
+        assert ltsfs != null;
         if (veoOutputDir == null) {
             throw new VEOError(CLASSNAME, "validate", 2, "veoDir is null");
         }
