@@ -86,7 +86,7 @@ import java.util.logging.SimpleFormatter;
 public class VEOAnalysis {
 
     private static final String CLASSNAME = "VEOAnalysis";
-    private Config c;           // configuration of this run
+    private Config config;      // configuration of this run
     private String runDateTime; // run date/time
     private int totalIOs;       // total IOs counted in VEO
     boolean hasErrors;          // true if VEO had errors
@@ -168,10 +168,11 @@ public class VEOAnalysis {
      * 20241113 4.21 Now prints the time run even if no command line arguments present
      * 20241127 4.22 Major rewrite of XML namespace handling, and interface between XML validation and RDF validation in handling metadata packages
      * 20250219 4.23 Linting of error messages and making the handling of metadata packages more robust
+     * 20250228 4.24 Changed handling of inheriting Loggers from calling classes
      * </pre>
      */
     static String version() {
-        return ("4.23");
+        return ("4.24");
     }
 
     static String copyright = "Copyright 2015-2024 Public Record Office Victoria";
@@ -195,8 +196,9 @@ public class VEOAnalysis {
         }
         LOG.setLevel(Level.FINEST);
         runDateTime = getISODateTime('-', ':');
-        c = new Config();
-        c.configure(args);
+        
+        config = new Config();
+        config.configure(args);
 
         // say what we are doing
         LOG.info("******************************************************************************");
@@ -211,13 +213,13 @@ public class VEOAnalysis {
         LOG.log(Level.INFO, "Run at {0}", runDateTime);
 
         // output help file
-        if (c.help) {
-            c.outputHelp();
+        if (config.help) {
+            config.outputHelp();
         }
 
         // initialise & report on what has been asked to do
-        init(c, null);
-        c.reportConfig();
+        init(config);
+        config.reportConfig();
     }
 
     /**
@@ -226,11 +228,12 @@ public class VEOAnalysis {
      * class has been created it can be used to validate multiple VEOs.
      *
      * @param c configuration parameters
-     * @param hndlr log handlers
+     * @param parentLogger the parent logger to use
      * @throws VEOError
      */
-    public VEOAnalysis(Config c, Handler hndlr) throws VEOError {
-        init(c, hndlr);
+    public VEOAnalysis(Config c, Logger parentLogger) throws VEOError {
+        LOG.setParent(parentLogger);
+        init(c);
     }
 
     /**
@@ -242,7 +245,7 @@ public class VEOAnalysis {
      * @param schemaDir directory in which VERS3 support information is found
      * @param ltsfs long term sustainable formats
      * @param outputDir directory in which the VEO will be unpacked
-     * @param hndlr where to send the LOG reports
+     * @param parentLogger send log messages to the calling class' logger
      * @param genErrorReport true if produce a summary error report
      * @param genHTMLReport true if produce HTML reports
      * @param unpack true if leave the VEO directories after execution
@@ -255,62 +258,45 @@ public class VEOAnalysis {
      * @throws VEOError if something goes wrong
      */
     public VEOAnalysis(Path schemaDir, LTSF ltsfs, Path outputDir,
-            Handler hndlr, boolean chatty, boolean genErrorReport, boolean genHTMLReport, boolean unpack,
+            Logger parentLogger, boolean chatty, boolean genErrorReport, boolean genHTMLReport, boolean unpack,
             boolean debug, boolean verbose, boolean norec, boolean vpa, ResultSummary results) throws VEOError {
-        c = new Config();
-
-        c.chatty = chatty;
-        c.classifyVEOs = false;
-        c.debug = debug;
-        c.genErrorReport = genErrorReport;
-        c.genHTMLReport = genHTMLReport;
-        c.genResultSummary = (results != null);
-        c.genCSVReport = false;
-        c.help = false;
-        c.ltsfs = ltsfs;
-        c.norec = norec;
-        c.outputDir = outputDir;
-        c.reportIOcnt = false;
-        c.supportDir = schemaDir;
-        c.unpack = unpack;
-        c.veos = null;
-        c.verbose = verbose;
-        c.vpa = vpa;
-        init(c, hndlr);
+        
+        LOG.setParent(parentLogger);
+        
+        config = new Config();
+        config.chatty = chatty;
+        config.classifyVEOs = false;
+        config.debug = debug;
+        config.genErrorReport = genErrorReport;
+        config.genHTMLReport = genHTMLReport;
+        config.genResultSummary = (results != null);
+        config.genCSVReport = false;
+        config.help = false;
+        config.ltsfs = ltsfs;
+        config.norec = norec;
+        config.outputDir = outputDir;
+        config.reportIOcnt = false;
+        config.supportDir = schemaDir;
+        config.unpack = unpack;
+        config.veos = null;
+        config.verbose = verbose;
+        config.vpa = vpa;
+        
+        init(config);
     }
 
     /**
      * Instantiate an VEOAnalysis instance.
      *
      * @param c configuration structure
-     * @param hndlr where to send the LOG reports
      * @throws VEOError if something goes wrong
      */
-    private void init(Config c, Handler hndlr) throws VEOError {
-        Handler h[];
-        int i;
+    private void init(Config c) throws VEOError {
 
         totalIOs = 0;
         hasErrors = false;
 
-        if (hndlr != null) {
-            // remove any handlers associated with the LOG & LOG messages aren't to
-            // go to the parent
-            h = LOG.getHandlers();
-            for (i = 0; i < h.length; i++) {
-                LOG.removeHandler(h[i]);
-            }
-            LOG.setUseParentHandlers(false);
-
-            // add LOG handler from calling program
-            LOG.addHandler(hndlr);
-
-            // default logging
-            LOG.getParent().setLevel(Level.WARNING);
-            LOG.setLevel(null);
-        }
-
-        this.c = c;
+        this.config = c;
 
         // check to see that user wants to do something
         if (!c.genErrorReport && !c.genHTMLReport && !c.genCSVReport && !c.classifyVEOs && !c.unpack) {
@@ -371,8 +357,8 @@ public class VEOAnalysis {
         Path veoFile;
 
         // go through the list of VEOs
-        for (i = 0; i < c.veos.size(); i++) {
-            veo = c.veos.get(i);
+        for (i = 0; i < config.veos.size(); i++) {
+            veo = config.veos.get(i);
             if (veo == null) {
                 continue;
             }
@@ -408,7 +394,7 @@ public class VEOAnalysis {
         }
 
         // report total IOs generated in run
-        if (c.reportIOcnt) {
+        if (config.reportIOcnt) {
             LOG.log(Level.INFO, "Total IOs encountered in run: {0}", totalIOs);
         }
     }
@@ -435,7 +421,7 @@ public class VEOAnalysis {
         } else {
             
             // ignore files that don't end in '.veo.zip'
-            if (c.onlyVEOs && !p.getFileName().toString().toLowerCase().endsWith(".veo.zip")) {
+            if (config.onlyVEOs && !p.getFileName().toString().toLowerCase().endsWith(".veo.zip")) {
                 return;
             }
             
@@ -457,7 +443,7 @@ public class VEOAnalysis {
      * @throws VEOError if something went wrong
      */
     public TestVEOResult testVEO(Path veo, Path outputDir) throws VEOError {
-        c.outputDir = outputDir;
+        config.outputDir = outputDir;
         return testVEO(veo);
     }
 
@@ -481,15 +467,14 @@ public class VEOAnalysis {
         }
 
         // if in error mode, print the header for this VEO
-        if (c.genErrorReport) {
+        if (config.genErrorReport) {
             LOG.info("******************************************************************************");
             LOG.info("*                                                                            *");
             LOG.log(Level.INFO, "* V3 VEO analysed: {0} at {1}", new Object[]{veo.getFileName().toString(), getISODateTime('T', ':')});
-            LOG.log(Level.INFO, "* ''{0}''", veo.toString());
             LOG.info("*                                                                            *");
             LOG.info("******************************************************************************");
             LOG.info("");
-        } else if (c.chatty) {
+        } else if (config.chatty) {
             LOG.log(Level.INFO, "{0}: {1}", new Object[]{System.currentTimeMillis() / 1000, veo});
         }
 
@@ -500,7 +485,7 @@ public class VEOAnalysis {
 
         // perform the analysis
         hasErrors = false;
-        rv = new RepnVEO(c.supportDir, veo, c.debug, c.outputDir, resultSummary);
+        rv = new RepnVEO(config.supportDir, veo, config.debug, config.outputDir, resultSummary);
         result = null;
 
         // if VEO had at least one signature, get it...
@@ -514,13 +499,13 @@ public class VEOAnalysis {
             if (rv.constructRepn()) {
 
                 // if validating, do so...
-                if (c.genErrorReport || c.genHTMLReport || c.genCSVReport || c.classifyVEOs) {
-                    rv.validate(c.ltsfs, c.norec, c.vpa); // note originally this was rv.validate(ltsfs, false, norec) with norec always being true when called from VPA
+                if (config.genErrorReport || config.genHTMLReport || config.genCSVReport || config.classifyVEOs) {
+                    rv.validate(config.ltsfs, config.norec, config.vpa); // note originally this was rv.validate(ltsfs, false, norec) with norec always being true when called from VPA
                 }
 
                 // if generating HTML report, do so...
-                if (c.genHTMLReport) {
-                    rv.genReport(c.verbose, version(), copyright);
+                if (config.genHTMLReport) {
+                    rv.genReport(config.verbose, version(), copyright);
                 }
             }
 
@@ -529,7 +514,7 @@ public class VEOAnalysis {
             rv.getProblems(false, warnings);
 
             // if in error mode, print the results for this VEO
-            if (c.genErrorReport) {
+            if (config.genErrorReport) {
                 LOG.info(getStatus(errors, warnings));
             }
 
@@ -554,7 +539,7 @@ public class VEOAnalysis {
             hasErrors = rv.hasErrors();
 
             // delete the unpacked VEO
-            if (!c.unpack && !c.genHTMLReport) {
+            if (!config.unpack && !config.genHTMLReport) {
                 rv.deleteVEO();
             }
 
