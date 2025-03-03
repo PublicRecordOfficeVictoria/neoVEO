@@ -169,10 +169,11 @@ public class VEOAnalysis {
      * 20241127 4.22 Major rewrite of XML namespace handling, and interface between XML validation and RDF validation in handling metadata packages
      * 20250219 4.23 Linting of error messages and making the handling of metadata packages more robust
      * 20250228 4.24 Changed handling of inheriting Loggers from calling classes
+     * 20250303 4.25 Changed handling of Handlers when V3Analysis is being used as a package
      * </pre>
      */
     static String version() {
-        return ("4.24");
+        return ("4.25");
     }
 
     static String copyright = "Copyright 2015-2024 Public Record Office Victoria";
@@ -196,7 +197,7 @@ public class VEOAnalysis {
         }
         LOG.setLevel(Level.FINEST);
         runDateTime = getISODateTime('-', ':');
-        
+
         config = new Config();
         config.configure(args);
 
@@ -232,7 +233,9 @@ public class VEOAnalysis {
      * @throws VEOError
      */
     public VEOAnalysis(Config c, Logger parentLogger) throws VEOError {
-        LOG.setParent(parentLogger);
+        if (parentLogger != null) {
+            LOG.setParent(parentLogger);
+        }
         init(c);
     }
 
@@ -241,6 +244,10 @@ public class VEOAnalysis {
      * without csvReport). In this mode, VEOAnalysis is called by another
      * program to unpack and validate VEOs. Once an instance of a VEOAnalysis
      * class has been created it can be used to validate multiple VEOs.
+     * 
+     * Note on logging. Switch off logging in handlers created by this package
+     * using the calling package's log configuration file (i.e.
+     * V3Analysis.V3Analysis.level=OFF)
      *
      * @param schemaDir directory in which VERS3 support information is found
      * @param ltsfs long term sustainable formats
@@ -260,9 +267,10 @@ public class VEOAnalysis {
     public VEOAnalysis(Path schemaDir, LTSF ltsfs, Path outputDir,
             Logger parentLogger, boolean chatty, boolean genErrorReport, boolean genHTMLReport, boolean unpack,
             boolean debug, boolean verbose, boolean norec, boolean vpa, ResultSummary results) throws VEOError {
-        
-        LOG.setParent(parentLogger);
-        
+        if (parentLogger != null) {
+            LOG.setParent(parentLogger);
+        }
+
         config = new Config();
         config.chatty = chatty;
         config.classifyVEOs = false;
@@ -281,7 +289,7 @@ public class VEOAnalysis {
         config.veos = null;
         config.verbose = verbose;
         config.vpa = vpa;
-        
+
         init(config);
     }
 
@@ -419,12 +427,12 @@ public class VEOAnalysis {
                 LOG.log(Level.WARNING, "Failed to process directory ''{0}'': {1}", new Object[]{p.toString(), e.getMessage()});
             }
         } else {
-            
+
             // ignore files that don't end in '.veo.zip'
             if (config.onlyVEOs && !p.getFileName().toString().toLowerCase().endsWith(".veo.zip")) {
                 return;
             }
-            
+
             try {
                 testVEO(p);
             } catch (VEOError ve) {
