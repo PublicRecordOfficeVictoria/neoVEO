@@ -170,10 +170,11 @@ public class VEOAnalysis {
      * 20250219 4.23 Linting of error messages and making the handling of metadata packages more robust
      * 20250228 4.24 Changed handling of inheriting Loggers from calling classes
      * 20250303 4.25 Changed handling of Handlers when V3Analysis is being used as a package
+     * 20250321 4.26 Now gets unique identifier for TestVEOResult later when the signatures have been processed
      * </pre>
      */
     static String version() {
-        return ("4.25");
+        return ("4.26");
     }
 
     static String copyright = "Copyright 2015-2024 Public Record Office Victoria";
@@ -244,7 +245,7 @@ public class VEOAnalysis {
      * without csvReport). In this mode, VEOAnalysis is called by another
      * program to unpack and validate VEOs. Once an instance of a VEOAnalysis
      * class has been created it can be used to validate multiple VEOs.
-     * 
+     *
      * Note on logging. Switch off logging in handlers created by this package
      * using the calling package's log configuration file (i.e.
      * V3Analysis.V3Analysis.level=OFF)
@@ -465,7 +466,6 @@ public class VEOAnalysis {
     public TestVEOResult testVEO(Path veo) throws VEOError {
         RepnVEO rv;
         TestVEOResult tvr;
-        String uniqueId;
         ArrayList<VEOFailure> errors = new ArrayList<>();
         ArrayList<VEOFailure> warnings = new ArrayList<>();
         String result;
@@ -495,9 +495,6 @@ public class VEOAnalysis {
         hasErrors = false;
         rv = new RepnVEO(config.supportDir, veo, config.debug, config.outputDir, resultSummary);
         result = null;
-
-        // if VEO had at least one signature, get it...
-        uniqueId = rv.getUniqueId();
 
         // get number of IOs seen in this VEO
         totalIOs += rv.getIOCount();
@@ -541,7 +538,7 @@ public class VEOAnalysis {
             }
 
             // capture results of processing this VEO
-            tvr = new TestVEOResult(rv.getVEODir(), uniqueId, 0, !errors.isEmpty(), !warnings.isEmpty(), result);
+            tvr = new TestVEOResult(rv.getVEODir(), rv.getUniqueId(), 0, !errors.isEmpty(), !warnings.isEmpty(), result);
 
         } finally {
             hasErrors = rv.hasErrors();
