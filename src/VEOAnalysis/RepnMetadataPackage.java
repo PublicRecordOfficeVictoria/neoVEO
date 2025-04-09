@@ -205,7 +205,7 @@ class RepnMetadataPackage extends AnalysisBase {
         }
 
         // if ANZS5478 check to see if the required properties are present and valid
-        if (schema.endsWith("ANZS5478") || schema.equals("http://www.prov.vic.gov.au/VERS-as5478")) {
+        if (schema.endsWith("ANZS5478") || schema.endsWith("ANZS5478#") || schema.equals("http://www.prov.vic.gov.au/VERS-as5478")) {
 
             // correct syntax?
             if (!(syntax.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns") || syntaxId.getValue().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#"))) {

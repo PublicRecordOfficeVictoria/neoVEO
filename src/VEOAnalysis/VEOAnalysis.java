@@ -171,10 +171,11 @@ public class VEOAnalysis {
      * 20250228 4.24 Changed handling of inheriting Loggers from calling classes
      * 20250303 4.25 Changed handling of Handlers when V3Analysis is being used as a package
      * 20250321 4.26 Now gets unique identifier for TestVEOResult later when the signatures have been processed
+     * 20250402 4.27 Make VPA and VEOAnalysis tests for ANZS5478 schema URL identical & corrected namespace references for AGLS metadata
      * </pre>
      */
     static String version() {
-        return ("4.26");
+        return ("4.27");
     }
 
     static String copyright = "Copyright 2015-2024 Public Record Office Victoria";
