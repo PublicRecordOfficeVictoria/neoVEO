@@ -933,9 +933,9 @@ class RepnMetadataPackage extends AnalysisBase {
     }
 
     /**
-     * Check that exactly one anzs5478:DateRange element exists, with exctly one
-     * anzs5478:StartDate element
-     *
+     * Check that exactly one anzs5478:DateRange element exists, with exactly
+     * one anzs5478:StartDate element
+     * 
      * @param r1 resource
      * @param entityType entityType being looked for
      */
@@ -1293,14 +1293,14 @@ class RepnMetadataPackage extends AnalysisBase {
                 addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 15, id, "AGLS metadata package contains 'dcterms:serviceType' not 'aglsterms:serviceType'. This was an error in the specification. The VEO should be fixed."));
             }
             // warn if disposal metadata is not present...
-            if (!noRec && !containsLeafProperty(r, dcTermsNSURI, "disposalReviewDate", true) && !containsLeafProperty(r, VERS_TERMS_NS, "disposalCondition", true)) {
+            if (!noRec && !containsLeafProperty(r, versTermsNSURI, "disposalReviewDate", true) && !containsLeafProperty(r, versTermsNSURI, "disposalCondition", true)) {
                 addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 16, id, "AGLS metadata package does not contain either the disposal review date or disposal condition properties (versterms:disposalReviewDate or versterms:disposalCondition)"));
             }
-            if (!noRec && !containsLeafProperty(r, dcTermsNSURI, "disposalAction", true)) {
-                addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 17, id, "AGLS metadata package does not contain the disposal action property (vers:disposalAction)"));
+            if (!noRec && !containsLeafProperty(r, versTermsNSURI, "disposalAction", true)) {
+                addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 17, id, "AGLS metadata package does not contain the disposal action property (versterms:disposalAction)"));
             }
-            if (!noRec && !containsLeafProperty(r, dcTermsNSURI, "disposalReference", true)) {
-                addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 18, id, "AGLS metadata package does not contain the disposal reference property (vers:disposalReference)"));
+            if (!noRec && !containsLeafProperty(r, versTermsNSURI, "disposalReference", true)) {
+                addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 18, id, "AGLS metadata package does not contain the disposal reference property (versterms:disposalReference)"));
             }
         }
     }
