@@ -1168,8 +1168,8 @@ class RepnMetadataPackage extends AnalysisBase {
                 addError("checkContextPath", 2, nlid + " is empty or blank");
                 continue;
             }
-            checkLeafProperty(r2, VERS_TERMS_NS, versTermsNSURI, "ContextPathDomain", 1, 1, "checkContextPath", nlid);
-            checkLeafProperty(r2, VERS_TERMS_NS, versTermsNSURI, "ContextPathValue", 1, 1, "checkContextPath", nlid);
+            checkLeafProperty(r2, VERS_TERMS_NS, versTermsNSURI, "contextPathDomain", 0, 1, "checkContextPath", nlid);
+            checkLeafProperty(r2, VERS_TERMS_NS, versTermsNSURI, "contextPathValue", 1, 1, "checkContextPath", nlid);
         }
     }
 
