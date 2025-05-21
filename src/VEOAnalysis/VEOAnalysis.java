@@ -173,10 +173,11 @@ public class VEOAnalysis {
      * 20250321 4.26 Now gets unique identifier for TestVEOResult later when the signatures have been processed
      * 20250402 4.27 Make VPA and VEOAnalysis tests for ANZS5478 schema URL identical & corrected namespace references for AGLS metadata
      * 20250514 4.28 Made contextPathDomain optional when testing metadata package (as per spec 5)
+     * 20250521 4.29 Testing for contextPath/ContextPath in both AS4578 and AGLS metadata, in both vers & versterms namespaces
      * </pre>
      */
     static String version() {
-        return ("4.28");
+        return ("4.29");
     }
 
     static String copyright = "Copyright 2015-2024 Public Record Office Victoria";

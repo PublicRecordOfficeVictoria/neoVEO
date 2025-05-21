@@ -79,6 +79,7 @@ class RepnMetadataPackage extends AnalysisBase {
     private String aglsTermsNSURI; // namespace URI for xmlns:aglsterms
     private String versTermsNSURI; // namespace URI for xmlns:versterms
     private String anzs5478NSURI;  // namespace for xmlns:anzs5478
+    private String versNSURI;      // namespace for xmlns:vers
     private final static java.util.logging.Logger LOG = java.util.logging.Logger.getLogger("VEOAnalysis.RepnMetadatPackage");
 
     /**
@@ -94,6 +95,8 @@ class RepnMetadataPackage extends AnalysisBase {
     // metadata packages. If the VEO uses other URLs for these namespaces, an
     // Error will be generated, but the actual namespace used in the VEO will
     // be used to check the VEO (this prevents cascading errors)
+    private static final String[] VERS_NS_URIs = {
+        "http://www.prov.vic.gov.au/VERS"};
     private static final String[] DC_TERMS_NS_URIs = {
         "http://purl.org/dc/terms/"};
     private static final String[] AGLS_TERMS_NS_URIs = {
@@ -108,6 +111,7 @@ class RepnMetadataPackage extends AnalysisBase {
         "http://www.prov.vic.gov.au/ANSZ5478/terms/",
         "http://www.prov.vic.gov.au/VERS-as5478"};
 
+    private static final String VERS_NS = "vers";
     private static final String DC_TERMS_NS = "dcterms";
     private static final String AGLS_TERMS_NS = "aglsterms";
     private static final String VERS_TERMS_NS = "versterms";
@@ -492,6 +496,7 @@ class RepnMetadataPackage extends AnalysisBase {
      * @param e current element
      */
     private void setNamespaces(MetadataPackage mp, Element e) {
+        versNSURI = checkNamespace(e, VERS_NS, VERS_NS_URIs);
         switch (mp) {
             case AGLS:
                 dcTermsNSURI = checkNamespace(e, DC_TERMS_NS, DC_TERMS_NS_URIs);
@@ -1171,6 +1176,17 @@ class RepnMetadataPackage extends AnalysisBase {
             checkLeafProperty(r2, VERS_TERMS_NS, versTermsNSURI, "contextPathDomain", 0, 1, "checkContextPath", nlid);
             checkLeafProperty(r2, VERS_TERMS_NS, versTermsNSURI, "contextPathValue", 1, 1, "checkContextPath", nlid);
         }
+        
+        nlid = lid + "/vers:ContextPath";
+        si = r1.listProperties(ResourceFactory.createProperty(versNSURI, "ContextPath"));
+        while (si.hasNext()) {
+            if ((r2 = getResource(si)) == null) {
+                addError("checkContextPath", 3, nlid + " is empty or blank");
+                continue;
+            }
+            checkLeafProperty(r2, VERS_NS, versNSURI, "ContextPathDomain", 0, 1, "checkContextPath", nlid);
+            checkLeafProperty(r2, VERS_NS, versNSURI, "ContextPathValue", 1, 1, "checkContextPath", nlid);
+        }
     }
 
     /**
@@ -1292,6 +1308,7 @@ class RepnMetadataPackage extends AnalysisBase {
             if (containsLeafProperty(r, dcTermsNSURI, "serviceType", false)) {
                 addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 15, id, "AGLS metadata package contains 'dcterms:serviceType' not 'aglsterms:serviceType'. This was an error in the specification. The VEO should be fixed."));
             }
+            checkContextPath("", r);
             // warn if disposal metadata is not present...
             if (!noRec && !containsLeafProperty(r, versTermsNSURI, "disposalReviewDate", true) && !containsLeafProperty(r, versTermsNSURI, "disposalCondition", true)) {
                 addWarning(new VEOFailure(CLASSNAME, "checkAGLSProperties", 16, id, "AGLS metadata package does not contain either the disposal review date or disposal condition properties (versterms:disposalReviewDate or versterms:disposalCondition)"));
