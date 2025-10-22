@@ -174,6 +174,7 @@ public class VEOAnalysis {
      * 20250402 4.27 Make VPA and VEOAnalysis tests for ANZS5478 schema URL identical & corrected namespace references for AGLS metadata
      * 20250514 4.28 Made contextPathDomain optional when testing metadata package (as per spec 5)
      * 20250521 4.29 Testing for contextPath/ContextPath in both AS4578 and AGLS metadata, in both vers & versterms namespaces
+     * 20251022 4.30 Tightened up testing for VEOContentSignature?.xml and VEOHistorySignature?.xml
      * </pre>
      */
     static String version() {

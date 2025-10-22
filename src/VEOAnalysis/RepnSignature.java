@@ -31,6 +31,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.Base64;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * This class represents the content of a VEO*Signature*.xml file. A valid
@@ -111,9 +112,9 @@ public class RepnSignature extends RepnXML {
             addError(new VEOFailure(CLASSNAME, 2, id, "Signature file '" + file.toString() + "' does not exist"));
             return;
         }
-        if (file.toString().contains("VEOContentSignature")) {
+        if (Pattern.matches("^VEOContentSignature(\\d)+.xml$", file.getFileName().toString())) {
             source = veoDir.resolve("VEOContent.xml");
-        } else if (file.toString().contains("VEOHistorySignature")) {
+        } else if (Pattern.matches("^VEOHistorySignature(\\d)+.xml$", file.getFileName().toString())) {
             source = veoDir.resolve("VEOHistory.xml");
         } else {
             addError(new VEOFailure(CLASSNAME, 3, id, "File name must be of the form 'VEOContentSignature?.xml' or 'VEOHistorySignature?.xml' but is '" + file.toString() + "'"));
