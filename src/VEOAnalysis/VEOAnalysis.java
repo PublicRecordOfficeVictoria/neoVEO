@@ -175,10 +175,11 @@ public class VEOAnalysis {
      * 20250514 4.28 Made contextPathDomain optional when testing metadata package (as per spec 5)
      * 20250521 4.29 Testing for contextPath/ContextPath in both AS4578 and AGLS metadata, in both vers & versterms namespaces
      * 20251022 4.30 Tightened up testing for VEOContentSignature?.xml and VEOHistorySignature?.xml
+     * 20251022 4.31 Tested for errors in signature algorithm (RepnSignature) - hyphen in hash function (e.g. SHA-512) and no encryption (i.e. no 'with')
      * </pre>
      */
     static String version() {
-        return ("4.29");
+        return ("4.31");
     }
 
     static String copyright = "Copyright 2015-2024 Public Record Office Victoria";

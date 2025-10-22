@@ -229,7 +229,8 @@ public class RepnSignature extends RepnXML {
         }
 
         // validate the algorithm
-        switch (sigAlgorithm.getValue()) {
+        String s = sigAlgorithm.getValue();
+        switch (s) {
             case "SHA224withDSA":
             case "SHA224withRSA":
             case "SHA256withRSA":
@@ -243,14 +244,25 @@ public class RepnSignature extends RepnXML {
             case "SHA1withRSA":
                 break;
             default:
-                sigAlgorithm.addError(new VEOFailure(CLASSNAME, "validate", 2, id, "Hash/signature algorithm combination '" + sigAlgorithm.getValue() + "' is not supported"));
+                boolean complained = false;
+                if (s.contains("SHA-224") || s.contains("SHA-256") || s.contains("SHA-384") || s.contains("SHA-512") || s.contains("SHA-1")) {
+                    sigAlgorithm.addError(new VEOFailure(CLASSNAME, "validate", 2, id, "Hash algorithm '" + s + "' contains a hyphen (i.e. use 'SHA256withRSA' instead of 'SHA-256withRSA"));
+                    complained = true;
+                }
+                if (!s.contains("with")) {
+                    sigAlgorithm.addError(new VEOFailure(CLASSNAME, "validate", 3, id, "Hash/signature algorithm '" + s + "' does not appear to contain a hash algorithm and a encryption algorithm (e.g. such as 'SHA256withRSA'"));
+                    complained = true;
+                }
+                if (!complained) {
+                    sigAlgorithm.addError(new VEOFailure(CLASSNAME, "validate", 4, id, "Hash/signature algorithm combination '" + s + "' is not supported"));
+                }
         }
 
         // validate a valid date and time
         try {
             VERSDate.testValueAsDate(sigDateTime.getValue());
         } catch (IllegalArgumentException e) {
-            sigDateTime.addError(new VEOFailure(CLASSNAME, "validate", 3, id, "Date in event is invalid. Value is '" + sigDateTime + "'", e));
+            sigDateTime.addError(new VEOFailure(CLASSNAME, "validate", 5, id, "Date in event is invalid. Value is '" + sigDateTime + "'", e));
         }
 
         // verify the digital signature
